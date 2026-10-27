@@ -1,0 +1,16 @@
+name: Release
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '.github/workflows/**'
+      - '**.md'
+jobs:
+  release:
+    uses: joutio/joutio-reusable-workflows/.github/workflows/service-release.yml@main
+    with:
+      java-version: "25"
+      github-username: ${{ vars.JOUTIO_GITHUB_USERNAME }}
+      service-name: bff
+    secrets:
+      GITHUB_PASSWORD: ${{ secrets.JOUTIO_GITHUB_TOKEN }}

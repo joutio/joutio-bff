@@ -1,0 +1,58 @@
+spring:
+  config:
+    import: optional:classpath:joutio-defaults.yml
+  application:
+    name: joutio-bff
+  profiles:
+    default: local
+
+  servlet:
+    multipart:
+      # Upload d'images (couvertures/questions/bannières) : marge au-dessus de la limite applicative
+      # `joutio.media.max-file-size` (5 Mo) pour que le refus soit un ProblemDetail typé, pas un 413 Tomcat.
+      max-file-size: 6MB
+      max-request-size: 8MB
+
+  flyway:
+    locations: classpath:db/migration/bff
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+microservice:
+  swagger:
+    description: Joutio BFF - facade unique REST + WebSocket (services headless)
+  websocket:
+    enabled: true
+
+# Fan-out temps réel multi-réplique : chaque pod BFF ne connaît que ses propres clients STOMP et
+# doit consommer TOUS les événements de ces groupes (processors suffixés par instance via le SDK,
+# token initial à la queue du flux — aucun replay Kafka). Le Web Push reste sur le groupe global
+# `notification-push` (une seule notification OS, quel que soit le nombre de répliques).
+joutio:
+  identity:
+    # Appels serveur-à-serveur limités aux OTP de suppression de compte.
+    url: ${JOUTIO_IDENTITY_URL:http://joutio-identity}
+  # Fuseau de découpage des jours d'activité (aligné sur `joutio-profile`).
+  activity:
+    zone: ${JOUTIO_ACTIVITY_ZONE:Europe/Paris}
+  # Quotas de création de duels (référence gratuite ; le premium lèvera ces bornes via
+  # `DuelLimitPolicy`). 0 = illimité.
+  duel:
+    limits:
+      pending-challenges: ${JOUTIO_DUEL_MAX_PENDING_CHALLENGES:5}
+      open-rooms: ${JOUTIO_DUEL_MAX_OPEN_ROOMS:5}
+  axon:
+    instance-scoped-groups:
+      - game-notification
+      - room-notification
+      - matchmaking-notification
+      - presence-notification
+      - follow-presence-notification
+      - achievement-notification
+      - notification-ws
+      # Purge des caches de lecture sur chaque réplique (follows, profil) : Éditions/follows sont
+      # traités par un pod, tous les autres doivent invalider leur Caffeine local.
+      - cache-invalidation

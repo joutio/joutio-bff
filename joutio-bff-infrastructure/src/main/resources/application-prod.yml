@@ -1,0 +1,21 @@
+server:
+  port: 8080
+
+spring:
+  config:
+    import: optional:classpath:joutio-prod.yml
+    activate:
+      on-profile: prod
+
+joutio:
+  media:
+    # URL publique des objets (Ingress `media.` → MinIO, namespace joutio-prod).
+    public-base-url: ${JOUTIO_MEDIA_PUBLIC_BASE_URL:https://media.joutio.com/joutio-media/}
+    s3:
+      # Endpoint in-cluster (Service `minio`, port 80 → 9000). Les credentials viennent du
+      # SealedSecret `joutio-bff-media` — noms d'env du secret, aliasés vers `joutio.media.s3.*`
+      # (sans alias, la propriété attendrait JOUTIO_MEDIA_S3_ACCESS_KEY et serait vide).
+      endpoint: ${JOUTIO_MEDIA_S3_ENDPOINT:http://minio}
+      bucket: ${JOUTIO_MEDIA_S3_BUCKET:joutio-media}
+      access-key: ${JOUTIO_MEDIA_ACCESS_KEY:}
+      secret-key: ${JOUTIO_MEDIA_SECRET_KEY:}

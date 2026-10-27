@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.joutio</groupId>
+        <artifactId>joutio-bff</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>joutio-bff-infrastructure</artifactId>
+
+    <properties>
+        <!-- Contrats inter-services : dernières versions release des *-domain (GitHub Packages). -->
+        <!-- 2.9.0 : motifs de suspension de compte étendus (console de modération). -->
+        <joutio.identity-domain.version>2.12.0</joutio.identity-domain.version>
+        <!-- 7.0.0 : paliers de rareté FER…DIAMANT dans les titres de seed. -->
+        <joutio.theme-domain.version>7.0.0</joutio.theme-domain.version>
+        <joutio.social-domain.version>5.3.1</joutio.social-domain.version>
+        <joutio.game-domain.version>9.0.0</joutio.game-domain.version>
+        <!-- 6.1.0 : centres d'intérêt persistés (Profile.interests, ProfileInterestsUpdatedEvent). -->
+        <joutio.profile-domain.version>6.1.0</joutio.profile-domain.version>
+        <joutio.matchmaking-domain.version>12.0.0</joutio.matchmaking-domain.version>
+        <joutio.leaderboard-domain.version>5.0.0</joutio.leaderboard-domain.version>
+        <!-- 2.5.0 : delete-all. -->
+        <joutio.notification-domain.version>3.10.0</joutio.notification-domain.version>
+        <!-- Web Push : JWT VAPID Nimbus + chiffrement BouncyCastle + HttpClient JDK. -->
+        <webpush.version>6.1.3</webpush.version>
+        <!-- Stockage d'images : client S3 (MinIO-compatible), transport HTTP pur JDK (pas de CRT natif). -->
+        <aws-sdk.version>2.46.7</aws-sdk.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.joutio</groupId>
+            <artifactId>joutio-microservice-starter</artifactId>
+        </dependency>
+
+        <!-- Contrats inter-services (queries / commands / read models / events) -->
+        <dependency>
+            <groupId>com.joutio</groupId>
+            <artifactId>joutio-identity-domain</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.joutio</groupId>
+            <artifactId>joutio-theme-domain</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.joutio</groupId>
+            <artifactId>joutio-social-domain</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.joutio</groupId>
+            <artifactId>joutio-game-domain</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.joutio</groupId>
+            <artifactId>joutio-profile-domain</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.joutio</groupId>
+            <artifactId>joutio-matchmaking-domain</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.joutio</groupId>
+            <artifactId>joutio-leaderboard-domain</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.joutio</groupId>
+            <artifactId>joutio-notification-domain</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- Web Push (abonnements navigateur + envoi RFC 8030/8291). -->
+        <dependency>
+            <groupId>dev.blanke.webpush</groupId>
+            <artifactId>webpush</artifactId>
+            <version>${webpush.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.blanke.webpush.jwt</groupId>
+            <artifactId>webpush-jwt-nimbus</artifactId>
+            <version>${webpush.version}</version>
+        </dependency>
+
+        <!-- Médias : dépôt des images (upload → MinIO/S3-compatible). -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws-sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>url-connection-client</artifactId>
+            <version>${aws-sdk.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.joutio.bff.BffServiceApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

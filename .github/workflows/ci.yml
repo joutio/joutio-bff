@@ -1,0 +1,11 @@
+name: CI
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  ci:
+    uses: joutio/joutio-reusable-workflows/.github/workflows/service-ci.yml@main
+    with:
+      github-username: ${{ vars.JOUTIO_GITHUB_USERNAME }}
+    secrets:
+      GITHUB_PASSWORD: ${{ secrets.JOUTIO_GITHUB_TOKEN }}

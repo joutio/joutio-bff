@@ -1,0 +1,32 @@
+server:
+  port: 8092
+
+spring:
+  config:
+    import: optional:classpath:joutio-local.yml
+    activate:
+      on-profile: local
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/joutio_bff
+    username: postgres
+    password: postgres
+
+# Web Push local : paire VAPID de DÉVELOPPEMENT jetable (locale au poste). Ne jamais réutiliser
+# en production — la paire prod vit dans le secret sealed GitOps (voir devops/joutio-gitops).
+joutio:
+  push:
+    vapid:
+      public-key: BL4_f0c1UrFgu1Hdym2XedjmA5cjTg8hDLn_AxU-MvhEf1aTauiA2Ph0_j4t89siXdF5dD4E6URhkonwHTBWxdE
+      private-key: hM9-hr1OPKWJ3lpi_bl6Hax-24ovYnB1KDORMkGvnb0
+      subject: mailto:dev@joutio.local
+
+  # MinIO local (docker compose : service `minio`, bucket initialisé par `minio-init`).
+  # Envoyer les images du seed : `make seed-images ACTION=publish ARGS="--endpoint http://localhost:9000 --bucket joutio-media"`.
+  media:
+    public-base-url: ${JOUTIO_MEDIA_PUBLIC_BASE_URL:http://localhost:9000/joutio-media/}
+    s3:
+      endpoint: ${JOUTIO_MEDIA_S3_ENDPOINT:http://localhost:9000}
+      bucket: ${JOUTIO_MEDIA_S3_BUCKET:joutio-media}
+      access-key: ${JOUTIO_MEDIA_ACCESS_KEY:joutio}
+      secret-key: ${JOUTIO_MEDIA_SECRET_KEY:joutio-minio}
