@@ -1,3 +1,9 @@
+## 1.0.0 (2026-10-27)
+
+### Features
+
+* initial Joutio BFF service ([cbef7ee](https://github.com/joutio/joutio-bff/commit/cbef7ee98cd5791a03791b5a1d6f82a6ca303a0a))
+
 ## [13.1.1](https://github.com/joutio/joutio-bff/compare/v13.1.0...v13.1.1) (2026-10-26)
 
 ### Bug Fixes
