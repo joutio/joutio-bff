@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/joutio/joutio-bff/compare/v1.0.0...v1.1.0) (2026-11-05)
+
+### Features
+
+* auto-train-on-timeout preference on /api/me ([c1968dc](https://github.com/joutio/joutio-bff/commit/c1968dcfeefd51bc451a9b95f8616638f804825d))
+
 ## 1.0.0 (2026-10-27)
 
 ### Features
