@@ -34,6 +34,7 @@ import com.joutio.profile.domain.model.GameXp;
 import com.joutio.profile.domain.model.MasteryTier;
 import com.joutio.profile.domain.model.PlayerPresence;
 import com.joutio.profile.domain.model.PlayerProgress;
+import com.joutio.profile.domain.model.PresenceStatus;
 import com.joutio.profile.domain.model.PlayerTitle;
 import com.joutio.profile.domain.model.Profile;
 import com.joutio.profile.domain.model.TopicProgress;
@@ -562,6 +563,10 @@ public class ProfileViewService {
     }
 
     private static Comparator<PlayerCardView> peopleComparator(PeopleSort sort) {
+        if (sort == PeopleSort.PRESENCE) {
+            return Comparator.comparingInt(ProfileViewService::presenceRank)
+                    .thenComparing(PlayerCardView::pseudonym, String.CASE_INSENSITIVE_ORDER);
+        }
         if (sort == PeopleSort.ELO) {
             return Comparator.comparingInt(PlayerCardView::rating).reversed()
                     .thenComparing(PlayerCardView::pseudonym, String.CASE_INSENSITIVE_ORDER);
@@ -570,6 +575,10 @@ public class ProfileViewService {
             return Comparator.comparing(PlayerCardView::pseudonym, String.CASE_INSENSITIVE_ORDER);
         }
         return (first, second) -> 0;
+    }
+
+    private static int presenceRank(PlayerCardView card) {
+        return card.presence() != null && card.presence().status() == PresenceStatus.ONLINE ? 0 : 1;
     }
 
     private static GameHistoryItemView toHistoryItem(String userId,
