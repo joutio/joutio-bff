@@ -91,6 +91,11 @@ public class CacheInvalidationHandler {
     }
 
     @EventHandler
+    public void on(ProfileEvent.ProfileAutoTrainOnTimeoutUpdatedEvent event) {
+        invalidateProfile(event.userId());
+    }
+
+    @EventHandler
     public void on(ProfileEvent.ProfileInterestsUpdatedEvent event) {
         invalidateProfile(event.userId());
     }

@@ -361,6 +361,31 @@ class ProfileControllerTest {
     }
 
     @Test
+    void updateAutoTrainOnTimeout_sendsCommandWithActor() throws Exception {
+        when(profileUpdateService.updateAutoTrainOnTimeout(USER_ID, USER_ID, false))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        MvcResult result = mockMvc.perform(put("/api/profiles/user-1/auto-train")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"enabled\":false}"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result)).andExpect(status().isNoContent());
+        verify(profileUpdateService).updateAutoTrainOnTimeout(USER_ID, USER_ID, false);
+    }
+
+    @Test
+    void updateAutoTrainOnTimeout_withoutValue_isRejected() throws Exception {
+        mockMvc.perform(put("/api/profiles/user-1/auto-train")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(profileUpdateService);
+    }
+
+    @Test
     void updateLanguage_withUnsupportedLanguage_isRejected() throws Exception {
         mockMvc.perform(put("/api/profiles/user-1/language")
                         .contentType(MediaType.APPLICATION_JSON)

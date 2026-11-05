@@ -86,6 +86,12 @@ public class ProfileUpdateService {
                 new ProfileCommand.UpdateProfileLanguageCommand(userId, requestedBy, language));
     }
 
+    /** Préférence « entraînement si aucun adversaire » (propriétaire uniquement, vérifié par l'agrégat). */
+    public CompletableFuture<Void> updateAutoTrainOnTimeout(String userId, String requestedBy, boolean enabled) {
+        return dispatch(userId,
+                new ProfileCommand.UpdateAutoTrainOnTimeoutCommand(userId, requestedBy, enabled));
+    }
+
     /**
      * Centres d'intérêt : codes ordonnés (premier = univers principal), max 3, sans doublon.
      * L'enum {@link TopicCategory} est la source de vérité des codes autorisés ; le domaine

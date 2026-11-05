@@ -71,7 +71,8 @@ public class MeService {
                             profile.onboardingCompletedAt() != null || progress.gamesPlayed() > 0,
                             rewards.codes().stream().map(Enum::name).sorted().toList(),
                             premium,
-                            profile.interests());
+                            profile.interests(),
+                            profile.autoTrainOnTimeout() == null || profile.autoTrainOnTimeout());
                 });
     }
 

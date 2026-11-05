@@ -32,13 +32,18 @@ public record MeView(
          * Centres d'intérêt : codes {@code TopicCategory} ordonnés (premier = univers principal),
          * max 3. Liste vide = aucun intérêt.
          */
-        List<String> interests
+        List<String> interests,
+        /**
+         * Préférence de jeu : à l'expiration d'une recherche sans adversaire, le client lance un
+         * entraînement contre le bot ({@code true}, défaut) ou propose les choix.
+         */
+        boolean autoTrainOnTimeout
 ) {
 
     /** Copie avec le flag forcé (la projection profile peut être en retard juste après la commande). */
     public MeView withOnboardingCompleted(boolean completed) {
         return new MeView(userId, email, pseudonym, bio, country, avatarOptions, bannerUrl,
                 equippedTitle, language, progression, stats, followingCount, followersCount, completed,
-                rewards, premium, interests);
+                rewards, premium, interests, autoTrainOnTimeout);
     }
 }

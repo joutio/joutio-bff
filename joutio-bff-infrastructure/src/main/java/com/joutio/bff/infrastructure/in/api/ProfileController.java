@@ -6,6 +6,7 @@ import com.joutio.bff.application.ProfileViewService;
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.bff.infrastructure.in.api.request.PageParams;
 import com.joutio.bff.infrastructure.in.api.request.PeopleSort;
+import com.joutio.bff.infrastructure.in.api.request.UpdateAutoTrainOnTimeoutRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateAvatarOptionsRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateBannerRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateBioRequest;
@@ -136,6 +137,16 @@ public class ProfileController {
             @Valid @RequestBody UpdateLanguageRequest request) {
         return profileUpdateService
                 .updateLanguage(userId, SecurityHelper.getUserId(), request.language())
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
+    /** Préférence de jeu « entraînement si aucun adversaire » (propriétaire uniquement). */
+    @PutMapping("/{userId}/auto-train")
+    public CompletableFuture<ResponseEntity<Void>> updateAutoTrainOnTimeout(
+            @PathVariable String userId,
+            @Valid @RequestBody UpdateAutoTrainOnTimeoutRequest request) {
+        return profileUpdateService
+                .updateAutoTrainOnTimeout(userId, SecurityHelper.getUserId(), request.enabled())
                 .thenApply(_ -> ResponseEntity.noContent().build());
     }
 

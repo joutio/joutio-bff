@@ -329,6 +329,7 @@ de sujet, illustration de question, bannière de profil) : objet référencé �
 | `PUT /api/profiles/{userId}/avatar-options` | `204` | `{ avatarOptions }` (`null` efface). `style:"base"` (icône + fond) est gratuit ; `micah` exige la récompense `MICAH_AVATAR` ou Premium (`403 urn:joutio:authorization:micahLocked`), `lorelei\|notionists` exigent Premium (`403 urn:joutio:authorization:premiumRequired`). |
 | `PUT /api/profiles/{userId}/banner` | `204` | `{ bannerUrl }` (`null` efface) — bannière de profil (URL image http(s) ≤1024) |
 | `PUT /api/profiles/{userId}/language` | `204` | `{ language }` ∈ `fr\|en` (enum strict) |
+| `PUT /api/profiles/{userId}/auto-train` | `204` | `{ enabled }` : entraînement automatique contre le bot quand une recherche expire (préférence profil, `true` par défaut, exposée par `GET /api/me` en `autoTrainOnTimeout`) |
 | `GET /api/presence/{userId}` | `PresenceView` | `404` si le joueur ne s'est jamais connecté (l'absence vaut hors ligne) ; poussé aussi en WS |
 
 ### Appariement public (matchmaking)

@@ -83,7 +83,7 @@ class MeControllerTest {
                 Language.FR,
                 new ProgressionView(List.of(), 200, 200, 0, true),
                 new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 3, 5, false, List.of(), false,
-                List.of("HISTORY"));
+                List.of("HISTORY"), true);
         when(meService.me(USER_ID)).thenReturn(CompletableFuture.completedFuture(view));
 
         MvcResult result = mockMvc.perform(get("/api/me"))
@@ -126,7 +126,7 @@ class MeControllerTest {
                 Language.FR,
                 new ProgressionView(List.of(), 200, 200, 0, true),
                 new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 3, 5, false, List.of(), false,
-                List.of());
+                List.of(), true);
         when(profileUpdateService.completeOnboarding(USER_ID))
                 .thenReturn(CompletableFuture.completedFuture(null));
         when(meService.isPremium()).thenReturn(false);
