@@ -1,3 +1,9 @@
+## [1.3.0](https://github.com/joutio/joutio-bff/compare/v1.2.0...v1.3.0) (2026-11-05)
+
+### Features
+
+* **social:** sort contacts by presence ([e85bad2](https://github.com/joutio/joutio-bff/commit/e85bad2bf735c9a333f9c532214dd6d6ae96403a))
+
 ## [1.2.0](https://github.com/joutio/joutio-bff/compare/v1.1.0...v1.2.0) (2026-11-05)
 
 ### Features
