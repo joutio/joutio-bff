@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/joutio/joutio-bff/compare/v1.1.0...v1.2.0) (2026-11-05)
+
+### Features
+
+* **room:** enrich opponent with Elo and country ([57bb96b](https://github.com/joutio/joutio-bff/commit/57bb96bcea4567742dea3b7e05e243adda992675))
+
 ## [1.1.0](https://github.com/joutio/joutio-bff/compare/v1.0.0...v1.1.0) (2026-11-05)
 
 ### Features
