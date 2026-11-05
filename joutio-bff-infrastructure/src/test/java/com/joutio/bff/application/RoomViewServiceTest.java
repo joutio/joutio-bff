@@ -3,6 +3,7 @@ package com.joutio.bff.application;
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.bff.infrastructure.in.api.request.CreateBotRoomRequest;
 import com.joutio.bff.infrastructure.in.api.request.CreateRoomRequest;
+import com.joutio.bff.infrastructure.in.api.response.RoomView;
 import com.joutio.matchmaking.domain.command.RoomCommand;
 import com.joutio.matchmaking.domain.model.Room;
 import com.joutio.matchmaking.domain.model.RoomStatus;
@@ -11,6 +12,8 @@ import com.joutio.microservice.core.domain.model.i18n.Language;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.Profile;
 import com.joutio.profile.domain.model.TopicProgress;
+import com.joutio.profile.domain.query.ProgressionQuery;
+import com.joutio.theme.domain.query.TopicQuery;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.responsetypes.ResponseType;
 import org.axonframework.queryhandling.QueryGateway;
@@ -18,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -132,6 +136,38 @@ class RoomViewServiceTest {
         assertThat(captor.getValue().playerId()).isEqualTo("user-1");
     }
 
+    @Test
+    void get_enrichesOpponentWithEloAndCountry() {
+        when(queryGateway.query(any(RoomQuery.GetRoomById.class), any(ResponseType.class)))
+                .thenReturn(CompletableFuture.completedFuture(Room.builder()
+                        .roomId("room-1")
+                        .topicId("topic-1")
+                        .initiatorId("user-1")
+                        .participantId("user-2")
+                        .status(RoomStatus.WAITING_PLAYERS)
+                        .createdAt(Instant.now())
+                        .expiresAt(Instant.now().plusSeconds(3600))
+                        .updatedAt(Instant.now())
+                        .build()));
+        when(queryGateway.query(any(TopicQuery.GetTopicsByIdsQuery.class), any(ResponseType.class)))
+                .thenReturn(CompletableFuture.completedFuture(List.of()));
+        when(queryGateway.query(any(ProgressionQuery.GetProgressionsByIdsQuery.class), any(ResponseType.class)))
+                .thenReturn(CompletableFuture.completedFuture(List.of(progress("user-2", 900, 10))));
+        when(profileLookup.getAll(List.of("user-2")))
+                .thenReturn(CompletableFuture.completedFuture(List.of(profile("user-2", "Bob", "FR"))));
+        when(identityLookup.statuses(List.of("user-2")))
+                .thenReturn(CompletableFuture.completedFuture(Map.of()));
+
+        RoomView view = service.get("room-1", "user-1").join();
+
+        assertThat(view.opponent()).isNotNull();
+        assertThat(view.opponent().userId()).isEqualTo("user-2");
+        assertThat(view.opponent().pseudonym()).isEqualTo("Bob");
+        assertThat(view.opponent().rating()).isEqualTo(900);
+        assertThat(view.opponent().provisional()).isFalse();
+        assertThat(view.opponent().country()).isEqualTo("FR");
+    }
+
     private void stubRoom() {
         when(queryGateway.query(any(RoomQuery.GetRoomById.class), any(ResponseType.class)))
                 .thenReturn(CompletableFuture.completedFuture(Room.builder()
@@ -146,12 +182,16 @@ class RoomViewServiceTest {
     }
 
     private static Profile profile() {
+        return profile("user-1", "Alice", "FR");
+    }
+
+    private static Profile profile(String userId, String pseudonym, String country) {
         return new Profile(
-                "user-1",
-                "user-1@joutio.test",
-                "Alice",
+                userId,
+                userId + "@joutio.test",
+                pseudonym,
                 null,
-                "FR",
+                country,
                 null,
                 null,
                 null,
@@ -161,9 +201,14 @@ class RoomViewServiceTest {
     }
 
     private static PlayerProgress progress() {
+        return progress("user-1", 842, 10);
+    }
+
+    private static PlayerProgress progress(String userId, int rating, int ratedGames) {
         return PlayerProgress.builder()
-                .userId("user-1")
-                .rating(842)
+                .userId(userId)
+                .rating(rating)
+                .ratedGames(ratedGames)
                 .xpByTopic(Map.of())
                 .badges(Set.of())
                 .gamesPlayed(10)

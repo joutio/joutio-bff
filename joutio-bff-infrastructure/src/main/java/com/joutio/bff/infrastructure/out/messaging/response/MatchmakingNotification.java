@@ -3,6 +3,7 @@ package com.joutio.bff.infrastructure.out.messaging.response;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.joutio.bff.infrastructure.in.api.response.RoomOpponentView;
 
 import java.time.Instant;
 
@@ -48,7 +49,12 @@ public interface MatchmakingNotification {
             String ticketId,
             String roomId,
             String opponentId,
-            boolean vsBot
+            boolean vsBot,
+            /**
+             * Adversaire enrichi (pseudo, avatar, Elo, pays) : la carte « Adversaire trouvé » n'attend pas la
+             * lecture de la salle. {@code null} si le profil est momentanément indisponible.
+             */
+            RoomOpponentView opponent
     ) implements MatchmakingNotification {
         @Override
         public MatchmakingNotificationType type() {

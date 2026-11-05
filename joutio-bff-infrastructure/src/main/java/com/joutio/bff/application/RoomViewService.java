@@ -2,9 +2,9 @@ package com.joutio.bff.application;
 
 import com.joutio.bff.infrastructure.in.api.request.CreateBotRoomRequest;
 import com.joutio.bff.infrastructure.in.api.request.CreateRoomRequest;
+import com.joutio.bff.infrastructure.in.api.response.RoomOpponentView;
 import com.joutio.bff.infrastructure.in.api.response.RoomView;
 import com.joutio.bff.infrastructure.in.api.response.TopicRefView;
-import com.joutio.bff.infrastructure.in.api.response.UserRefView;
 import com.joutio.game.domain.model.BotDifficulty;
 import com.joutio.matchmaking.domain.command.RoomCommand;
 import com.joutio.matchmaking.domain.model.Room;
@@ -16,6 +16,7 @@ import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.Profile;
 import com.joutio.profile.domain.model.TopicProgress;
+import com.joutio.profile.domain.query.ProgressionQuery;
 import com.joutio.theme.domain.model.Topic;
 import com.joutio.theme.domain.query.TopicQuery;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -201,16 +202,23 @@ public class RoomViewService {
                 : profileLookup.getAll(opponentIds);
         CompletableFuture<Map<String, UserAccountStatus>> statusesFuture = identityLookup.statuses(opponentIds)
                 .exceptionally(_ -> Map.<String, UserAccountStatus>of());
+        CompletableFuture<List<PlayerProgress>> progressionsFuture = opponentIds.isEmpty()
+                ? CompletableFuture.completedFuture(List.of())
+                : queryGateway.query(new ProgressionQuery.GetProgressionsByIdsQuery(opponentIds),
+                        QueryResponseTypes.multipleInstancesOf(PlayerProgress.class))
+                .exceptionally(_ -> List.of());
 
-        return CompletableFuture.allOf(topicsFuture, profilesFuture, statusesFuture).thenApply(_ -> {
+        return CompletableFuture.allOf(topicsFuture, profilesFuture, statusesFuture, progressionsFuture).thenApply(_ -> {
             Map<String, Topic> topicById = topicsFuture.join().stream()
                     .collect(Collectors.toMap(Topic::topicId, Function.identity(), (first, _) -> first, LinkedHashMap::new));
             Map<String, Profile> profileById = profilesFuture.join().stream()
                     .collect(Collectors.toMap(Profile::userId, Function.identity(), (first, _) -> first, LinkedHashMap::new));
             Map<String, UserAccountStatus> statusById = statusesFuture.join();
+            Map<String, PlayerProgress> progressById = progressionsFuture.join().stream()
+                    .collect(Collectors.toMap(PlayerProgress::userId, Function.identity(), (first, _) -> first, LinkedHashMap::new));
 
             return rooms.stream()
-                    .map(room -> toView(room, viewerId, topicById, profileById, statusById))
+                    .map(room -> toView(room, viewerId, topicById, profileById, statusById, progressById))
                     .toList();
         });
     }
@@ -219,10 +227,12 @@ public class RoomViewService {
                                    String viewerId,
                                    Map<String, Topic> topicById,
                                    Map<String, Profile> profileById,
-                                   Map<String, UserAccountStatus> statusById) {
+                                   Map<String, UserAccountStatus> statusById,
+                                   Map<String, PlayerProgress> progressById) {
         String opponentId = opponentIdOf(viewerId, room);
         Profile opponent = opponentId == null ? null : profileById.get(opponentId);
         UserAccountStatus status = opponentId == null ? null : statusById.get(opponentId);
+        PlayerProgress progress = opponentId == null ? null : progressById.get(opponentId);
         TopicRefView topic = TopicViews.toRef(room.topicId(), topicById.get(room.topicId()));
 
         return new RoomView(
@@ -231,7 +241,7 @@ public class RoomViewService {
                 room.status(),
                 room.vsBot(),
                 viewerId.equals(room.initiatorId()),
-                opponentRef(opponentId, opponent, status),
+                opponentRef(opponentId, opponent, status, progress),
                 room.initiatorPresent(),
                 room.participantPresent(),
                 room.gameId(),
@@ -241,18 +251,22 @@ public class RoomViewService {
     }
 
     /** Le bot n'a pas de profil : référence synthétique stable (nom système, sans avatar). */
-    private static UserRefView opponentRef(String opponentId,
-                                           Profile opponent,
-                                           UserAccountStatus status) {
+    private static RoomOpponentView opponentRef(String opponentId,
+                                                Profile opponent,
+                                                UserAccountStatus status,
+                                                PlayerProgress progress) {
         if (opponent != null) {
-            return new UserRefView(
+            return new RoomOpponentView(
                     opponent.userId(),
                     opponent.pseudonym(),
                     opponent.avatarOptions(),
-                    status != null && status.suspended(Instant.now()));
+                    status != null && status.suspended(Instant.now()),
+                    progress == null ? null : progress.rating(),
+                    progress == null ? null : progress.provisional(),
+                    opponent.country());
         }
         if (JoutioConstants.SYSTEM_USER_ID.equals(opponentId)) {
-            return new UserRefView(JoutioConstants.SYSTEM_USER_ID, JoutioConstants.SYSTEM_USER_NAME, null);
+            return new RoomOpponentView(JoutioConstants.SYSTEM_USER_ID, JoutioConstants.SYSTEM_USER_NAME, null, false);
         }
         return null;
     }

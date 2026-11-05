@@ -15,7 +15,7 @@ public record RoomView(
         boolean vsBot,
         /** Vrai si le viewer est l'initiateur (seul habilité à annuler la salle). */
         boolean canCancel,
-        UserRefView opponent,
+        RoomOpponentView opponent,
         boolean initiatorPresent,
         boolean participantPresent,
         String gameId,
