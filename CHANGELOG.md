@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/joutio/joutio-bff/compare/v1.4.0...v1.5.0) (2026-11-08)
+
+### Features
+
+* **authoring:** expose collaborative topics and question lifecycle APIs ([c5746cc](https://github.com/joutio/joutio-bff/commit/c5746cc799082ba56bd1652ed175235b81ab1ac0))
+
 ## [1.4.0](https://github.com/joutio/joutio-bff/compare/v1.3.0...v1.4.0) (2026-11-08)
 
 ### Features
