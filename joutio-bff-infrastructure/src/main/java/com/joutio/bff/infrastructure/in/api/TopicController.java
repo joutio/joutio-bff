@@ -28,7 +28,9 @@ import com.joutio.social.domain.command.TopicFollowerCommand;
 import com.joutio.social.domain.model.FollowerIds;
 import com.joutio.theme.domain.model.TopicCategory;
 import com.joutio.theme.domain.model.TopicSort;
+
 import jakarta.validation.Valid;
+
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -58,9 +60,10 @@ public class TopicController {
     private final TopicAuthoringService topicAuthoringService;
     private final CommandGateway commandGateway;
 
-    public TopicController(TopicViewService topicViewService,
-                           TopicAuthoringService topicAuthoringService,
-                           CommandGateway commandGateway) {
+    public TopicController(
+            TopicViewService topicViewService,
+            TopicAuthoringService topicAuthoringService,
+            CommandGateway commandGateway) {
         this.topicViewService = topicViewService;
         this.topicAuthoringService = topicAuthoringService;
         this.commandGateway = commandGateway;
@@ -91,7 +94,8 @@ public class TopicController {
     }
 
     @GetMapping("/{topicId}/overview")
-    public CompletableFuture<ResponseEntity<TopicOverviewView>> overview(@PathVariable String topicId) {
+    public CompletableFuture<ResponseEntity<TopicOverviewView>> overview(
+            @PathVariable String topicId) {
         return topicViewService
                 .overview(SecurityHelper.getUserId(), topicId)
                 .thenApply(ResponseEntity::ok);
@@ -107,7 +111,14 @@ public class TopicController {
             @RequestParam(defaultValue = "25") int size) {
         PageParams.validate(page, size, MAX_PAGE_SIZE);
         return topicViewService
-                .leaderboard(SecurityHelper.getUserId(), topicId, period, LeaderboardMonth.validate(month), scope, page, size)
+                .leaderboard(
+                        SecurityHelper.getUserId(),
+                        topicId,
+                        period,
+                        LeaderboardMonth.validate(month),
+                        scope,
+                        page,
+                        size)
                 .thenApply(ResponseEntity::ok);
     }
 
@@ -115,7 +126,9 @@ public class TopicController {
     public CompletableFuture<ResponseEntity<Void>> follow(@PathVariable String topicId) {
         String userId = SecurityHelper.getUserId();
         return commandGateway
-                .send(new TopicFollowerCommand.FollowTopicCommand(FollowerIds.topic(topicId, userId), topicId, userId))
+                .send(
+                        new TopicFollowerCommand.FollowTopicCommand(
+                                FollowerIds.topic(topicId, userId), topicId, userId))
                 .thenApply(_ -> ResponseEntity.noContent().build());
     }
 
@@ -123,12 +136,15 @@ public class TopicController {
     public CompletableFuture<ResponseEntity<Void>> unfollow(@PathVariable String topicId) {
         String userId = SecurityHelper.getUserId();
         return commandGateway
-                .send(new TopicFollowerCommand.UnfollowTopicCommand(FollowerIds.topic(topicId, userId), userId))
+                .send(
+                        new TopicFollowerCommand.UnfollowTopicCommand(
+                                FollowerIds.topic(topicId, userId), userId))
                 .thenApply(_ -> ResponseEntity.noContent().build());
     }
 
     @PostMapping
-    public CompletableFuture<ResponseEntity<IdResponse>> create(@Valid @RequestBody CreateTopicRequest request) {
+    public CompletableFuture<ResponseEntity<IdResponse>> create(
+            @Valid @RequestBody CreateTopicRequest request) {
         return topicAuthoringService
                 .create(SecurityHelper.getUserId(), request)
                 .thenApply(topicId -> ResponseEntityBuilder.creation(ENDPOINT, topicId));
@@ -136,8 +152,7 @@ public class TopicController {
 
     @PutMapping("/{topicId}/name")
     public CompletableFuture<ResponseEntity<Void>> updateName(
-            @PathVariable String topicId,
-            @Valid @RequestBody UpdateTopicNameRequest request) {
+            @PathVariable String topicId, @Valid @RequestBody UpdateTopicNameRequest request) {
         return topicAuthoringService
                 .updateName(topicId, SecurityHelper.getUserId(), request)
                 .thenApply(_ -> ResponseEntity.noContent().build());
@@ -154,8 +169,7 @@ public class TopicController {
 
     @PutMapping("/{topicId}/category")
     public CompletableFuture<ResponseEntity<Void>> updateCategory(
-            @PathVariable String topicId,
-            @Valid @RequestBody UpdateTopicCategoryRequest request) {
+            @PathVariable String topicId, @Valid @RequestBody UpdateTopicCategoryRequest request) {
         return topicAuthoringService
                 .updateCategory(topicId, SecurityHelper.getUserId(), request)
                 .thenApply(_ -> ResponseEntity.noContent().build());
@@ -163,8 +177,7 @@ public class TopicController {
 
     @PutMapping("/{topicId}/emoji")
     public CompletableFuture<ResponseEntity<Void>> updateEmoji(
-            @PathVariable String topicId,
-            @Valid @RequestBody UpdateTopicEmojiRequest request) {
+            @PathVariable String topicId, @Valid @RequestBody UpdateTopicEmojiRequest request) {
         return topicAuthoringService
                 .updateEmoji(topicId, SecurityHelper.getUserId(), request)
                 .thenApply(_ -> ResponseEntity.noContent().build());
@@ -172,8 +185,7 @@ public class TopicController {
 
     @PutMapping("/{topicId}/color")
     public CompletableFuture<ResponseEntity<Void>> updateColor(
-            @PathVariable String topicId,
-            @Valid @RequestBody UpdateTopicColorRequest request) {
+            @PathVariable String topicId, @Valid @RequestBody UpdateTopicColorRequest request) {
         return topicAuthoringService
                 .updateColor(topicId, SecurityHelper.getUserId(), request)
                 .thenApply(_ -> ResponseEntity.noContent().build());
@@ -181,8 +193,7 @@ public class TopicController {
 
     @PutMapping("/{topicId}/image-url")
     public CompletableFuture<ResponseEntity<Void>> updateImageUrl(
-            @PathVariable String topicId,
-            @Valid @RequestBody UpdateTopicImageUrlRequest request) {
+            @PathVariable String topicId, @Valid @RequestBody UpdateTopicImageUrlRequest request) {
         return topicAuthoringService
                 .updateImageUrl(topicId, SecurityHelper.getUserId(), request)
                 .thenApply(_ -> ResponseEntity.noContent().build());
@@ -190,8 +201,7 @@ public class TopicController {
 
     @PutMapping("/{topicId}/banner-url")
     public CompletableFuture<ResponseEntity<Void>> updateBannerUrl(
-            @PathVariable String topicId,
-            @Valid @RequestBody UpdateTopicBannerUrlRequest request) {
+            @PathVariable String topicId, @Valid @RequestBody UpdateTopicBannerUrlRequest request) {
         return topicAuthoringService
                 .updateBannerUrl(topicId, SecurityHelper.getUserId(), request)
                 .thenApply(_ -> ResponseEntity.noContent().build());
@@ -217,11 +227,19 @@ public class TopicController {
 
     @PostMapping("/{topicId}/questions")
     public CompletableFuture<ResponseEntity<IdResponse>> createQuestion(
-            @PathVariable String topicId,
-            @Valid @RequestBody CreateQuestionRequest request) {
+            @PathVariable String topicId, @Valid @RequestBody CreateQuestionRequest request) {
         return topicAuthoringService
                 .createQuestion(topicId, SecurityHelper.getUserId(), request)
-                .thenApply(questionId -> ResponseEntityBuilder.creation(
-                        ENDPOINT + "/" + topicId + "/questions", questionId));
+                .thenApply(
+                        questionId ->
+                                ResponseEntityBuilder.creation(
+                                        ENDPOINT + "/" + topicId + "/questions", questionId));
+    }
+
+    @PostMapping("/{topicId}/draft")
+    public CompletableFuture<ResponseEntity<Void>> draft(@PathVariable String topicId) {
+        return topicAuthoringService
+                .draft(topicId, SecurityHelper.getUserId())
+                .thenApply(_ -> ResponseEntity.noContent().build());
     }
 }

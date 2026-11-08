@@ -171,10 +171,10 @@ l'ancienne surface et sont migrés lot par lot.
 
 ### Auteur (sujets + questions)
 
-Surface d'écriture **propriétaire uniquement** : le créateur du sujet gère son brouillon, ses
-questions et la publication. Les commandes du sujet portent la vérification dans
-`TopicAggregate` (`requestedBy == creatorId`) ; les questions sont vérifiées côté BFF (l'agrégat
-question ne connaît pas le créateur du sujet) et répondent `403` `PERMISSION` sinon.
+Surface d'écriture **collaborative** : créateur et administrateurs Premium gèrent le sujet et
+la modération ; les rédacteurs interviennent sur leurs propres propositions en attente ou rejetées.
+`TopicAccessService` prépare les permissions effectives ; `TopicAggregate` protège aussi le créateur
+et les rôles enregistrés. Les questions et signalements sont gardés côté BFF (`403` sinon).
 
 | Endpoint | Réponse | Notes |
 |---|---|---|
@@ -515,3 +515,22 @@ l'`EventEnvelope` du SDK (payload typé via `eventType`, sans annotation), mapp�
   selon la sécurité du projet Expo. Aucun contrat métier ajouté au SDK.
 - Guide d'activation et limites :
   [`../../mobile-applications/joutio-mobile-expo/docs/push-notifications.md`](../../mobile-applications/joutio-mobile-expo/docs/push-notifications.md).
+
+### Atelier collaboratif des sujets — 2026-11-08
+
+- `GET /api/topics/contributed?page=&size=` : sujets créés ou rejoints, tous statuts, pagination serveur.
+  `mine=true` garde son contrat de liste des sujets créés.
+- `GET /api/topics/{id}/workshop` : `TopicWorkshopView(topic,permissions)`. Les mêmes permissions
+  enrichissent `TopicOverviewView`, dont `canManage` reste réservé aux gestionnaires effectifs.
+- `GET /api/topics/{id}/team` : membres et rôles ; `PUT .../team/{userId}` `{role}` retourne le membre
+  préparé côté serveur (`200`) ; `DELETE .../team/{userId}` retourne `204`. Ajout immédiat, créateur protégé.
+- `POST /api/topics/{id}/draft`, `DELETE /api/questions/{id}`, `POST .../{id}/archive|restore|resubmit`.
+  La suppression admin utilise aussi `DELETE /api/admin/questions/{id}` ; archive et restore restent distincts.
+- `GET /api/question-reports/{reportId}` : détail réservé aux gestionnaires effectifs du sujet,
+  sans identité du signaleur ; `topicId`, `questionId` et vue propriétaire du signalement.
+- `TopicAccessService` centralise l'accès de l'atelier, des questions et des signalements.
+  Les administrateurs de sujet doivent chacun être Premium ; leurs droits sont relus dans identity.
+  Le créateur gratuit conserve son contenu mais ne peut pas ajouter de collaborateurs.
+- Seules les questions `APPROVED` sont jouables ; suspension et archivage sont des statuts.
+  Les champs JSON historiques restent dérivés. Les brouillons sont refusés aux points de départ
+  et d'entrée des salons ; la salle contrôle encore le sujet avant la création de partie.

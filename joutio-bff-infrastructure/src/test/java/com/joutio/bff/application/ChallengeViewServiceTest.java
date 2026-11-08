@@ -1,11 +1,20 @@
 package com.joutio.bff.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.bff.infrastructure.in.api.request.CreateChallengeRequest;
 import com.joutio.game.domain.model.Game;
 import com.joutio.game.domain.model.GamePlayerType;
 import com.joutio.game.domain.query.GameQuery;
 import com.joutio.matchmaking.domain.command.ChallengeCommand;
+
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.responsetypes.ResponseType;
 import org.axonframework.queryhandling.QueryGateway;
@@ -15,14 +24,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 
 import java.util.concurrent.CompletableFuture;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * Validation du défi de revanche : {@code gameId} référence la partie terminée d'origine —
@@ -39,15 +40,19 @@ class ChallengeViewServiceTest {
     private final IdentityLookup identityLookup = mock(IdentityLookup.class);
     private final DuelCreationGuard duelCreationGuard = mock(DuelCreationGuard.class);
     private final ChallengeViewService service =
-            new ChallengeViewService(queryGateway, commandGateway, profileLookup, identityLookup,
-                    duelCreationGuard);
+            new ChallengeViewService(
+                    queryGateway, commandGateway, profileLookup, identityLookup, duelCreationGuard);
 
     @BeforeEach
     void setUp() {
         when(profileLookup.get(any())).thenReturn(CompletableFuture.completedFuture(null));
-        when(identityLookup.status(any())).thenReturn(CompletableFuture.completedFuture(
-                new com.joutio.identity.domain.model.UserAccountStatus(
-                        OPPONENT, com.joutio.identity.domain.model.AccountStatus.ACTIVE, null)));
+        when(identityLookup.status(any()))
+                .thenReturn(
+                        CompletableFuture.completedFuture(
+                                new com.joutio.identity.domain.model.UserAccountStatus(
+                                        OPPONENT,
+                                        com.joutio.identity.domain.model.AccountStatus.ACTIVE,
+                                        null)));
         when(duelCreationGuard.ensureChallengeAllowed(any(), any(), any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
         when(commandGateway.send(any())).thenReturn(CompletableFuture.completedFuture(null));
@@ -59,17 +64,21 @@ class ChallengeViewServiceTest {
 
         ChallengeCommand.CreateChallengeCommand command = capturedCommand();
         assertThat(command.gameId()).isNull();
-        verify(queryGateway, never()).query(
-                any(GameQuery.GetGameByIdQuery.class), ArgumentMatchers.<ResponseType<Game>>any());
+        verify(queryGateway, never())
+                .query(
+                        any(GameQuery.GetGameByIdQuery.class),
+                        ArgumentMatchers.<ResponseType<Game>>any());
     }
 
     @Test
     void create_refusedWhenOpponentDeleted() {
-        when(identityLookup.status(OPPONENT)).thenReturn(CompletableFuture.completedFuture(
-                new com.joutio.identity.domain.model.UserAccountStatus(
-                        OPPONENT,
-                        com.joutio.identity.domain.model.AccountStatus.DELETED,
-                        null)));
+        when(identityLookup.status(OPPONENT))
+                .thenReturn(
+                        CompletableFuture.completedFuture(
+                                new com.joutio.identity.domain.model.UserAccountStatus(
+                                        OPPONENT,
+                                        com.joutio.identity.domain.model.AccountStatus.DELETED,
+                                        null)));
 
         assertThatThrownBy(() -> service.create(CHALLENGER, request(OPPONENT, "game-1")).join())
                 .hasCauseInstanceOf(BffProblems.ChallengeOpponentDeletedProblem.class);
@@ -88,8 +97,10 @@ class ChallengeViewServiceTest {
     @Test
     void create_refusedBeforeCommandWhenDuelGuardRejects() {
         when(duelCreationGuard.ensureChallengeAllowed(CHALLENGER, OPPONENT, "topic-1"))
-                .thenReturn(CompletableFuture.failedFuture(
-                        new BffProblems.ChallengeAlreadyPendingProblem("topic-1", OPPONENT)));
+                .thenReturn(
+                        CompletableFuture.failedFuture(
+                                new BffProblems.ChallengeAlreadyPendingProblem(
+                                        "topic-1", OPPONENT)));
 
         assertThatThrownBy(() -> service.create(CHALLENGER, request(OPPONENT, null)).join())
                 .hasCauseInstanceOf(BffProblems.ChallengeAlreadyPendingProblem.class);
@@ -122,8 +133,8 @@ class ChallengeViewServiceTest {
 
     private void stubGame(Game game) {
         when(queryGateway.query(
-                any(GameQuery.GetGameByIdQuery.class),
-                ArgumentMatchers.<ResponseType<Game>>any()))
+                        any(GameQuery.GetGameByIdQuery.class),
+                        ArgumentMatchers.<ResponseType<Game>>any()))
                 .thenReturn(CompletableFuture.completedFuture(game));
     }
 
@@ -148,5 +159,24 @@ class ChallengeViewServiceTest {
                 .player2Name("P2")
                 .opponent(opponent)
                 .build();
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void publishedTopic() {
+        org.mockito.Mockito.lenient()
+                .when(
+                        queryGateway.query(
+                                org.mockito.ArgumentMatchers.any(
+                                        com.joutio.theme.domain.query.TopicQuery.GetTopicByIdQuery
+                                                .class),
+                                org.mockito.ArgumentMatchers.any(
+                                        org.axonframework.messaging.responsetypes.ResponseType
+                                                .class)))
+                .thenReturn(
+                        java.util.concurrent.CompletableFuture.completedFuture(
+                                com.joutio.theme.domain.model.Topic.builder()
+                                        .topicId("topic-1")
+                                        .status(com.joutio.theme.domain.model.TopicStatus.PUBLISHED)
+                                        .build()));
     }
 }

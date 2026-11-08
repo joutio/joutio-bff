@@ -33,19 +33,11 @@ public record QuestionEditorView(
         int totalReportCount,
         Instant lastReportedAt,
         Instant createdAt,
-        Instant updatedAt
-) {
+        Instant updatedAt,
+        String creatorId,
+        String rejectionReason) {
 
-    public record ContentView(
-            Language language,
-            String text,
-            List<AnswerView> answers
-    ) {
-    }
+    public record ContentView(Language language, String text, List<AnswerView> answers) {}
 
-    public record AnswerView(
-            QuestionChoice choice,
-            String text
-    ) {
-    }
+    public record AnswerView(QuestionChoice choice, String text) {}
 }

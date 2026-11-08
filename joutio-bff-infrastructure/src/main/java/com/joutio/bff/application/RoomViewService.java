@@ -6,11 +6,11 @@ import com.joutio.bff.infrastructure.in.api.response.RoomOpponentView;
 import com.joutio.bff.infrastructure.in.api.response.RoomView;
 import com.joutio.bff.infrastructure.in.api.response.TopicRefView;
 import com.joutio.game.domain.model.BotDifficulty;
+import com.joutio.identity.domain.model.UserAccountStatus;
 import com.joutio.matchmaking.domain.command.RoomCommand;
 import com.joutio.matchmaking.domain.model.Room;
 import com.joutio.matchmaking.domain.model.RoomPlayer;
 import com.joutio.matchmaking.domain.query.RoomQuery;
-import com.joutio.identity.domain.model.UserAccountStatus;
 import com.joutio.microservice.core.domain.constant.JoutioConstants;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.profile.domain.model.PlayerProgress;
@@ -19,6 +19,7 @@ import com.joutio.profile.domain.model.TopicProgress;
 import com.joutio.profile.domain.query.ProgressionQuery;
 import com.joutio.theme.domain.model.Topic;
 import com.joutio.theme.domain.query.TopicQuery;
+
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.queryhandling.QueryGateway;
 import org.springframework.stereotype.Service;
@@ -46,12 +47,13 @@ public class RoomViewService {
     private final IdentityLookup identityLookup;
     private final DuelCreationGuard duelCreationGuard;
 
-    public RoomViewService(QueryGateway queryGateway,
-                           CommandGateway commandGateway,
-                           ProfileLookup profileLookup,
-                           ProgressionLookup progressionLookup,
-                           IdentityLookup identityLookup,
-                           DuelCreationGuard duelCreationGuard) {
+    public RoomViewService(
+            QueryGateway queryGateway,
+            CommandGateway commandGateway,
+            ProfileLookup profileLookup,
+            ProgressionLookup progressionLookup,
+            IdentityLookup identityLookup,
+            DuelCreationGuard duelCreationGuard) {
         this.queryGateway = queryGateway;
         this.commandGateway = commandGateway;
         this.profileLookup = profileLookup;
@@ -66,10 +68,18 @@ public class RoomViewService {
      */
     public CompletableFuture<String> create(String playerId, CreateRoomRequest request) {
         String roomId = UUID.randomUUID().toString();
-        return duelCreationGuard.ensureRoomAllowed(playerId, request.topicId())
-                .thenCompose(_ -> commandGateway
-                        .send(new RoomCommand.CreateRoomCommand(
-                                roomId, request.topicId(), playerId, null, false, null)))
+        return TopicAccessService.requirePlayable(queryGateway, request.topicId())
+                .thenCompose(_ -> duelCreationGuard.ensureRoomAllowed(playerId, request.topicId()))
+                .thenCompose(
+                        _ ->
+                                commandGateway.send(
+                                        new RoomCommand.CreateRoomCommand(
+                                                roomId,
+                                                request.topicId(),
+                                                playerId,
+                                                null,
+                                                false,
+                                                null)))
                 .thenApply(_ -> roomId);
     }
 
@@ -81,23 +91,34 @@ public class RoomViewService {
     public CompletableFuture<String> createBot(String playerId, CreateBotRoomRequest request) {
         String roomId = UUID.randomUUID().toString();
         BotDifficulty difficulty = BotDifficulty.fromOrDefault(request.difficulty());
-        return duelCreationGuard.ensureBotRoomAllowed(playerId)
-                .thenCompose(_ -> commandGateway
-                        .send(new RoomCommand.CreateRoomCommand(
-                                roomId, request.topicId(), playerId, JoutioConstants.SYSTEM_USER_ID,
-                                true, difficulty.name())))
+        return TopicAccessService.requirePlayable(queryGateway, request.topicId())
+                .thenCompose(_ -> duelCreationGuard.ensureBotRoomAllowed(playerId))
+                .thenCompose(
+                        _ ->
+                                commandGateway.send(
+                                        new RoomCommand.CreateRoomCommand(
+                                                roomId,
+                                                request.topicId(),
+                                                playerId,
+                                                JoutioConstants.SYSTEM_USER_ID,
+                                                true,
+                                                difficulty.name())))
                 .thenApply(_ -> roomId);
     }
 
     public CompletableFuture<RoomView> get(String roomId, String viewerId) {
         return queryGateway
                 .query(new RoomQuery.GetRoomById(roomId), QueryResponseTypes.instanceOf(Room.class))
-                .thenCompose(room -> enrich(List.of(room), viewerId).thenApply(views -> views.getFirst()));
+                .thenCompose(
+                        room ->
+                                enrich(List.of(room), viewerId)
+                                        .thenApply(views -> views.getFirst()));
     }
 
     public CompletableFuture<List<RoomView>> mine(String playerId) {
         return queryGateway
-                .query(new RoomQuery.GetMyOpenRooms(playerId),
+                .query(
+                        new RoomQuery.GetMyOpenRooms(playerId),
                         QueryResponseTypes.multipleInstancesOf(Room.class))
                 .thenCompose(rooms -> enrich(rooms, playerId));
     }
@@ -106,19 +127,28 @@ public class RoomViewService {
      * Le joueur <b>apparaît</b> dans la salle : présence temps réel et, pour le second humain,
      * enregistrement comme participant. C'est la seule action d'entrée, émise par le client quand
      * l'utilisateur est réellement dans la salle.
-     * <p>
-     * Le snapshot de profil ({@code RoomPlayer}) est <b>préparé ici</b> (profils + progression,
+     *
+     * <p>Le snapshot de profil ({@code RoomPlayer}) est <b>préparé ici</b> (profils + progression,
      * caches Caffeine) et porté par la commande : la salle ne fait aucune I/O pour résoudre les
      * joueurs (voir {@code best-practices/.backend/command-preparation.md}).
      */
     public CompletableFuture<Void> join(String roomId, String playerId) {
         return queryGateway
                 .query(new RoomQuery.GetRoomById(roomId), QueryResponseTypes.instanceOf(Room.class))
-                .thenCompose(room -> roomPlayer(playerId, room.topicId()))
-                .thenCompose(player -> commandGateway
-                        .send(new RoomCommand.JoinRoomCommand(roomId, playerId, player))
-                        .thenAccept(_ -> {
-                        }));
+                .thenCompose(
+                        room ->
+                                (room.gameId() == null
+                                                ? TopicAccessService.requirePlayable(
+                                                        queryGateway, room.topicId())
+                                                : CompletableFuture.<Void>completedFuture(null))
+                                        .thenCompose(_ -> roomPlayer(playerId, room.topicId())))
+                .thenCompose(
+                        player ->
+                                commandGateway
+                                        .send(
+                                                new RoomCommand.JoinRoomCommand(
+                                                        roomId, playerId, player))
+                                        .thenAccept(_ -> {}));
     }
 
     /**
@@ -127,38 +157,45 @@ public class RoomViewService {
      */
     private CompletableFuture<RoomPlayer> roomPlayer(String playerId, String topicId) {
         CompletableFuture<Profile> profileFuture = profileLookup.get(playerId);
-        CompletableFuture<PlayerProgress> progressFuture = progressionLookup.get(playerId)
-                .exceptionally(_ -> null);
-        CompletableFuture<TopicProgress> topicProgressFuture = progressionLookup
-                .getTopic(playerId, topicId)
-                .exceptionally(_ -> null);
+        CompletableFuture<PlayerProgress> progressFuture =
+                progressionLookup.get(playerId).exceptionally(_ -> null);
+        CompletableFuture<TopicProgress> topicProgressFuture =
+                progressionLookup.getTopic(playerId, topicId).exceptionally(_ -> null);
         return profileFuture
-                .thenCombine(progressFuture, (profile, progress) -> new PlayerWithProgress(profile, progress))
-                .thenCombine(topicProgressFuture, (player, topicProgress) -> new RoomPlayer(
-                        player.profile().userId(),
-                        player.profile().pseudonym(),
-                        player.profile().language(),
-                        topicProgress == null ? 0 : Math.max(0, topicProgress.xp()),
-                        player.progress() == null ? null : player.progress().rating()));
+                .thenCombine(
+                        progressFuture,
+                        (profile, progress) -> new PlayerWithProgress(profile, progress))
+                .thenCombine(
+                        topicProgressFuture,
+                        (player, topicProgress) ->
+                                new RoomPlayer(
+                                        player.profile().userId(),
+                                        player.profile().pseudonym(),
+                                        player.profile().language(),
+                                        topicProgress == null ? 0 : Math.max(0, topicProgress.xp()),
+                                        player.progress() == null
+                                                ? null
+                                                : player.progress().rating()));
     }
 
-    private record PlayerWithProgress(Profile profile, PlayerProgress progress) {
-    }
+    private record PlayerWithProgress(Profile profile, PlayerProgress progress) {}
 
     public CompletableFuture<Void> leave(String roomId, String playerId) {
         return requireRoom(roomId)
-                .thenCompose(_ -> commandGateway
-                        .send(new RoomCommand.LeaveRoomCommand(roomId, playerId))
-                        .thenAccept(_ -> {
-                        }));
+                .thenCompose(
+                        _ ->
+                                commandGateway
+                                        .send(new RoomCommand.LeaveRoomCommand(roomId, playerId))
+                                        .thenAccept(_ -> {}));
     }
 
     public CompletableFuture<Void> cancel(String roomId, String playerId) {
         return requireRoom(roomId)
-                .thenCompose(_ -> commandGateway
-                        .send(new RoomCommand.CancelRoomCommand(roomId, playerId))
-                        .thenAccept(_ -> {
-                        }));
+                .thenCompose(
+                        _ ->
+                                commandGateway
+                                        .send(new RoomCommand.CancelRoomCommand(roomId, playerId))
+                                        .thenAccept(_ -> {}));
     }
 
     /**
@@ -168,67 +205,107 @@ public class RoomViewService {
      */
     public CompletableFuture<Void> wizz(String roomId, String playerId) {
         return requireRoom(roomId)
-                .thenCompose(_ -> commandGateway
-                        .send(new RoomCommand.WizzRoomCommand(roomId, playerId))
-                        .thenAccept(_ -> {
-                        }));
+                .thenCompose(
+                        _ ->
+                                commandGateway
+                                        .send(new RoomCommand.WizzRoomCommand(roomId, playerId))
+                                        .thenAccept(_ -> {}));
     }
 
     /**
-     * Pré-vérification : une salle purgée (état terminal + rétention) doit répondre 404,
-     * pas une {@code AggregateDeletedException} non mappée par le SDK.
+     * Pré-vérification : une salle purgée (état terminal + rétention) doit répondre 404, pas une
+     * {@code AggregateDeletedException} non mappée par le SDK.
      */
     private CompletableFuture<Void> requireRoom(String roomId) {
         return queryGateway
                 .query(new RoomQuery.GetRoomById(roomId), QueryResponseTypes.instanceOf(Room.class))
-                .thenAccept(_ -> {
-                });
+                .thenAccept(_ -> {});
     }
 
     private CompletableFuture<List<RoomView>> enrich(List<Room> rooms, String viewerId) {
         List<String> topicIds = rooms.stream().map(Room::topicId).distinct().toList();
-        List<String> opponentIds = rooms.stream()
-                .map(room -> opponentIdOf(viewerId, room))
-                .filter(id -> id != null && !JoutioConstants.SYSTEM_USER_ID.equals(id))
-                .distinct()
-                .toList();
+        List<String> opponentIds =
+                rooms.stream()
+                        .map(room -> opponentIdOf(viewerId, room))
+                        .filter(id -> id != null && !JoutioConstants.SYSTEM_USER_ID.equals(id))
+                        .distinct()
+                        .toList();
 
-        CompletableFuture<List<Topic>> topicsFuture = topicIds.isEmpty()
-                ? CompletableFuture.completedFuture(List.of())
-                : queryGateway.query(new TopicQuery.GetTopicsByIdsQuery(topicIds),
-                        QueryResponseTypes.multipleInstancesOf(Topic.class));
-        CompletableFuture<List<Profile>> profilesFuture = opponentIds.isEmpty()
-                ? CompletableFuture.completedFuture(List.of())
-                : profileLookup.getAll(opponentIds);
-        CompletableFuture<Map<String, UserAccountStatus>> statusesFuture = identityLookup.statuses(opponentIds)
-                .exceptionally(_ -> Map.<String, UserAccountStatus>of());
-        CompletableFuture<List<PlayerProgress>> progressionsFuture = opponentIds.isEmpty()
-                ? CompletableFuture.completedFuture(List.of())
-                : queryGateway.query(new ProgressionQuery.GetProgressionsByIdsQuery(opponentIds),
-                        QueryResponseTypes.multipleInstancesOf(PlayerProgress.class))
-                .exceptionally(_ -> List.of());
+        CompletableFuture<List<Topic>> topicsFuture =
+                topicIds.isEmpty()
+                        ? CompletableFuture.completedFuture(List.of())
+                        : queryGateway.query(
+                                new TopicQuery.GetTopicsByIdsQuery(topicIds),
+                                QueryResponseTypes.multipleInstancesOf(Topic.class));
+        CompletableFuture<List<Profile>> profilesFuture =
+                opponentIds.isEmpty()
+                        ? CompletableFuture.completedFuture(List.of())
+                        : profileLookup.getAll(opponentIds);
+        CompletableFuture<Map<String, UserAccountStatus>> statusesFuture =
+                identityLookup
+                        .statuses(opponentIds)
+                        .exceptionally(_ -> Map.<String, UserAccountStatus>of());
+        CompletableFuture<List<PlayerProgress>> progressionsFuture =
+                opponentIds.isEmpty()
+                        ? CompletableFuture.completedFuture(List.of())
+                        : queryGateway
+                                .query(
+                                        new ProgressionQuery.GetProgressionsByIdsQuery(opponentIds),
+                                        QueryResponseTypes.multipleInstancesOf(
+                                                PlayerProgress.class))
+                                .exceptionally(_ -> List.of());
 
-        return CompletableFuture.allOf(topicsFuture, profilesFuture, statusesFuture, progressionsFuture).thenApply(_ -> {
-            Map<String, Topic> topicById = topicsFuture.join().stream()
-                    .collect(Collectors.toMap(Topic::topicId, Function.identity(), (first, _) -> first, LinkedHashMap::new));
-            Map<String, Profile> profileById = profilesFuture.join().stream()
-                    .collect(Collectors.toMap(Profile::userId, Function.identity(), (first, _) -> first, LinkedHashMap::new));
-            Map<String, UserAccountStatus> statusById = statusesFuture.join();
-            Map<String, PlayerProgress> progressById = progressionsFuture.join().stream()
-                    .collect(Collectors.toMap(PlayerProgress::userId, Function.identity(), (first, _) -> first, LinkedHashMap::new));
+        return CompletableFuture.allOf(
+                        topicsFuture, profilesFuture, statusesFuture, progressionsFuture)
+                .thenApply(
+                        _ -> {
+                            Map<String, Topic> topicById =
+                                    topicsFuture.join().stream()
+                                            .collect(
+                                                    Collectors.toMap(
+                                                            Topic::topicId,
+                                                            Function.identity(),
+                                                            (first, _) -> first,
+                                                            LinkedHashMap::new));
+                            Map<String, Profile> profileById =
+                                    profilesFuture.join().stream()
+                                            .collect(
+                                                    Collectors.toMap(
+                                                            Profile::userId,
+                                                            Function.identity(),
+                                                            (first, _) -> first,
+                                                            LinkedHashMap::new));
+                            Map<String, UserAccountStatus> statusById = statusesFuture.join();
+                            Map<String, PlayerProgress> progressById =
+                                    progressionsFuture.join().stream()
+                                            .collect(
+                                                    Collectors.toMap(
+                                                            PlayerProgress::userId,
+                                                            Function.identity(),
+                                                            (first, _) -> first,
+                                                            LinkedHashMap::new));
 
-            return rooms.stream()
-                    .map(room -> toView(room, viewerId, topicById, profileById, statusById, progressById))
-                    .toList();
-        });
+                            return rooms.stream()
+                                    .map(
+                                            room ->
+                                                    toView(
+                                                            room,
+                                                            viewerId,
+                                                            topicById,
+                                                            profileById,
+                                                            statusById,
+                                                            progressById))
+                                    .toList();
+                        });
     }
 
-    private static RoomView toView(Room room,
-                                   String viewerId,
-                                   Map<String, Topic> topicById,
-                                   Map<String, Profile> profileById,
-                                   Map<String, UserAccountStatus> statusById,
-                                   Map<String, PlayerProgress> progressById) {
+    private static RoomView toView(
+            Room room,
+            String viewerId,
+            Map<String, Topic> topicById,
+            Map<String, Profile> profileById,
+            Map<String, UserAccountStatus> statusById,
+            Map<String, PlayerProgress> progressById) {
         String opponentId = opponentIdOf(viewerId, room);
         Profile opponent = opponentId == null ? null : profileById.get(opponentId);
         UserAccountStatus status = opponentId == null ? null : statusById.get(opponentId);
@@ -251,10 +328,11 @@ public class RoomViewService {
     }
 
     /** Le bot n'a pas de profil : référence synthétique stable (nom système, sans avatar). */
-    private static RoomOpponentView opponentRef(String opponentId,
-                                                Profile opponent,
-                                                UserAccountStatus status,
-                                                PlayerProgress progress) {
+    private static RoomOpponentView opponentRef(
+            String opponentId,
+            Profile opponent,
+            UserAccountStatus status,
+            PlayerProgress progress) {
         if (opponent != null) {
             return new RoomOpponentView(
                     opponent.userId(),
@@ -266,7 +344,8 @@ public class RoomViewService {
                     opponent.country());
         }
         if (JoutioConstants.SYSTEM_USER_ID.equals(opponentId)) {
-            return new RoomOpponentView(JoutioConstants.SYSTEM_USER_ID, JoutioConstants.SYSTEM_USER_NAME, null, false);
+            return new RoomOpponentView(
+                    JoutioConstants.SYSTEM_USER_ID, JoutioConstants.SYSTEM_USER_NAME, null, false);
         }
         return null;
     }

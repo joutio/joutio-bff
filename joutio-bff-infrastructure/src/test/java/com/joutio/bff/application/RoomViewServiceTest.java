@@ -1,5 +1,13 @@
 package com.joutio.bff.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.bff.infrastructure.in.api.request.CreateBotRoomRequest;
 import com.joutio.bff.infrastructure.in.api.request.CreateRoomRequest;
@@ -14,6 +22,7 @@ import com.joutio.profile.domain.model.Profile;
 import com.joutio.profile.domain.model.TopicProgress;
 import com.joutio.profile.domain.query.ProgressionQuery;
 import com.joutio.theme.domain.query.TopicQuery;
+
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.responsetypes.ResponseType;
 import org.axonframework.queryhandling.QueryGateway;
@@ -26,17 +35,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 /**
- * Vérifie que la façade prépare le snapshot de profil dans la commande d'apparition (aucune I/O
- * de résolution des joueurs côté saga salle).
+ * Vérifie que la façade prépare le snapshot de profil dans la commande d'apparition (aucune I/O de
+ * résolution des joueurs côté saga salle).
  */
 class RoomViewServiceTest {
 
@@ -48,17 +49,23 @@ class RoomViewServiceTest {
     private final DuelCreationGuard duelCreationGuard = mock(DuelCreationGuard.class);
 
     private final RoomViewService service =
-            new RoomViewService(queryGateway, commandGateway, profileLookup, progressionLookup,
-                    identityLookup, duelCreationGuard);
+            new RoomViewService(
+                    queryGateway,
+                    commandGateway,
+                    profileLookup,
+                    progressionLookup,
+                    identityLookup,
+                    duelCreationGuard);
 
     @Test
     void create_refusedBeforeCommandWhenDuelGuardRejects() {
         when(duelCreationGuard.ensureRoomAllowed("user-1", "topic-1"))
-                .thenReturn(CompletableFuture.failedFuture(
-                        new BffProblems.RoomAlreadyOpenOnTopicProblem("topic-1", "room-1")));
+                .thenReturn(
+                        CompletableFuture.failedFuture(
+                                new BffProblems.RoomAlreadyOpenOnTopicProblem(
+                                        "topic-1", "room-1")));
 
-        assertThatThrownBy(() ->
-                service.create("user-1", new CreateRoomRequest("topic-1")).join())
+        assertThatThrownBy(() -> service.create("user-1", new CreateRoomRequest("topic-1")).join())
                 .hasCauseInstanceOf(BffProblems.RoomAlreadyOpenOnTopicProblem.class);
         verify(commandGateway, never()).send(any());
     }
@@ -81,9 +88,11 @@ class RoomViewServiceTest {
     void join_preparesPlayerSnapshotInCommand() {
         stubRoom();
         when(profileLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(profile()));
-        when(progressionLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(progress()));
+        when(progressionLookup.get("user-1"))
+                .thenReturn(CompletableFuture.completedFuture(progress()));
         when(progressionLookup.getTopic("user-1", "topic-1"))
-                .thenReturn(CompletableFuture.completedFuture(TopicProgress.of("topic-1", 1_200, 5)));
+                .thenReturn(
+                        CompletableFuture.completedFuture(TopicProgress.of("topic-1", 1_200, 5)));
         when(commandGateway.send(any(RoomCommand.JoinRoomCommand.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
@@ -106,9 +115,13 @@ class RoomViewServiceTest {
         stubRoom();
         when(profileLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(profile()));
         when(progressionLookup.get("user-1"))
-                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("no progression")));
+                .thenReturn(
+                        CompletableFuture.failedFuture(
+                                new IllegalStateException("no progression")));
         when(progressionLookup.getTopic("user-1", "topic-1"))
-                .thenReturn(CompletableFuture.failedFuture(new IllegalStateException("no topic progression")));
+                .thenReturn(
+                        CompletableFuture.failedFuture(
+                                new IllegalStateException("no topic progression")));
         when(commandGateway.send(any(RoomCommand.JoinRoomCommand.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
@@ -139,22 +152,28 @@ class RoomViewServiceTest {
     @Test
     void get_enrichesOpponentWithEloAndCountry() {
         when(queryGateway.query(any(RoomQuery.GetRoomById.class), any(ResponseType.class)))
-                .thenReturn(CompletableFuture.completedFuture(Room.builder()
-                        .roomId("room-1")
-                        .topicId("topic-1")
-                        .initiatorId("user-1")
-                        .participantId("user-2")
-                        .status(RoomStatus.WAITING_PLAYERS)
-                        .createdAt(Instant.now())
-                        .expiresAt(Instant.now().plusSeconds(3600))
-                        .updatedAt(Instant.now())
-                        .build()));
+                .thenReturn(
+                        CompletableFuture.completedFuture(
+                                Room.builder()
+                                        .roomId("room-1")
+                                        .topicId("topic-1")
+                                        .initiatorId("user-1")
+                                        .participantId("user-2")
+                                        .status(RoomStatus.WAITING_PLAYERS)
+                                        .createdAt(Instant.now())
+                                        .expiresAt(Instant.now().plusSeconds(3600))
+                                        .updatedAt(Instant.now())
+                                        .build()));
         when(queryGateway.query(any(TopicQuery.GetTopicsByIdsQuery.class), any(ResponseType.class)))
                 .thenReturn(CompletableFuture.completedFuture(List.of()));
-        when(queryGateway.query(any(ProgressionQuery.GetProgressionsByIdsQuery.class), any(ResponseType.class)))
-                .thenReturn(CompletableFuture.completedFuture(List.of(progress("user-2", 900, 10))));
+        when(queryGateway.query(
+                        any(ProgressionQuery.GetProgressionsByIdsQuery.class),
+                        any(ResponseType.class)))
+                .thenReturn(
+                        CompletableFuture.completedFuture(List.of(progress("user-2", 900, 10))));
         when(profileLookup.getAll(List.of("user-2")))
-                .thenReturn(CompletableFuture.completedFuture(List.of(profile("user-2", "Bob", "FR"))));
+                .thenReturn(
+                        CompletableFuture.completedFuture(List.of(profile("user-2", "Bob", "FR"))));
         when(identityLookup.statuses(List.of("user-2")))
                 .thenReturn(CompletableFuture.completedFuture(Map.of()));
 
@@ -170,15 +189,17 @@ class RoomViewServiceTest {
 
     private void stubRoom() {
         when(queryGateway.query(any(RoomQuery.GetRoomById.class), any(ResponseType.class)))
-                .thenReturn(CompletableFuture.completedFuture(Room.builder()
-                        .roomId("room-1")
-                        .topicId("topic-1")
-                        .initiatorId("user-1")
-                        .status(RoomStatus.WAITING_PLAYERS)
-                        .createdAt(Instant.now())
-                        .expiresAt(Instant.now().plusSeconds(3600))
-                        .updatedAt(Instant.now())
-                        .build()));
+                .thenReturn(
+                        CompletableFuture.completedFuture(
+                                Room.builder()
+                                        .roomId("room-1")
+                                        .topicId("topic-1")
+                                        .initiatorId("user-1")
+                                        .status(RoomStatus.WAITING_PLAYERS)
+                                        .createdAt(Instant.now())
+                                        .expiresAt(Instant.now().plusSeconds(3600))
+                                        .updatedAt(Instant.now())
+                                        .build()));
     }
 
     private static Profile profile() {
@@ -220,5 +241,24 @@ class RoomViewServiceTest {
                 .bestWinStreak(4)
                 .updatedAt(Instant.now())
                 .build();
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void publishedTopic() {
+        org.mockito.Mockito.lenient()
+                .when(
+                        queryGateway.query(
+                                org.mockito.ArgumentMatchers.any(
+                                        com.joutio.theme.domain.query.TopicQuery.GetTopicByIdQuery
+                                                .class),
+                                org.mockito.ArgumentMatchers.any(
+                                        org.axonframework.messaging.responsetypes.ResponseType
+                                                .class)))
+                .thenReturn(
+                        java.util.concurrent.CompletableFuture.completedFuture(
+                                com.joutio.theme.domain.model.Topic.builder()
+                                        .topicId("topic-1")
+                                        .status(com.joutio.theme.domain.model.TopicStatus.PUBLISHED)
+                                        .build()));
     }
 }

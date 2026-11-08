@@ -30,7 +30,9 @@ import com.joutio.theme.domain.model.QuestionReportSort;
 import com.joutio.theme.domain.model.QuestionReportStatus;
 import com.joutio.theme.domain.model.QuestionReportSummaryFilter;
 import com.joutio.theme.domain.model.QuestionStatus;
+
 import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,8 +49,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * {@code /api/admin} — administration du catalogue de questions, de la file de signalements et
- * des actions de modération. Surface réservée à {@code ROLE_ADMIN}.
+ * {@code /api/admin} — administration du catalogue de questions, de la file de signalements et des
+ * actions de modération. Surface réservée à {@code ROLE_ADMIN}.
  */
 @RestController
 @RequestMapping("/api/admin")
@@ -58,8 +60,9 @@ public class QuestionAdminController {
     private final QuestionAdminService questionAdminService;
     private final QuestionReportService questionReportService;
 
-    public QuestionAdminController(QuestionAdminService questionAdminService,
-                                   QuestionReportService questionReportService) {
+    public QuestionAdminController(
+            QuestionAdminService questionAdminService,
+            QuestionReportService questionReportService) {
         this.questionAdminService = questionAdminService;
         this.questionReportService = questionReportService;
     }
@@ -75,9 +78,10 @@ public class QuestionAdminController {
             @RequestParam(defaultValue = "RECENT_UPDATED") QuestionAdminSort sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        QuestionAdminFilter filter = new QuestionAdminFilter(
-                q, topicId, status, difficulty, moderation, reportedOnly);
-        return questionAdminService.list(filter, sort, safePage(page), safeSize(size))
+        QuestionAdminFilter filter =
+                new QuestionAdminFilter(q, topicId, status, difficulty, moderation, reportedOnly);
+        return questionAdminService
+                .list(filter, sort, safePage(page), safeSize(size))
                 .thenApply(ResponseEntity::ok);
     }
 
@@ -100,8 +104,10 @@ public class QuestionAdminController {
             @RequestParam(defaultValue = "RECENT_REPORT") QuestionReportSort sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        QuestionReportSummaryFilter filter = new QuestionReportSummaryFilter(status, topicId, suspended);
-        return questionAdminService.queue(filter, sort, safePage(page), safeSize(size))
+        QuestionReportSummaryFilter filter =
+                new QuestionReportSummaryFilter(status, topicId, suspended);
+        return questionAdminService
+                .queue(filter, sort, safePage(page), safeSize(size))
                 .thenApply(ResponseEntity::ok);
     }
 
@@ -112,12 +118,14 @@ public class QuestionAdminController {
 
     @PostMapping("/topics/{topicId}/questions")
     public CompletableFuture<ResponseEntity<CreatedQuestionView>> createQuestion(
-            @PathVariable String topicId,
-            @Valid @RequestBody CreateQuestionRequest request) {
-        return questionAdminService.create(topicId, SecurityHelper.getUserId(), request)
-                .thenApply(questionId -> ResponseEntity
-                        .created(URI.create("/api/admin/questions/" + questionId))
-                        .body(new CreatedQuestionView(questionId)));
+            @PathVariable String topicId, @Valid @RequestBody CreateQuestionRequest request) {
+        return questionAdminService
+                .create(topicId, SecurityHelper.getUserId(), request)
+                .thenApply(
+                        questionId ->
+                                ResponseEntity.created(
+                                                URI.create("/api/admin/questions/" + questionId))
+                                        .body(new CreatedQuestionView(questionId)));
     }
 
     @PostMapping("/questions/{questionId}/translations")
@@ -175,7 +183,8 @@ public class QuestionAdminController {
     @PostMapping("/questions/{questionId}/reject")
     public CompletableFuture<ResponseEntity<Void>> reject(
             @PathVariable String questionId,
-            @Valid @RequestBody(required = false) com.joutio.bff.infrastructure.in.api.request.RejectQuestionRequest request) {
+            @Valid @RequestBody(required = false)
+                    com.joutio.bff.infrastructure.in.api.request.RejectQuestionRequest request) {
         String reason = request == null ? null : request.reason();
         return questionAdminService
                 .reject(questionId, SecurityHelper.getUserId(), reason)
@@ -242,5 +251,12 @@ public class QuestionAdminController {
 
     private static int safePage(int page) {
         return Math.max(page, 0);
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/questions/{questionId}")
+    public CompletableFuture<ResponseEntity<Void>> delete(@PathVariable String questionId) {
+        return questionAdminService
+                .delete(questionId, SecurityHelper.getUserId())
+                .thenApply(_ -> ResponseEntity.noContent().build());
     }
 }

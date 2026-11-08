@@ -8,7 +8,9 @@ import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionCorrectAnswerR
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionImageUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionTextRequest;
 import com.joutio.microservice.security.SecurityHelper;
+
 import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -93,5 +95,33 @@ public class QuestionController {
         return topicAuthoringService
                 .rejectQuestion(questionId, SecurityHelper.getUserId(), reason)
                 .thenApply(_ -> ResponseEntity.ok().build());
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{questionId}")
+    public CompletableFuture<ResponseEntity<Void>> delete(@PathVariable String questionId) {
+        return topicAuthoringService
+                .delete(questionId, SecurityHelper.getUserId())
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
+    @PostMapping("/{questionId}/resubmit")
+    public CompletableFuture<ResponseEntity<Void>> resubmit(@PathVariable String questionId) {
+        return topicAuthoringService
+                .resubmit(questionId, SecurityHelper.getUserId())
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
+    @PostMapping("/{questionId}/archive")
+    public CompletableFuture<ResponseEntity<Void>> archive(@PathVariable String questionId) {
+        return topicAuthoringService
+                .archive(questionId, SecurityHelper.getUserId())
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
+    @PostMapping("/{questionId}/restore")
+    public CompletableFuture<ResponseEntity<Void>> restore(@PathVariable String questionId) {
+        return topicAuthoringService
+                .restore(questionId, SecurityHelper.getUserId())
+                .thenApply(_ -> ResponseEntity.noContent().build());
     }
 }

@@ -1,12 +1,13 @@
 package com.joutio.bff.infrastructure.out.messaging.mapper;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.joutio.bff.infrastructure.out.messaging.response.RoomNotification;
 import com.joutio.matchmaking.domain.event.RoomEvent;
+
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class RoomEventNotificationMapperTest {
 
@@ -14,9 +15,11 @@ class RoomEventNotificationMapperTest {
 
     @Test
     void wizz_mapsToRoomWizzedNotification() {
-        RoomNotification notification = RoomEventNotificationMapper
-                .toNotification(new RoomEvent.RoomWizzedEvent("room-1", "initiator", "opponent", AT))
-                .orElseThrow();
+        RoomNotification notification =
+                RoomEventNotificationMapper.toNotification(
+                                new RoomEvent.RoomWizzedEvent(
+                                        "room-1", "initiator", "opponent", AT))
+                        .orElseThrow();
 
         assertThat(notification).isInstanceOf(RoomNotification.RoomWizzedNotification.class);
         RoomNotification.RoomWizzedNotification wizz =
@@ -30,10 +33,21 @@ class RoomEventNotificationMapperTest {
 
     @Test
     void left_mapsToRoomLeftNotification() {
-        RoomNotification notification = RoomEventNotificationMapper
-                .toNotification(new RoomEvent.RoomLeftEvent("room-1", "player-1", AT))
-                .orElseThrow();
+        RoomNotification notification =
+                RoomEventNotificationMapper.toNotification(
+                                new RoomEvent.RoomLeftEvent("room-1", "player-1", AT))
+                        .orElseThrow();
 
         assertThat(notification.type()).isEqualTo(RoomNotification.RoomNotificationType.ROOM_LEFT);
+    }
+
+    @Test
+    void availabilityConfirmationKeepsNotificationSequenceContiguous() {
+        var notification =
+                RoomEventNotificationMapper.toNotification(
+                                new RoomEvent.RoomTopicAvailabilityConfirmedEvent("room-1", AT))
+                        .orElseThrow();
+        assertThat(notification.type())
+                .isEqualTo(RoomNotification.RoomNotificationType.ROOM_QUESTIONS_LOADED);
     }
 }

@@ -1,11 +1,18 @@
 package com.joutio.bff.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.joutio.matchmaking.domain.command.MatchmakingCommand;
 import com.joutio.microservice.core.domain.model.i18n.Language;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.Profile;
 import com.joutio.theme.domain.model.QuestionLanguageCoverage;
 import com.joutio.theme.domain.query.QuestionQuery;
+
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.responsetypes.ResponseType;
 import org.axonframework.queryhandling.QueryGateway;
@@ -17,12 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * Vérifie que la façade prépare la photo de couverture linguistique du sujet et la porte dans la
@@ -36,17 +37,24 @@ class MatchmakingViewServiceTest {
     private final ProgressionLookup progressionLookup = mock(ProgressionLookup.class);
 
     private final MatchmakingViewService service =
-            new MatchmakingViewService(queryGateway, commandGateway, profileLookup, progressionLookup);
+            new MatchmakingViewService(
+                    queryGateway, commandGateway, profileLookup, progressionLookup);
 
     @Test
     void enqueue_carriesTopicLanguageCoverageFromTheme() {
         when(profileLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(profile()));
-        when(progressionLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(progress()));
-        when(queryGateway.query(any(QuestionQuery.GetTopicLanguageCoverageQuery.class), any(ResponseType.class)))
-                .thenReturn(CompletableFuture.completedFuture(List.of(
-                        new QuestionLanguageCoverage(Set.of(Language.FR), 10),
-                        new QuestionLanguageCoverage(Set.of(Language.EN), 8),
-                        new QuestionLanguageCoverage(Set.of(Language.FR, Language.EN), 7))));
+        when(progressionLookup.get("user-1"))
+                .thenReturn(CompletableFuture.completedFuture(progress()));
+        when(queryGateway.query(
+                        any(QuestionQuery.GetTopicLanguageCoverageQuery.class),
+                        any(ResponseType.class)))
+                .thenReturn(
+                        CompletableFuture.completedFuture(
+                                List.of(
+                                        new QuestionLanguageCoverage(Set.of(Language.FR), 10),
+                                        new QuestionLanguageCoverage(Set.of(Language.EN), 8),
+                                        new QuestionLanguageCoverage(
+                                                Set.of(Language.FR, Language.EN), 7))));
         when(commandGateway.send(any(MatchmakingCommand.CreateMatchmakingCommand.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
@@ -62,7 +70,8 @@ class MatchmakingViewServiceTest {
         assertThat(command.languages()).containsExactly(Language.FR);
         assertThat(command.topicCoverage().approvedCountFor(Set.of(Language.FR))).isEqualTo(10);
         assertThat(command.topicCoverage().approvedCountFor(Set.of(Language.EN))).isEqualTo(8);
-        assertThat(command.topicCoverage().approvedCountFor(Set.of(Language.FR, Language.EN))).isEqualTo(7);
+        assertThat(command.topicCoverage().approvedCountFor(Set.of(Language.FR, Language.EN)))
+                .isEqualTo(7);
     }
 
     private static Profile profile() {
@@ -95,5 +104,24 @@ class MatchmakingViewServiceTest {
                 .bestWinStreak(4)
                 .updatedAt(Instant.now())
                 .build();
+    }
+
+    @org.junit.jupiter.api.BeforeEach
+    void publishedTopic() {
+        org.mockito.Mockito.lenient()
+                .when(
+                        queryGateway.query(
+                                org.mockito.ArgumentMatchers.any(
+                                        com.joutio.theme.domain.query.TopicQuery.GetTopicByIdQuery
+                                                .class),
+                                org.mockito.ArgumentMatchers.any(
+                                        org.axonframework.messaging.responsetypes.ResponseType
+                                                .class)))
+                .thenReturn(
+                        java.util.concurrent.CompletableFuture.completedFuture(
+                                com.joutio.theme.domain.model.Topic.builder()
+                                        .topicId("topic-1")
+                                        .status(com.joutio.theme.domain.model.TopicStatus.PUBLISHED)
+                                        .build()));
     }
 }
