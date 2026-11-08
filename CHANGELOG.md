@@ -1,3 +1,9 @@
+## [1.4.0](https://github.com/joutio/joutio-bff/compare/v1.3.0...v1.4.0) (2026-11-08)
+
+### Features
+
+* **notifications:** deliver mobile challenges and wizz through Expo ([9f179bb](https://github.com/joutio/joutio-bff/commit/9f179bb676aff121cbaeab211647526b70412a83))
+
 ## [1.3.0](https://github.com/joutio/joutio-bff/compare/v1.2.0...v1.3.0) (2026-11-05)
 
 ### Features
