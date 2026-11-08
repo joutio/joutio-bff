@@ -498,3 +498,20 @@ l'`EventEnvelope` du SDK (payload typé via `eventType`, sans annotation), mapp�
 - Un test `WebMvcTest` par contrôleur (gateways mockés) : chemin, paramètres, mapping DTO.
 - Un test unitaire par service de composition (`application/`).
 - `mvn -pl joutio-bff-infrastructure test` avant tout commit.
+
+### Canal push Expo — 2026-11-08
+
+- `PUT /api/push/expo/subscriptions` → `204`, body `ExpoPushSubscriptionRequest` :
+  `installationId` (16–64 caractères alphanumériques/tirets), `token` Expo (≤255),
+  `platform` (`ANDROID|IOS`), `rematches` obligatoire. Propriétaire issu du JWT.
+- `DELETE /api/push/expo/subscriptions?installationId=` → `204`, suppression limitée au propriétaire.
+- Tables Flyway V2 : `expo_push_subscription` et `expo_push_delivery`, distinctes du Web Push navigateur.
+  Réaffectation de token atomique, plusieurs installations par joueur, unicité notification/installation.
+- Handler global `notification-push`, sans replay explicite : `CHALLENGE_RECEIVED` et `WIZZ` seulement,
+  aucune inscription rétroactive aux événements antérieurs. Worker HTTP dédié avec claim PostgreSQL 60 s,
+  5 tentatives bornées, expiration et relecture de `ROOM`, préférence Revanches par installation,
+  tickets/reçus Expo (15 min), purge des tokens invalides et journal conservé 7 jours.
+- `JOUTIO_EXPO_PUSH_ENABLED=false` par défaut ; `JOUTIO_EXPO_PUSH_ACCESS_TOKEN` secret serveur facultatif
+  selon la sécurité du projet Expo. Aucun contrat métier ajouté au SDK.
+- Guide d'activation et limites :
+  [`../../mobile-applications/joutio-mobile-expo/docs/push-notifications.md`](../../mobile-applications/joutio-mobile-expo/docs/push-notifications.md).

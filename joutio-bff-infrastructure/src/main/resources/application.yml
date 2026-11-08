@@ -32,6 +32,9 @@ microservice:
 # token initial à la queue du flux — aucun replay Kafka). Le Web Push reste sur le groupe global
 # `notification-push` (une seule notification OS, quel que soit le nombre de répliques).
 joutio:
+  expo-push:
+    enabled: ${JOUTIO_EXPO_PUSH_ENABLED:false}
+    access-token: ${JOUTIO_EXPO_PUSH_ACCESS_TOKEN:}
   identity:
     # Appels serveur-à-serveur limités aux OTP de suppression de compte.
     url: ${JOUTIO_IDENTITY_URL:http://joutio-identity}
