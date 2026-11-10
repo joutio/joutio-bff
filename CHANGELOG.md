@@ -1,3 +1,9 @@
+## [1.6.0](https://github.com/joutio/joutio-bff/compare/v1.5.0...v1.6.0) (2026-11-10)
+
+### Features
+
+* **bff:** report triage queue, topic todo, draft deletion, anonymous reports ([9e0784d](https://github.com/joutio/joutio-bff/commit/9e0784da51091935b022be97b90c032bb5856224))
+
 ## [1.5.0](https://github.com/joutio/joutio-bff/compare/v1.4.0...v1.5.0) (2026-11-08)
 
 ### Features
