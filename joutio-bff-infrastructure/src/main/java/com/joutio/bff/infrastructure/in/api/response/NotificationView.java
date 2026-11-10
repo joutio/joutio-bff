@@ -28,17 +28,19 @@ public record NotificationView(
     }
 
     public static NotificationView of(Notification notification, boolean actorSuspended) {
+        // Signalement anonyme : l'acteur n'est jamais exposé, même pour une notification antérieure.
+        boolean anonymous = notification.type() == NotificationType.QUESTION_REPORTED;
         return new NotificationView(
                 notification.notificationId(),
                 notification.type(),
-                notification.actorId(),
+                anonymous ? null : notification.actorId(),
                 notification.sourceId(),
                 notification.topicId(),
                 notification.gameId(),
                 notification.expiresAt(),
                 notification.readAt(),
                 notification.createdAt(),
-                actorSuspended);
+                !anonymous && actorSuspended);
     }
 
     public static NotificationView of(NotificationEvent.NotificationCreatedEvent event) {
@@ -46,16 +48,17 @@ public record NotificationView(
     }
 
     public static NotificationView of(NotificationEvent.NotificationCreatedEvent event, boolean actorSuspended) {
+        boolean anonymous = event.type() == NotificationType.QUESTION_REPORTED;
         return new NotificationView(
                 event.notificationId(),
                 event.type(),
-                event.actorId(),
+                anonymous ? null : event.actorId(),
                 event.sourceId(),
                 event.topicId(),
                 event.gameId(),
                 event.expiresAt(),
                 null,
                 event.createdAt(),
-                actorSuspended);
+                !anonymous && actorSuspended);
     }
 }

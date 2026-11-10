@@ -195,8 +195,13 @@ et les rôles enregistrés. Les questions et signalements sont gardés côté BF
 |---|---|---|
 | `POST /api/questions/{questionId}/reports` | `201` (créé) / `200` (déjà ouvert) | `{ gameId, reasons[], comment?, language? }` ; partie `FINISHED`, participant et question réellement jouée exigés ; snapshot de la version jouée |
 | `GET /api/questions/{questionId}/reports` | `List<OwnerQuestionReportView>` | propriétaire du sujet uniquement, **sans identité** du signalant |
-| `POST /api/questions/{questionId}/reports/{reportId}/resolve` | `200` | `{ resolution: RESOLVED\|DISMISSED, note? }` |
-| `POST /api/questions/{questionId}/reports/resolve` | `200` | clôture en masse des signalements ouverts |
+| `POST /api/questions/{questionId}/reports/{reportId}/resolve` | `200` | `{ resolution: RESOLVED\|DISMISSED, note? }` ; `404` (`urn:joutio:bff:question:reportNotFound`) si le signalement est d'une autre question |
+| `GET /api/question-reports/topics/{topicId}` | `List<ReportedQuestionView>` | file de l'équipe du sujet (gestionnaires) : par question avec signalements ouverts, la question actuelle (`QuestionEditorView`), ses signalements **ouverts** anonymes du plus récent au plus ancien (avec `snapshot`) et `history { closedCount, lastStatus, lastReviewedAt }` (ou `null`) au lieu de la liste des clos ; 100 questions au plus |
+| `GET /api/question-reports/{reportId}` | `ReportDetail { topicId, questionId, report }` | résout la cible d'une notification `QUESTION_REPORTED` |
+| `POST /api/questions/{questionId}/reports/resolve` | `200` | clôture en masse des signalements ouverts ; `resolvedCount` = signalements réellement clos |
+
+**Anonymat** : une notification `QUESTION_REPORTED` n'expose jamais le signalant — `actorId` nul et
+`actorSuspended=false` en REST/WS, ni identifiant ni pseudonyme en Web Push (notifications antérieures comprises).
 
 `GET /api/topics/{topicId}/questions` enrichit chaque question de `openReportCount`,
 `totalReportCount`, `lastReportedAt`, `suspended`, `archived` et des métadonnées de modération.
@@ -519,6 +524,10 @@ l'`EventEnvelope` du SDK (payload typé via `eventType`, sans annotation), mapp�
 ### Atelier collaboratif des sujets — 2026-11-08
 
 - `GET /api/topics/contributed?page=&size=` : sujets créés ou rejoints, tous statuts, pagination serveur.
+- `GET /api/topics/contributed/todo` : `List<TopicTodoView { topicId, pending, reportedQuestions, suspended }>`,
+  sujets **gérés** par le joueur avec au moins une action en attente (Mes sujets › À traiter).
+- `DELETE /api/topics/{id}` : supprime un **brouillon** (créateur seul, `TopicNotOwner`/`TopicNotInDraft` sinon) ;
+  ses questions sont supprimées par le service theme.
   `mine=true` garde son contrat de liste des sujets créés.
 - `GET /api/topics/{id}/workshop` : `TopicWorkshopView(topic,permissions)`. Les mêmes permissions
   enrichissent `TopicOverviewView`, dont `canManage` reste réservé aux gestionnaires effectifs.

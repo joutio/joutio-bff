@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -38,6 +39,16 @@ class WebPushDispatcherTest {
         when(subscriptionService.subscriptionsOf(USER_ID)).thenReturn(List.of(subscription));
         when(profiles.get(any())).thenReturn(CompletableFuture.completedFuture(null));
         when(pushGateway.send(any(), any())).thenReturn(WebPushGateway.SendStatus.DELIVERED);
+    }
+
+    @Test
+    void question_report_never_reveals_the_reporter() {
+        dispatcher.dispatch(event(NotificationType.QUESTION_REPORTED, "report-1", "reporter-1"));
+
+        WebPushMessage message = capturedMessage();
+        assertThat(message.actorId()).isNull();
+        assertThat(message.actorPseudonym()).isNull();
+        verify(profiles, never()).get("reporter-1");
     }
 
     @Test

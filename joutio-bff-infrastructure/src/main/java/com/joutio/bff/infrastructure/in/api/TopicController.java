@@ -236,6 +236,14 @@ public class TopicController {
                                         ENDPOINT + "/" + topicId + "/questions", questionId));
     }
 
+    /** Supprime un brouillon (créateur seul) ; ses questions sont supprimées avec lui. */
+    @DeleteMapping("/{topicId}")
+    public CompletableFuture<ResponseEntity<Void>> delete(@PathVariable String topicId) {
+        return topicAuthoringService
+                .deleteTopic(topicId, SecurityHelper.getUserId())
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
     @PostMapping("/{topicId}/draft")
     public CompletableFuture<ResponseEntity<Void>> draft(@PathVariable String topicId) {
         return topicAuthoringService

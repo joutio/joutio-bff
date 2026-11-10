@@ -159,6 +159,17 @@ public final class BffProblems {
         }
     }
 
+    /** Signalement inconnu pour cette question (`404`). */
+    public static class QuestionReportNotFoundProblem extends BaseProblem {
+        public QuestionReportNotFoundProblem(String reportId, String questionId) {
+            super("urn:joutio:bff:question:reportNotFound",
+                    ProblemCategory.BUSINESS_RESOURCE_MISSING,
+                    "Question report not found",
+                    "No report " + reportId + " on question " + questionId,
+                    Map.of("reportId", reportId, "questionId", questionId));
+        }
+    }
+
     /** Paramètres invalides d'un signalement de question (`400`). */
     public static class InvalidQuestionReportRequestProblem extends BaseProblem {
         public InvalidQuestionReportRequestProblem(String detail) {

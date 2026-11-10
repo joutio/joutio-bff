@@ -1,5 +1,7 @@
 package com.joutio.bff.infrastructure.in.api;
 
+import com.joutio.bff.infrastructure.in.api.response.TopicTodoView;
+
 import com.joutio.bff.application.TopicTeamService;
 import com.joutio.bff.infrastructure.in.api.request.PageParams;
 import com.joutio.bff.infrastructure.in.api.response.*;
@@ -32,6 +34,12 @@ public class TopicTeamController {
             @RequestParam(defaultValue = "24") int size) {
         PageParams.validate(page, size, 100);
         return service.contributed(SecurityHelper.getUserId(), page, size);
+    }
+
+    /** Mes sujets › À traiter : actions en attente sur les sujets que le joueur gère. */
+    @GetMapping("/contributed/todo")
+    public CompletableFuture<List<TopicTodoView>> todo() {
+        return service.todo(SecurityHelper.getUserId());
     }
 
     @GetMapping("/{id}/workshop")

@@ -18,7 +18,7 @@
         <!-- 1.1.0 : droits Premium effectifs (équipes de sujets). -->
         <joutio.identity-domain.version>1.1.0</joutio.identity-domain.version>
         <!-- 2.0.0 : équipes, statuts de modération et suppression des questions. -->
-        <joutio.theme-domain.version>2.0.0</joutio.theme-domain.version>
+        <joutio.theme-domain.version>2.1.0</joutio.theme-domain.version>
         <joutio.social-domain.version>5.3.1</joutio.social-domain.version>
         <joutio.game-domain.version>9.0.0</joutio.game-domain.version>
         <!-- 6.1.0 : centres d'intérêt persistés (Profile.interests, ProfileInterestsUpdatedEvent). -->

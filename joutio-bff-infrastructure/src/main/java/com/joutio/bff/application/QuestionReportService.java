@@ -6,7 +6,13 @@ import com.joutio.bff.infrastructure.in.api.request.ResolveQuestionReportsReques
 import com.joutio.bff.infrastructure.in.api.response.AdminQuestionReportResolutionView;
 import com.joutio.bff.infrastructure.in.api.response.AdminQuestionReportView;
 import com.joutio.bff.infrastructure.in.api.response.OwnerQuestionReportView;
+import com.joutio.bff.infrastructure.in.api.response.QuestionEditorView;
 import com.joutio.bff.infrastructure.in.api.response.QuestionReportAckView;
+import com.joutio.bff.infrastructure.in.api.response.ReportedQuestionView;
+import com.joutio.theme.domain.model.QuestionReportCount;
+import com.joutio.theme.domain.model.QuestionReportSort;
+import com.joutio.theme.domain.model.QuestionReportSummaryFilter;
+import com.joutio.theme.domain.model.QuestionReportSummaryPage;
 import com.joutio.bff.infrastructure.out.messaging.mapper.GameEventNotificationMapper;
 import com.joutio.bff.infrastructure.out.messaging.response.GameNotification;
 import com.joutio.game.domain.event.GameEvent;
@@ -164,9 +170,9 @@ public class QuestionReportService {
                                         .thenCompose(_ -> requireReport(reportId)))
                 .thenCompose(
                         report -> {
+                            // Un signalement d'une autre question n'existe pas pour cette route.
                             if (!report.questionId().equals(questionId)) {
-                                return CompletableFuture.completedFuture(
-                                        new AdminQuestionReportResolutionView(0));
+                                throw new BffProblems.QuestionReportNotFoundProblem(reportId, questionId);
                             }
                             return resolveOne(report, userId, request);
                         });
@@ -254,9 +260,9 @@ public class QuestionReportService {
         if (reports.isEmpty()) {
             return CompletableFuture.completedFuture(new AdminQuestionReportResolutionView(0));
         }
+        List<QuestionReport> open = reports.stream().filter(QuestionReport::open).toList();
         List<CompletableFuture<Void>> commands =
-                reports.stream()
-                        .filter(QuestionReport::open)
+                open.stream()
                         .map(
                                 report ->
                                         commandGateway
@@ -272,7 +278,7 @@ public class QuestionReportService {
                                                 .thenAccept(_ -> {}))
                         .toList();
         return CompletableFuture.allOf(commands.toArray(CompletableFuture[]::new))
-                .thenApply(_ -> new AdminQuestionReportResolutionView(reports.size()));
+                .thenApply(_ -> new AdminQuestionReportResolutionView(open.size()));
     }
 
     private CompletableFuture<List<QuestionReport>> reportsOf(String questionId) {
@@ -390,6 +396,70 @@ public class QuestionReportService {
     }
 
     public record ReportDetail(String topicId, String questionId, OwnerQuestionReportView report) {}
+
+    /** Taille maximale de la file d'un sujet : au-delà, l'équipe traite d'abord les plus récents. */
+    static final int QUEUE_LIMIT = 100;
+
+    /**
+     * File des signalements d'un sujet, pour son équipe : une entrée par question avec des signalements
+     * ouverts, du plus récent au plus ancien signalement.
+     */
+    public CompletableFuture<List<ReportedQuestionView>> topicQueue(String topicId, String userId) {
+        return requireOwner(topicId, userId)
+                .thenCompose(
+                        _ ->
+                                queryGateway.query(
+                                        new QuestionReportQuery.GetReportedQuestionPageQuery(
+                                                new QuestionReportSummaryFilter(QuestionReportStatus.OPEN, topicId, null),
+                                                QuestionReportSort.RECENT_REPORT,
+                                                0,
+                                                QUEUE_LIMIT),
+                                        QueryResponseTypes.instanceOf(QuestionReportSummaryPage.class)))
+                .thenCompose(
+                        page -> {
+                            List<CompletableFuture<ReportedQuestionView>> entries =
+                                    page.content().stream().map(summary -> queueEntry(summary.questionId())).toList();
+                            return CompletableFuture.allOf(entries.toArray(CompletableFuture[]::new))
+                                    .thenApply(
+                                            _ ->
+                                                    entries.stream()
+                                                            .map(CompletableFuture::join)
+                                                            .filter(entry -> !entry.reports().isEmpty())
+                                                            .toList());
+                        });
+    }
+
+    private CompletableFuture<ReportedQuestionView> queueEntry(String questionId) {
+        CompletableFuture<Question> question = requireQuestion(questionId);
+        CompletableFuture<List<QuestionReport>> reports = reportsOf(questionId);
+        return question.thenCombine(reports, QuestionReportService::queueEntry);
+    }
+
+    static ReportedQuestionView queueEntry(Question question, List<QuestionReport> reports) {
+        List<QuestionReport> open = reports.stream().filter(QuestionReport::open).toList();
+        List<QuestionReport> closed =
+                reports.stream()
+                        .filter(report -> !report.open() && report.reviewedAt() != null)
+                        .sorted(java.util.Comparator.comparing(QuestionReport::reviewedAt).reversed())
+                        .toList();
+        Instant lastReportedAt =
+                reports.stream().map(QuestionReport::createdAt).filter(Objects::nonNull).max(Instant::compareTo).orElse(null);
+        QuestionEditorView view =
+                TopicAuthoringService.toEditorView(
+                        question, new QuestionReportCount(question.questionId(), open.size(), reports.size(), lastReportedAt));
+        ReportedQuestionView.History history =
+                closed.isEmpty()
+                        ? null
+                        : new ReportedQuestionView.History(
+                                closed.size(), closed.getFirst().status(), closed.getFirst().reviewedAt());
+        return new ReportedQuestionView(
+                view,
+                open.stream()
+                        .sorted(java.util.Comparator.comparing(QuestionReport::createdAt).reversed())
+                        .map(OwnerQuestionReportView::of)
+                        .toList(),
+                history);
+    }
 
     public CompletableFuture<ReportDetail> ownerReport(String reportId, String userId) {
         return requireReport(reportId)

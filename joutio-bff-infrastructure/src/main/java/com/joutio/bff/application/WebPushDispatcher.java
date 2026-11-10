@@ -55,11 +55,13 @@ public class WebPushDispatcher {
     }
 
     private WebPushMessage toMessage(NotificationEvent.NotificationCreatedEvent event) {
+        // Un signalement reste anonyme : ni identifiant ni pseudonyme du signalant (anciennes notifications comprises).
+        String actorId = event.type() == NotificationType.QUESTION_REPORTED ? null : event.actorId();
         return new WebPushMessage(
                 event.notificationId(),
                 event.type().name(),
-                event.actorId(),
-                resolvePseudonym(event.actorId()),
+                actorId,
+                resolvePseudonym(actorId),
                 event.sourceId(),
                 event.topicId(),
                 event.gameId(),

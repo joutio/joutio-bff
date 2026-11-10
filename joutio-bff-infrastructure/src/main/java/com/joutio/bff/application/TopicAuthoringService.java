@@ -372,7 +372,7 @@ public class TopicAuthoringService {
         return result;
     }
 
-    private static QuestionEditorView toEditorView(
+    static QuestionEditorView toEditorView(
             Question question, QuestionReportCount reportCount) {
         List<QuestionEditorView.ContentView> contents =
                 question.contents().entrySet().stream()
@@ -433,6 +433,13 @@ public class TopicAuthoringService {
                                 commandGateway.send(
                                         new QuestionCommand.DeleteQuestionCommand(
                                                 questionId, userId)))
+                .thenAccept(_ -> {});
+    }
+
+    /** Supprime un brouillon : l'agrégat réserve l'action au créateur et refuse un sujet publié. */
+    public CompletableFuture<Void> deleteTopic(String topicId, String userId) {
+        return access.requireMember(topicId, userId)
+                .thenCompose(_ -> commandGateway.send(new TopicCommand.DeleteTopicCommand(topicId, userId)))
                 .thenAccept(_ -> {});
     }
 

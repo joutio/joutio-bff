@@ -32,6 +32,57 @@ public class TopicTeamService {
         this.profiles = profiles;
     }
 
+    /**
+     * Mes sujets › À traiter : pour chaque sujet que le joueur gère, les questions à valider et les questions
+     * avec des signalements ouverts. Seuls les sujets avec au moins une action en attente sont renvoyés.
+     */
+    public CompletableFuture<List<TopicTodoView>> todo(String userId) {
+        return queries.query(
+                        new TopicQuery.GetContributedTopicsQuery(userId, 0, 100),
+                        QueryResponseTypes.instanceOf(TopicPage.class))
+                .thenCompose(
+                        page -> {
+                            List<CompletableFuture<Optional<TopicTodoView>>> entries =
+                                    page.topics().stream()
+                                            .map(
+                                                    topic ->
+                                                            access.permissions(topic.topicId(), userId)
+                                                                    .thenCompose(
+                                                                            p ->
+                                                                                    p.canManage()
+                                                                                            ? todoOf(topic).thenApply(Optional::of)
+                                                                                            : CompletableFuture.completedFuture(
+                                                                                                    Optional.<TopicTodoView>empty())))
+                                            .toList();
+                            return CompletableFuture.allOf(entries.toArray(CompletableFuture[]::new))
+                                    .thenApply(
+                                            _ ->
+                                                    entries.stream()
+                                                            .map(CompletableFuture::join)
+                                                            .flatMap(Optional::stream)
+                                                            .filter(todo -> todo.total() > 0)
+                                                            .toList());
+                        });
+    }
+
+    private CompletableFuture<TopicTodoView> todoOf(Topic topic) {
+        Map<QuestionStatus, Integer> counters = topic.questionsCounter() == null ? Map.of() : topic.questionsCounter();
+        return queries.query(
+                        new com.joutio.theme.domain.query.QuestionReportQuery.GetReportedQuestionPageQuery(
+                                new QuestionReportSummaryFilter(QuestionReportStatus.OPEN, topic.topicId(), null),
+                                QuestionReportSort.RECENT_REPORT,
+                                0,
+                                1),
+                        QueryResponseTypes.instanceOf(QuestionReportSummaryPage.class))
+                .thenApply(
+                        reported ->
+                                new TopicTodoView(
+                                        topic.topicId(),
+                                        counters.getOrDefault(QuestionStatus.PENDING, 0),
+                                        (int) reported.totalElements(),
+                                        counters.getOrDefault(QuestionStatus.SUSPENDED, 0)));
+    }
+
     public CompletableFuture<TopicWorkshopView> workshop(String topicId, String userId) {
         return access.requireMember(topicId, userId)
                 .thenCompose(

@@ -1,5 +1,8 @@
 package com.joutio.bff.infrastructure.in.api;
 
+import com.joutio.bff.infrastructure.in.api.response.ReportedQuestionView;
+import java.util.List;
+
 import com.joutio.bff.application.QuestionReportService;
 import com.joutio.microservice.security.SecurityHelper;
 
@@ -14,6 +17,12 @@ public class AuthorReportController {
 
     public AuthorReportController(QuestionReportService service) {
         this.service = service;
+    }
+
+    /** File des signalements ouverts d'un sujet, une entrée par question (équipe du sujet). */
+    @GetMapping("/topics/{topicId}")
+    public CompletableFuture<List<ReportedQuestionView>> topicQueue(@PathVariable String topicId) {
+        return service.topicQueue(topicId, SecurityHelper.getUserId());
     }
 
     @GetMapping("/{id}")
