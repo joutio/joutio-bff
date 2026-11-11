@@ -1,3 +1,9 @@
+## [1.7.0](https://github.com/joutio/joutio-bff/compare/v1.6.0...v1.7.0) (2026-11-11)
+
+### Features
+
+* room and search presence observed on STOMP presence channels ([5f38fd5](https://github.com/joutio/joutio-bff/commit/5f38fd53e72ea98739b25ac320a9db654f74f6c6))
+
 ## [1.6.0](https://github.com/joutio/joutio-bff/compare/v1.5.0...v1.6.0) (2026-11-10)
 
 ### Features
