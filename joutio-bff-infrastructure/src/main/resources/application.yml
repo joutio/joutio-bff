@@ -32,6 +32,9 @@ microservice:
 # token initial à la queue du flux — aucun replay Kafka). Le Web Push reste sur le groupe global
 # `notification-push` (une seule notification OS, quel que soit le nombre de répliques).
 joutio:
+  room-presence:
+    # Sortie d'un salon après une connexion fermée (une reconnexion pendant la grâce garde la présence).
+    disconnect-grace: ${JOUTIO_ROOM_PRESENCE_DISCONNECT_GRACE:10s}
   expo-push:
     enabled: ${JOUTIO_EXPO_PUSH_ENABLED:false}
     access-token: ${JOUTIO_EXPO_PUSH_ACCESS_TOKEN:}

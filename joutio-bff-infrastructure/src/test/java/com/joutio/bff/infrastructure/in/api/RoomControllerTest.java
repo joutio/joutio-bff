@@ -82,8 +82,8 @@ class RoomControllerTest {
 
     @Test
     void join_leave_cancel_delegate_to_service() throws Exception {
-        when(roomViewService.join("room-1", USER_ID)).thenReturn(CompletableFuture.completedFuture(null));
-        when(roomViewService.leave("room-1", USER_ID)).thenReturn(CompletableFuture.completedFuture(null));
+        when(roomViewService.join("room-1", USER_ID, null)).thenReturn(CompletableFuture.completedFuture(null));
+        when(roomViewService.leave("room-1", USER_ID, null, com.joutio.matchmaking.domain.model.RoomLeaveReason.LEFT)).thenReturn(CompletableFuture.completedFuture(null));
         when(roomViewService.cancel("room-1", USER_ID)).thenReturn(CompletableFuture.completedFuture(null));
 
         MvcResult join = mockMvc.perform(post("/api/rooms/room-1/join"))
@@ -98,8 +98,8 @@ class RoomControllerTest {
                 .andExpect(request().asyncStarted()).andReturn();
         mockMvc.perform(asyncDispatch(cancel)).andExpect(status().isOk());
 
-        verify(roomViewService).join("room-1", USER_ID);
-        verify(roomViewService).leave("room-1", USER_ID);
+        verify(roomViewService).join("room-1", USER_ID, null);
+        verify(roomViewService).leave("room-1", USER_ID, null, com.joutio.matchmaking.domain.model.RoomLeaveReason.LEFT);
         verify(roomViewService).cancel("room-1", USER_ID);
     }
 

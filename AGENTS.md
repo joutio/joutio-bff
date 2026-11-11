@@ -343,7 +343,7 @@ de sujet, illustration de question, bannière de profil) : objet référencé �
 |---|---|---|
 | `POST /api/matchmaking/tickets` | `201 + Location` | Body `{ topicId }` — lance la recherche ; l'appariement crée une **salle** nominative (jamais la partie). Le serveur ne bascule **jamais** seul vers un bot : à l'échéance **10 s** le ticket expire ; le client applique la préférence locale `autoTrainOnTimeout` (entraînement automatique par défaut, sinon popup relance/entraînement). Le BFF prépare la **photo de couverture linguistique** du sujet (`GetTopicLanguageCoverageQuery`) et la porte dans la commande : la saga compare localement |
 | `GET /api/matchmaking/tickets/{ticketId}` | `MatchmakingTicketView` | Statut `SEARCHING\|COMPLETED\|CANCELLED\|EXPIRED\|FAILED`, `roomId`, `opponentId`, `vsBot` |
-| `POST /api/matchmaking/tickets/{ticketId}/cancel` | `200` | Annule la recherche |
+| `POST /api/matchmaking/tickets/{ticketId}/cancel` | `200` | « Annuler la recherche » (`PLAYER_CANCELLED`). Quitter l'écran ou perdre la connexion annule aussi le ticket, **côté serveur** (`PLAYER_LEFT`, canal de présence § 4) : le client n'appelle jamais cette route en partant |
 | `GET /api/matchmaking/tickets/{ticketId}/notifications` | `List<EventEnvelopeResponse>` (payload `MatchmakingNotification`) | Même contrat que le push WS |
 
 ### Défis nominatifs (matchmaking)
@@ -374,8 +374,8 @@ salle temps réel : l'acceptation crée la salle (saga matchmaking) qui porte pr
 | `POST /api/rooms/bot` | `201 + Location` | Body `{ topicId, difficulty? }` — **salle bot** : le bot rejoint la salle automatiquement, l'humain y apparaît ensuite. **Exemptée de l'unicité par sujet** : un salon privé ouvert ne bloque pas l'entraînement ; quota bot propre |
 | `GET /api/rooms/mine` | `List<RoomView>` | Salles `WAITING_PLAYERS` du joueur (initiateur **ou** invité) — filet de reprise |
 | `GET /api/rooms/{roomId}` | `RoomView` | Sujet, `status` (`WAITING_PLAYERS\|FETCHING_PLAYERS\|FETCHING_PLAYED_QUESTIONS\|FETCHING_QUESTIONS\|CREATING_GAME\|GAME_CREATED\|COMPLETED\|CANCELLED\|EXPIRED\|FAILED`), `vsBot`, `canCancel` (viewer = initiateur), adversaire, présences, `gameId`. `opponent` est un `RoomOpponentView` enrichi par la façade (`pseudonym`, `avatarOptions`, `suspended`, `rating`, `provisional`, `country`) pour la carte « Adversaire trouvé » |
-| `POST /api/rooms/{roomId}/join` | `200` | **Apparition** (idempotente) : présence et, pour le second joueur, enregistrement du participant ; nominatif : invité uniquement (403 sinon). Émise par le client quand l'utilisateur est dans la salle ; le BFF prépare le **snapshot `RoomPlayer`** (profil + progression, caches Caffeine) et le porte dans `JoinRoomCommand` — la salle ne résout jamais les joueurs (préparation ensuite non bloquante : profils portés par l'apparition, historique/tirage par requêtes async) |
-| `POST /api/rooms/{roomId}/leave` | `200` | Sortie **non destructive** (idempotente) tant que la préparation n'est pas engagée ; refusée (400) dès que les deux joueurs sont présents — seul `cancel` ferme la salle |
+| `POST /api/rooms/{roomId}/join` | `200` | **Dépréciée** (anciens clients : app web de production, APK installés ; à retirer après la bascule web et l'adoption mobile) — la présence est **observée sur le canal de présence** (§ 4). **Apparition** (idempotente) : présence et, pour le second joueur, enregistrement du participant ; nominatif : invité uniquement (403 sinon) ; le BFF prépare le **snapshot `RoomPlayer`** (profil + progression, caches Caffeine) et le porte dans `JoinRoomCommand` — la salle ne résout jamais les joueurs (préparation ensuite non bloquante : profils portés par l'apparition, historique/tirage par requêtes async) |
+| `POST /api/rooms/{roomId}/leave` | `200` | **Dépréciée** (comme `join`). Sortie **non destructive** (idempotente) tant que la préparation n'est pas engagée ; refusée (400) dès que les deux joueurs sont présents — seul `cancel` ferme la salle |
 | `POST /api/rooms/{roomId}/cancel` | `200` | Annulation par l'initiateur, possible tant que la salle n'est pas terminale |
 | `POST /api/rooms/{roomId}/wizz` | `200` | **Relance** de l'adversaire humain **absent** (salle nominative, émetteur présent) — pur temps réel, aucune préparation déclenchée ; cadence **10 s par joueur** (le refus métier remonte le `Problem` mappé 4xx) |
 | `GET /api/rooms/{roomId}/notifications` | `List<EventEnvelopeResponse>` (payload `RoomNotification`) | Même contrat que le push WS |
@@ -462,11 +462,21 @@ Heartbeats STOMP activés côté serveur (`heartbeat-outgoing`/`heartbeat-incomi
 défaut, fournis par le SDK) : un client silencieux est fermé par le broker en ~30 s, ce qui
 déclenche la déconnexion de session côté présence.
 
+**Présence observée par le serveur (2026-11-11)** : l'interface ne déclare jamais qu'elle entre
+dans un salon, le quitte ou abandonne une recherche. Elle s'abonne à un **canal de présence** tant
+que l'écran est ouvert ; `PresenceChannelListener` traduit SUBSCRIBE / UNSUBSCRIBE / DISCONNECT en
+commandes. Une instance tombée sans prévenir est couverte par `joutio-matchmaking`
+(`PlayerWentOfflineEvent` → sortie `OFFLINE`). Seules les intentions explicites restent des
+routes : « Annuler la recherche », « Fermer le salon », « Relancer ».
+
 | Destination | Payload |
 |---|---|
 | `/topic/games/{gameId}` | `EventEnvelopeResponse` (payload `GameNotification`) (`GAME_CREATED`, `GAME_STARTED`, `ROUND_STARTED`, `QUESTION_REVEALED`, `PLAYER_ANSWERED`, `ROUND_CLOSED`, `GAME_FORFEITED`, `GAME_ENDED`, `GAME_CANCELLED`) |
 | `/topic/rooms/{roomId}` | `EventEnvelopeResponse` (payload `RoomNotification`) (`ROOM_CREATED`, `ROOM_ENTERED`, `ROOM_ALL_PRESENT`, `ROOM_PLAYERS_LOADED`, `ROOM_PLAYED_QUESTIONS_LOADED`, `ROOM_QUESTIONS_LOADED`, `ROOM_GAME_CREATED`, `ROOM_LEFT`, `ROOM_WIZZED`, `ROOM_COMPLETED`, `ROOM_CANCELLED`, `ROOM_EXPIRED`, `ROOM_FAILED`) |
 | `/topic/matchmaking/tickets/{ticketId}` | `EventEnvelopeResponse` (payload `MatchmakingNotification`) (`SEARCHING`, `MATCHED`, `CANCELLED`, `EXPIRED`, `FAILED`) — `MATCHED` porte un `opponent` enrichi (`RoomOpponentView`) pour la carte « Adversaire trouvé » ; `null` si le profil est momentanément indisponible, le client se replie sur `GET /api/rooms/{roomId}` |
+| `/topic/rooms/{roomId}/presence` | **Canal de présence** (aucun message) : s'abonner = entrer dans le salon, se désabonner = en sortir (`LEFT`), connexion fermée = en sortir après **10 s** de grâce (`DISCONNECTED`, `joutio.room-presence.disconnect-grace`). Le client s'y abonne tant que l'écran du salon est ouvert, et seulement là (pas depuis un suivi de salle en arrière-plan). `PresenceChannelListener` ; présence liée à la session STOMP (`presenceId`) |
+| `/topic/matchmaking/tickets/{ticketId}/presence` | **Canal de présence** du ticket : désabonnement ou connexion fermée = annulation `PLAYER_LEFT` immédiate |
+| `/user/queue/room-presence` | `{ roomId, problem: { type, title, detail } }` — refus d'entrée (salle pleine, non invité, sujet indisponible, salle disparue) ; « Réessayer » = se réabonner |
 | `/topic/notifications/{userId}` | `EventEnvelopeResponse` (payload `NotificationView`) — inbox personnelle (invitations de défi, follows) ; suppression poussée sous `NOTIFICATION_DELETED` (payload `{ notificationId }`) |
 | `/topic/presence/{userId}` | `PresenceView` — **exception assumée** : événements de session non séquencés, pas d'enveloppe |
 | `/topic/follow-presence/{userId}` | `FollowPresenceView` (`actorId`, `pseudonym`, `avatarOptions`, `at`) — **fan-out éphémère** : quand un joueur passe en ligne, chaque **abonné** reçoit « X est en ligne » ; jamais persisté (pas d'inbox), poussé par le groupe `follow-presence-notification` |

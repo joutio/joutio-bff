@@ -109,7 +109,11 @@ public class MatchmakingViewService {
                 .thenApply(MatchmakingViewService::toView);
     }
 
-    public CompletableFuture<Void> cancel(String playerId, String ticketId) {
+    /**
+     * Annule une recherche : « Annuler la recherche » ({@code PLAYER_CANCELLED}) ou départ constaté
+     * par {@code PresenceChannelListener} ({@code PLAYER_LEFT}).
+     */
+    public CompletableFuture<Void> cancel(String playerId, String ticketId, String reason) {
         // Pré-vérification : un ticket purgé (état terminal + rétention) doit répondre 404,
         // pas une AggregateDeletedException non mappée.
         return queryGateway
@@ -121,7 +125,7 @@ public class MatchmakingViewService {
                                 commandGateway
                                         .send(
                                                 new MatchmakingCommand.CancelMatchmakingCommand(
-                                                        ticketId, playerId))
+                                                        ticketId, playerId, reason))
                                         .thenAccept(_ -> {}));
     }
 

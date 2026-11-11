@@ -66,12 +66,12 @@ class MatchmakingControllerTest {
 
     @Test
     void cancel_delegates_to_service() throws Exception {
-        when(matchmakingViewService.cancel(USER_ID, "mm-1")).thenReturn(CompletableFuture.completedFuture(null));
+        when(matchmakingViewService.cancel(USER_ID, "mm-1", "PLAYER_CANCELLED")).thenReturn(CompletableFuture.completedFuture(null));
 
         MvcResult result = mockMvc.perform(post("/api/matchmaking/tickets/mm-1/cancel"))
                 .andExpect(request().asyncStarted()).andReturn();
         mockMvc.perform(asyncDispatch(result)).andExpect(status().isOk());
 
-        verify(matchmakingViewService).cancel(USER_ID, "mm-1");
+        verify(matchmakingViewService).cancel(USER_ID, "mm-1", "PLAYER_CANCELLED");
     }
 }

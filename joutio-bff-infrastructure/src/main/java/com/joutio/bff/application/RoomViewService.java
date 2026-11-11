@@ -8,6 +8,7 @@ import com.joutio.bff.infrastructure.in.api.response.TopicRefView;
 import com.joutio.game.domain.model.BotDifficulty;
 import com.joutio.identity.domain.model.UserAccountStatus;
 import com.joutio.matchmaking.domain.command.RoomCommand;
+import com.joutio.matchmaking.domain.model.RoomLeaveReason;
 import com.joutio.matchmaking.domain.model.Room;
 import com.joutio.matchmaking.domain.model.RoomPlayer;
 import com.joutio.matchmaking.domain.query.RoomQuery;
@@ -125,14 +126,15 @@ public class RoomViewService {
 
     /**
      * Le joueur <b>apparaît</b> dans la salle : présence temps réel et, pour le second humain,
-     * enregistrement comme participant. C'est la seule action d'entrée, émise par le client quand
-     * l'utilisateur est réellement dans la salle.
+     * enregistrement comme participant. Appelée par {@code PresenceChannelListener} quand le joueur
+     * s'abonne au canal de présence du salon ({@code presenceId} = session STOMP) ; {@code POST
+     * /join} (anciens clients, déprécié) passe {@code null}.
      *
      * <p>Le snapshot de profil ({@code RoomPlayer}) est <b>préparé ici</b> (profils + progression,
      * caches Caffeine) et porté par la commande : la salle ne fait aucune I/O pour résoudre les
      * joueurs (voir {@code best-practices/.backend/command-preparation.md}).
      */
-    public CompletableFuture<Void> join(String roomId, String playerId) {
+    public CompletableFuture<Void> join(String roomId, String playerId, String presenceId) {
         return queryGateway
                 .query(new RoomQuery.GetRoomById(roomId), QueryResponseTypes.instanceOf(Room.class))
                 .thenCompose(
@@ -147,7 +149,7 @@ public class RoomViewService {
                                 commandGateway
                                         .send(
                                                 new RoomCommand.JoinRoomCommand(
-                                                        roomId, playerId, player))
+                                                        roomId, playerId, player, presenceId))
                                         .thenAccept(_ -> {}));
     }
 
@@ -180,12 +182,19 @@ public class RoomViewService {
 
     private record PlayerWithProgress(Profile profile, PlayerProgress progress) {}
 
-    public CompletableFuture<Void> leave(String roomId, String playerId) {
+    /**
+     * Le joueur n'est plus présent : constaté par {@code PresenceChannelListener} (session STOMP,
+     * motif) ; {@code POST /leave} (anciens clients, déprécié) passe une session nulle.
+     */
+    public CompletableFuture<Void> leave(
+            String roomId, String playerId, String presenceId, RoomLeaveReason reason) {
         return requireRoom(roomId)
                 .thenCompose(
                         _ ->
                                 commandGateway
-                                        .send(new RoomCommand.LeaveRoomCommand(roomId, playerId))
+                                        .send(
+                                                new RoomCommand.LeaveRoomCommand(
+                                                        roomId, playerId, presenceId, reason))
                                         .thenAccept(_ -> {}));
     }
 

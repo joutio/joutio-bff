@@ -1,5 +1,6 @@
 package com.joutio.bff.infrastructure.in.api;
 
+import com.joutio.matchmaking.domain.command.MatchmakingCommand;
 import com.joutio.bff.application.MatchmakingViewService;
 import com.joutio.bff.infrastructure.in.api.request.CreateMatchmakingRequest;
 import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
@@ -60,7 +61,10 @@ public class MatchmakingController {
     @PostMapping("/{ticketId}/cancel")
     public CompletableFuture<ResponseEntity<Void>> cancel(@PathVariable String ticketId) {
         return matchmakingViewService
-                .cancel(SecurityHelper.getUserId(), ticketId)
+                .cancel(
+                        SecurityHelper.getUserId(),
+                        ticketId,
+                        MatchmakingCommand.CancelMatchmakingCommand.PLAYER_CANCELLED)
                 .thenApply(_ -> ResponseEntity.ok().build());
     }
 

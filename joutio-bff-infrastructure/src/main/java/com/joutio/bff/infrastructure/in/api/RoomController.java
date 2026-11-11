@@ -1,5 +1,6 @@
 package com.joutio.bff.infrastructure.in.api;
 
+import com.joutio.matchmaking.domain.model.RoomLeaveReason;
 import com.joutio.bff.application.RoomViewService;
 import com.joutio.bff.infrastructure.in.api.request.CreateBotRoomRequest;
 import com.joutio.bff.infrastructure.in.api.request.CreateRoomRequest;
@@ -70,18 +71,25 @@ public class RoomController {
         return roomViewService.get(roomId, SecurityHelper.getUserId()).thenApply(ResponseEntity::ok);
     }
 
-    /** Apparition dans la salle (présence temps réel, idempotent) — commande unique d'entrée. */
+    /**
+     * Apparition dans la salle (idempotent). <b>Dépréciée</b> : la présence est observée sur le
+     * canal {@code /topic/rooms/{roomId}/presence} ; conservée pour les anciens clients (app web
+     * de production, APK installés) jusqu'à leur remplacement.
+     */
+    @Deprecated
     @PostMapping("/{roomId}/join")
     public CompletableFuture<ResponseEntity<Void>> join(@PathVariable String roomId) {
         return roomViewService
-                .join(roomId, SecurityHelper.getUserId())
+                .join(roomId, SecurityHelper.getUserId(), null)
                 .thenApply(_ -> ResponseEntity.ok().build());
     }
 
+    /** Sortie <b>dépréciée</b> (voir {@link #join}) : sans session, refusée pendant la préparation. */
+    @Deprecated
     @PostMapping("/{roomId}/leave")
     public CompletableFuture<ResponseEntity<Void>> leave(@PathVariable String roomId) {
         return roomViewService
-                .leave(roomId, SecurityHelper.getUserId())
+                .leave(roomId, SecurityHelper.getUserId(), null, RoomLeaveReason.LEFT)
                 .thenApply(_ -> ResponseEntity.ok().build());
     }
 

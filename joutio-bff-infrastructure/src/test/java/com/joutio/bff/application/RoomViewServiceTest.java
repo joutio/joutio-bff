@@ -96,7 +96,7 @@ class RoomViewServiceTest {
         when(commandGateway.send(any(RoomCommand.JoinRoomCommand.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
-        service.join("room-1", "user-1").join();
+        service.join("room-1", "user-1", "s1").join();
 
         ArgumentCaptor<RoomCommand.JoinRoomCommand> captor =
                 ArgumentCaptor.forClass(RoomCommand.JoinRoomCommand.class);
@@ -125,7 +125,7 @@ class RoomViewServiceTest {
         when(commandGateway.send(any(RoomCommand.JoinRoomCommand.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
-        service.join("room-1", "user-1").join();
+        service.join("room-1", "user-1", "s1").join();
 
         ArgumentCaptor<RoomCommand.JoinRoomCommand> captor =
                 ArgumentCaptor.forClass(RoomCommand.JoinRoomCommand.class);
