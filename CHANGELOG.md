@@ -1,3 +1,9 @@
+## [2.3.0](https://github.com/joutio/joutio-bff/compare/v2.2.0...v2.3.0) (2026-11-12)
+
+### Features
+
+* **bff:** pseudonym availability check ([657b4c1](https://github.com/joutio/joutio-bff/commit/657b4c1f2b20758537ac1c29625c3f5502287e57))
+
 ## [2.2.0](https://github.com/joutio/joutio-bff/compare/v2.1.0...v2.2.0) (2026-11-12)
 
 ### Features
