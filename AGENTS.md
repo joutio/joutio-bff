@@ -141,7 +141,7 @@ l'ancienne surface et sont migrés lot par lot.
 
 | Endpoint | Réponse | Notes |
 |---|---|---|
-| `GET /api/me` | `MeView` | Profil (+ `language` fr/en, + `equippedTitle` = clé du titre porté, + `interests` = codes `TopicCategory` ordonnés, premier = univers principal, max 3) + progression + stats de duel + `followingCount` + `followersCount` + `onboardingCompleted` (flag serveur, ou première partie humaine déjà jouée) + `rewards` (codes des récompenses persistées, ex. `MICAH_AVATAR`) + `premium` (`ROLE_ADMIN` par défaut ou `ROLE_PREMIUM`) |
+| `GET /api/me` | `MeView` | Profil (+ `language` fr/en, + `equippedTitle` = clé du titre porté, + `interests` = codes `TopicCategory` ordonnés, premier = univers principal, max 3) + progression + stats de duel + `followingCount` + `followersCount` + `onboardingCompleted` (flag serveur, ou première partie humaine déjà jouée) + `rewards` (codes des récompenses persistées, ex. `MICAH_AVATAR`) + `premium` (`ROLE_ADMIN` ou droit accordé dans identity, lu par `PremiumAccessPolicy` via `IdentityLookup` — frais sans refresh du jeton) + `premiumUntil` (`null` = sans échéance ou aucun droit) + `premiumSource` (`MANUAL\|APP_STORE\|PLAY\|WEB`) |
 | `GET /api/me/rewards` | `RewardsView` | Catalogue complet des récompenses : `code`, `unlocked`, `unlockedAt`, `source`, `condition` (`badgeCode`, `badgeLabel`, `target`). Les déblocages viennent de `player_reward`, les verrouillées de `RewardRules.catalog()` ; réponse privée au joueur courant. |
 | `POST /api/me/onboarding/complete` | `MeView` | Fin explicite ou skip de l'onboarding ; idempotent, renvoie le flag `onboardingCompleted=true` sans attendre la projection profile |
 | `PUT /api/me/interests` | `204` | Remplace les centres d'intérêt du joueur courant (`{ interests: ["HISTORY","SCIENCE"] }`) : 0 à 3 codes `TopicCategory`, ordre conservé (premier = univers principal), doublons refusés (`400`), liste vide efface. Envoie `UpdateProfileInterestsCommand` et invalide le cache profil. |
@@ -247,6 +247,8 @@ Admin (`ROLE_ADMIN`, `/api/admin/**`) :
 | `GET /api/admin/users/{userId}` | `AdminUserDetailView` | compte + profil + signalements |
 | `POST /api/admin/users/{userId}/suspend` | `AdminUserModerationView` | `{ reason, note?, duration?, permanent, resolveOpenReports? }` |
 | `POST /api/admin/users/{userId}/reinstate` | `AdminUserModerationView` | `{ note? }` |
+| `PUT /api/admin/users/{userId}/premium` | `AdminUserPremiumView` | `{ premiumUntil? }` (absent = sans échéance) : attribution manuelle (`GrantPremiumCommand`, source `MANUAL`, admin tracé dans l'événement) ; `400` si échéance passée, compte supprimé ; `403` compte système |
+| `DELETE /api/admin/users/{userId}/premium` | `AdminUserPremiumView` | retrait manuel (`RevokePremiumCommand`, idempotent) |
 | `POST /api/admin/user-reports/{reportId}/resolve` | `200` | résolution unitaire |
 | `POST /api/admin/users/{userId}/reports/resolve` | `200` | résolution en masse |
 

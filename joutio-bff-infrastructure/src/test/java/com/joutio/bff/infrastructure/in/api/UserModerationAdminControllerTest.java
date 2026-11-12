@@ -3,7 +3,9 @@ package com.joutio.bff.infrastructure.in.api;
 import com.joutio.bff.application.UserModerationAdminService;
 import com.joutio.bff.application.UserReportService;
 import com.joutio.bff.infrastructure.in.api.problem.BffProblemExceptionHandler;
+import com.joutio.bff.infrastructure.in.api.request.GrantPremiumRequest;
 import com.joutio.bff.infrastructure.in.api.response.AdminReportedUserSummaryView;
+import com.joutio.bff.infrastructure.in.api.response.AdminUserPremiumView;
 import com.joutio.bff.infrastructure.in.api.response.AdminUserAccountView;
 import com.joutio.bff.infrastructure.in.api.response.AdminUserCatalogueView;
 import com.joutio.bff.infrastructure.in.api.response.AdminUserDetailView;
@@ -12,6 +14,7 @@ import com.joutio.bff.infrastructure.in.api.response.AdminUserModerationView;
 import com.joutio.bff.infrastructure.in.api.response.AdminUserProfileView;
 import com.joutio.bff.infrastructure.in.api.response.PageResponse;
 import com.joutio.identity.domain.model.AccountStatus;
+import com.joutio.identity.domain.model.PremiumSource;
 import com.joutio.identity.domain.model.UserSuspensionReason;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,10 +31,13 @@ import java.util.concurrent.CompletableFuture;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -117,7 +123,8 @@ class UserModerationAdminControllerTest {
                         new AdminUserAccountView(
                                 "user-2", "user2@joutio.dev", Instant.now(),
                                 AccountStatus.ACTIVE, false, null, null, null,
-                                null, null, null, null, null, null, false),
+                                null, null, null, null, null, null, false,
+                                true, null, PremiumSource.MANUAL, Instant.now(), "admin-1"),
                         new AdminUserProfileView("Bravo", null, "FR", null, null),
                         List.of())));
 
@@ -129,6 +136,42 @@ class UserModerationAdminControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.account.email").value("user2@joutio.dev"))
                 .andExpect(jsonPath("$.profile.pseudonym").value("Bravo"));
+    }
+
+    @Test
+    void grantPremium_delegates_to_service_with_admin() throws Exception {
+        Instant until = Instant.parse("2027-01-01T00:00:00Z");
+        when(adminService.grantPremium(eq("user-2"), eq("admin-1"), any()))
+                .thenReturn(CompletableFuture.completedFuture(
+                        new AdminUserPremiumView("user-2", true, until, PremiumSource.MANUAL)));
+
+        MvcResult result = mockMvc.perform(put("/api/admin/users/user-2/premium")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"premiumUntil\":\"2027-01-01T00:00:00Z\"}"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.premium").value(true))
+                .andExpect(jsonPath("$.premiumSource").value("MANUAL"));
+        verify(adminService).grantPremium(eq("user-2"), eq("admin-1"),
+                eq(new GrantPremiumRequest(until)));
+    }
+
+    @Test
+    void revokePremium_delegates_to_service() throws Exception {
+        when(adminService.revokePremium(eq("user-2"), eq("admin-1"), any()))
+                .thenReturn(CompletableFuture.completedFuture(
+                        new AdminUserPremiumView("user-2", false, null, null)));
+
+        MvcResult result = mockMvc.perform(delete("/api/admin/users/user-2/premium"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.premium").value(false));
     }
 
     @Test

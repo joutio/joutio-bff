@@ -2,6 +2,7 @@ package com.joutio.bff.infrastructure.in.api;
 
 import com.joutio.bff.application.AccountDeletionService;
 import com.joutio.bff.application.MeService;
+import com.joutio.bff.application.PremiumAccessPolicy;
 import com.joutio.bff.application.ProfileUpdateService;
 import com.joutio.bff.application.RewardService;
 import com.joutio.bff.application.TopicRecommendationService;
@@ -83,7 +84,7 @@ class MeControllerTest {
                 Language.FR,
                 new ProgressionView(List.of(), 200, 200, 0, true),
                 new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 3, 5, false, List.of(), false,
-                List.of("HISTORY"), true);
+                List.of("HISTORY"), true, null, null);
         when(meService.me(USER_ID)).thenReturn(CompletableFuture.completedFuture(view));
 
         MvcResult result = mockMvc.perform(get("/api/me"))
@@ -126,11 +127,12 @@ class MeControllerTest {
                 Language.FR,
                 new ProgressionView(List.of(), 200, 200, 0, true),
                 new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 3, 5, false, List.of(), false,
-                List.of(), true);
+                List.of(), true, null, null);
         when(profileUpdateService.completeOnboarding(USER_ID))
                 .thenReturn(CompletableFuture.completedFuture(null));
-        when(meService.isPremium()).thenReturn(false);
-        when(meService.me(USER_ID, false)).thenReturn(CompletableFuture.completedFuture(view));
+        PremiumAccessPolicy.PremiumStatus none = new PremiumAccessPolicy.PremiumStatus(false, null, null);
+        when(meService.premiumStatus()).thenReturn(none);
+        when(meService.me(USER_ID, none)).thenReturn(CompletableFuture.completedFuture(view));
 
         MvcResult result = mockMvc.perform(post("/api/me/onboarding/complete"))
                 .andExpect(request().asyncStarted())

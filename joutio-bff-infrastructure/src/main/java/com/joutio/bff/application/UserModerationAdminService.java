@@ -2,7 +2,12 @@ package com.joutio.bff.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
+import com.joutio.bff.infrastructure.in.api.request.GrantPremiumRequest;
 import com.joutio.bff.infrastructure.in.api.request.ReinstateUserRequest;
+import com.joutio.bff.infrastructure.in.api.request.RevokePremiumRequest;
+import com.joutio.bff.infrastructure.in.api.response.AdminUserPremiumView;
+import com.joutio.identity.domain.model.PremiumSource;
+import com.joutio.identity.domain.model.UserPremium;
 import com.joutio.bff.infrastructure.in.api.request.SuspendUserRequest;
 import com.joutio.bff.infrastructure.in.api.response.AdminReportedUserSummaryView;
 import com.joutio.bff.infrastructure.in.api.response.AdminUserAccountView;
@@ -265,6 +270,45 @@ public class UserModerationAdminService {
     }
 
     /**
+     * Attribue (ou remplace) Premium à la main : support, testeurs, gestes commerciaux. Le droit
+     * est porté par {@code UserAggregate} ; la commande garde l'administrateur dans l'événement.
+     */
+    public CompletableFuture<AdminUserPremiumView> grantPremium(String userId,
+                                                                String adminId,
+                                                                GrantPremiumRequest request) {
+        return requireUser(userId).thenCompose(user -> {
+            requireNotProtected(user);
+            if (user.status() == AccountStatus.DELETED) {
+                throw new BffProblems.InvalidPremiumGrantRequestProblem("Le compte est supprimé");
+            }
+            Instant now = Instant.now();
+            Instant until = request == null ? null : request.premiumUntil();
+            if (until != null && !until.isAfter(now)) {
+                throw new BffProblems.InvalidPremiumGrantRequestProblem("L'échéance doit être dans le futur");
+            }
+            return commandGateway.send(new UserCommand.GrantPremiumCommand(
+                            userId, PremiumSource.MANUAL, until, adminId, now))
+                    .thenApply(_ -> new AdminUserPremiumView(
+                            userId, !user.suspended(now), until, PremiumSource.MANUAL));
+        });
+    }
+
+    /** Retire Premium (idempotent : sans effet si aucun droit actif). */
+    public CompletableFuture<AdminUserPremiumView> revokePremium(String userId,
+                                                                 String adminId,
+                                                                 RevokePremiumRequest request) {
+        return requireUser(userId).thenCompose(user -> {
+            requireNotProtected(user);
+            return commandGateway.send(new UserCommand.RevokePremiumCommand(
+                            userId,
+                            request == null ? null : normalizeNote(request.note()),
+                            adminId,
+                            Instant.now()))
+                    .thenApply(_ -> new AdminUserPremiumView(userId, false, null, null));
+        });
+    }
+
+    /**
      * Le query bus distribué transporte {@link SearchResponse} avec un contenu brut
      * ({@code LinkedHashMap}) : le type générique est perdu par le descripteur de transport.
      * On re-matérialise les éléments avant l'enrichissement.
@@ -444,6 +488,7 @@ public class UserModerationAdminService {
 
     private static AdminUserAccountView accountView(User user) {
         UserSuspension suspension = user.suspension();
+        UserPremium premium = user.premium();
         Instant now = Instant.now();
         return new AdminUserAccountView(
                 user.userId(),
@@ -460,7 +505,12 @@ public class UserModerationAdminService {
                 suspension == null ? null : suspension.reinstatedBy(),
                 suspension == null ? null : suspension.reinstatementReason(),
                 suspension == null ? null : suspension.reinstatementNote(),
-                JoutioConstants.SYSTEM_USER_ID.equals(user.userId()));
+                JoutioConstants.SYSTEM_USER_ID.equals(user.userId()),
+                user.premiumActive(now),
+                premium == null ? null : premium.premiumUntil(),
+                premium == null ? null : premium.source(),
+                premium == null ? null : premium.grantedAt(),
+                premium == null ? null : premium.grantedBy());
     }
 
     private static AdminUserProfileView profileView(Profile profile) {

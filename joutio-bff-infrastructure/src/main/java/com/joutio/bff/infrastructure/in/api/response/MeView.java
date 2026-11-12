@@ -2,6 +2,7 @@ package com.joutio.bff.infrastructure.in.api.response;
 
 import com.joutio.microservice.core.domain.model.i18n.Language;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -37,13 +38,17 @@ public record MeView(
          * Préférence de jeu : à l'expiration d'une recherche sans adversaire, le client lance un
          * entraînement contre le bot ({@code true}, défaut) ou propose les choix.
          */
-        boolean autoTrainOnTimeout
+        boolean autoTrainOnTimeout,
+        /** Échéance du droit Premium accordé ; {@code null} = sans échéance ou aucun droit. */
+        Instant premiumUntil,
+        /** Origine du droit Premium ({@code MANUAL|APP_STORE|PLAY|WEB}) ; {@code null} = aucun droit. */
+        String premiumSource
 ) {
 
     /** Copie avec le flag forcé (la projection profile peut être en retard juste après la commande). */
     public MeView withOnboardingCompleted(boolean completed) {
         return new MeView(userId, email, pseudonym, bio, country, avatarOptions, bannerUrl,
                 equippedTitle, language, progression, stats, followingCount, followersCount, completed,
-                rewards, premium, interests, autoTrainOnTimeout);
+                rewards, premium, interests, autoTrainOnTimeout, premiumUntil, premiumSource);
     }
 }

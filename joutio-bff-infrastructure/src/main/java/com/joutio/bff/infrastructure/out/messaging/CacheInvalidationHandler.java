@@ -132,6 +132,18 @@ public class CacheInvalidationHandler {
         logger.debug("Statut identity invalidé (réintégration): userId={}", event.userId());
     }
 
+    @EventHandler
+    public void on(UserEvent.UserPremiumGrantedEvent event) {
+        identityLookup.invalidate(event.userId());
+        logger.debug("Statut identity invalidé (Premium accordé): userId={}", event.userId());
+    }
+
+    @EventHandler
+    public void on(UserEvent.UserPremiumRevokedEvent event) {
+        identityLookup.invalidate(event.userId());
+        logger.debug("Statut identity invalidé (Premium retiré): userId={}", event.userId());
+    }
+
     private void invalidateCounts(UserFollowerEvent event) {
         // Le follower (followingCount) et le suivi (followersCount) changent tous les deux.
         followLookup.invalidateCounts(event.followerId());

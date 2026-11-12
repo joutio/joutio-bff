@@ -37,12 +37,12 @@ public class MeService {
 
     public CompletableFuture<MeView> me(String userId) {
         // Capturé sur le thread HTTP : le callback Axon peut s'exécuter sur un autre thread sans
-        // SecurityContext, ce qui ferait perdre le rôle admin/premium.
-        return me(userId, premiumAccessPolicy.isPremium());
+        // SecurityContext, ce qui ferait perdre le rôle admin.
+        return me(userId, premiumAccessPolicy.status());
     }
 
     /** Variante pour les appels déclenchés depuis un callback asynchrone (fin d'onboarding). */
-    public CompletableFuture<MeView> me(String userId, boolean premium) {
+    public CompletableFuture<MeView> me(String userId, PremiumAccessPolicy.PremiumStatus premium) {
         CompletableFuture<Profile> profileFuture = profileLookup.get(userId);
         CompletableFuture<PlayerProgress> progressFuture = progressionLookup.get(userId);
         CompletableFuture<PlayerRewards> rewardsFuture = rewardLookup.get(userId)
@@ -70,14 +70,16 @@ public class MeService {
                             counts.followers(),
                             profile.onboardingCompletedAt() != null || progress.gamesPlayed() > 0,
                             rewards.codes().stream().map(Enum::name).sorted().toList(),
-                            premium,
+                            premium.premium(),
                             profile.interests(),
-                            profile.autoTrainOnTimeout() == null || profile.autoTrainOnTimeout());
+                            profile.autoTrainOnTimeout() == null || profile.autoTrainOnTimeout(),
+                            premium.premiumUntil(),
+                            premium.source() == null ? null : premium.source().name());
                 });
     }
 
 
-    public boolean isPremium() {
-        return premiumAccessPolicy.isPremium();
+    public PremiumAccessPolicy.PremiumStatus premiumStatus() {
+        return premiumAccessPolicy.status();
     }
 }

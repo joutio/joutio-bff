@@ -2,6 +2,7 @@ package com.joutio.bff.infrastructure.in.api;
 
 import com.joutio.bff.application.AccountDeletionService;
 import com.joutio.bff.application.MeService;
+import com.joutio.bff.application.PremiumAccessPolicy;
 import com.joutio.bff.application.ProfileUpdateService;
 import com.joutio.bff.application.RewardService;
 import com.joutio.bff.application.TopicRecommendationService;
@@ -68,7 +69,7 @@ public class MeController {
     @PostMapping("/onboarding/complete")
     public CompletableFuture<ResponseEntity<MeView>> completeOnboarding() {
         String userId = SecurityHelper.getUserId();
-        boolean premium = meService.isPremium();
+        PremiumAccessPolicy.PremiumStatus premium = meService.premiumStatus();
         return profileUpdateService.completeOnboarding(userId)
                 .thenCompose(_ -> meService.me(userId, premium))
                 // La projection profile est asynchrone : le flag renvoyé doit refléter la commande

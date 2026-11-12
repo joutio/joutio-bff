@@ -2,7 +2,10 @@ package com.joutio.bff.infrastructure.in.api;
 
 import com.joutio.bff.application.UserModerationAdminService;
 import com.joutio.bff.application.UserReportService;
+import com.joutio.bff.infrastructure.in.api.request.GrantPremiumRequest;
 import com.joutio.bff.infrastructure.in.api.request.ReinstateUserRequest;
+import com.joutio.bff.infrastructure.in.api.request.RevokePremiumRequest;
+import com.joutio.bff.infrastructure.in.api.response.AdminUserPremiumView;
 import com.joutio.bff.infrastructure.in.api.request.ResolveUserReportsRequest;
 import com.joutio.bff.infrastructure.in.api.request.SuspendUserRequest;
 import com.joutio.bff.infrastructure.in.api.response.AdminReportedUserSummaryView;
@@ -21,9 +24,11 @@ import com.joutio.microservice.security.SecurityHelper;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -103,6 +108,24 @@ public class UserModerationAdminController {
             @PathVariable String userId,
             @Valid @RequestBody(required = false) ReinstateUserRequest request) {
         return adminService.reinstate(userId, SecurityHelper.getUserId(), request)
+                .thenApply(ResponseEntity::ok);
+    }
+
+    /** Attribution manuelle de Premium ({@code premiumUntil} absent = sans échéance). */
+    @PutMapping("/users/{userId}/premium")
+    public CompletableFuture<ResponseEntity<AdminUserPremiumView>> grantPremium(
+            @PathVariable String userId,
+            @Valid @RequestBody(required = false) GrantPremiumRequest request) {
+        return adminService.grantPremium(userId, SecurityHelper.getUserId(), request)
+                .thenApply(ResponseEntity::ok);
+    }
+
+    /** Retrait manuel de Premium. */
+    @DeleteMapping("/users/{userId}/premium")
+    public CompletableFuture<ResponseEntity<AdminUserPremiumView>> revokePremium(
+            @PathVariable String userId,
+            @Valid @RequestBody(required = false) RevokePremiumRequest request) {
+        return adminService.revokePremium(userId, SecurityHelper.getUserId(), request)
                 .thenApply(ResponseEntity::ok);
     }
 

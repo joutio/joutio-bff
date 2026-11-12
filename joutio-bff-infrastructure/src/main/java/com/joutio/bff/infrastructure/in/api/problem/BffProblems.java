@@ -214,6 +214,16 @@ public final class BffProblems {
         }
     }
 
+    public static class InvalidPremiumGrantRequestProblem extends BaseProblem {
+        public InvalidPremiumGrantRequestProblem(String detail) {
+            super("urn:joutio:bff:user:invalidPremiumGrant",
+                    ProblemCategory.VALIDATION,
+                    "Invalid premium grant",
+                    detail,
+                    Map.of());
+        }
+    }
+
     /** Compte déjà suspendu (`409`). */
     public static class UserAlreadySuspendedProblem extends BaseProblem {
         public UserAlreadySuspendedProblem(String userId) {

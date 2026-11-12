@@ -1,30 +1,106 @@
 package com.joutio.bff.application;
 
+import com.joutio.identity.domain.model.PremiumSource;
+import com.joutio.identity.domain.model.UserAccountStatus;
+import com.joutio.identity.domain.model.UserPremium;
+import com.joutio.microservice.security.SecurityHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 /**
- * Entitlement Premium de la requête courante. L'admin est Premium par défaut ; un futur
- * abonnement pourra émettre {@code ROLE_PREMIUM} sans changer les consommateurs.
+ * Droit Premium de la requête courante.
+ *
+ * <p>L'admin ({@code ROLE_ADMIN} du JWT) est Premium par défaut. Pour les autres, le droit est
+ * porté par {@code UserAggregate} (identity) et lu via {@link IdentityLookup} : déjà interrogé à
+ * chaque requête par {@code CurrentUserExistsFilter}, son cache est purgé sur les événements
+ * {@code UserPremiumGranted/RevokedEvent}. Un achat ou un retrait est donc visible sans attendre
+ * le renouvellement du jeton (premium/specs/entitlements.md § 3).</p>
+ *
+ * <p>Fail-closed : identity injoignable ⇒ pas de Premium (aucune ressource Premium n'est
+ * accordée sur une lecture incertaine).</p>
  */
 @Component
 public class PremiumAccessPolicy {
 
-    static final String ROLE_ADMIN = "ROLE_ADMIN";
-    static final String ROLE_PREMIUM = "ROLE_PREMIUM";
+    private static final Logger logger = LoggerFactory.getLogger(PremiumAccessPolicy.class);
 
-    public boolean isPremium() {
-        return isPremium(SecurityContextHolder.getContext().getAuthentication());
+    static final String ROLE_ADMIN = "ROLE_ADMIN";
+    private static final long LOOKUP_TIMEOUT_MS = 2_000;
+
+    /** Droit Premium résolu : {@code premiumUntil}/{@code source} nuls si aucun droit accordé. */
+    public record PremiumStatus(boolean premium, Instant premiumUntil, PremiumSource source) {
+        static final PremiumStatus NONE = new PremiumStatus(false, null, null);
     }
 
-    static boolean isPremium(Authentication authentication) {
+    private final IdentityLookup identityLookup;
+    private final Clock clock;
+
+    public PremiumAccessPolicy(IdentityLookup identityLookup) {
+        this(identityLookup, Clock.systemUTC());
+    }
+
+    PremiumAccessPolicy(IdentityLookup identityLookup, Clock clock) {
+        this.identityLookup = identityLookup;
+        this.clock = clock;
+    }
+
+    /** Doit être appelé sur le thread HTTP (lit le {@code SecurityContext}). */
+    public boolean isPremium() {
+        return status().premium();
+    }
+
+    /** Doit être appelé sur le thread HTTP (lit le {@code SecurityContext}). */
+    public PremiumStatus status() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            return false;
+            return PremiumStatus.NONE;
         }
-        return authentication.getAuthorities().stream()
+        boolean admin = isAdmin(authentication);
+        PremiumStatus granted = SecurityHelper.findUserId()
+                .map(this::lookup)
+                .orElse(PremiumStatus.NONE);
+        return admin ? new PremiumStatus(true, granted.premiumUntil(), granted.source()) : granted;
+    }
+
+    static boolean isAdmin(Authentication authentication) {
+        return authentication != null && authentication.isAuthenticated()
+                && authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(role -> ROLE_ADMIN.equals(role) || ROLE_PREMIUM.equals(role));
+                .anyMatch(ROLE_ADMIN::equals);
+    }
+
+    PremiumStatus lookup(String userId) {
+        try {
+            UserAccountStatus status = identityLookup.status(userId)
+                    .get(LOOKUP_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            return toStatus(status, clock.instant());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.warn("Premium lookup interrupted for {} (fail-closed)", userId);
+        } catch (ExecutionException | TimeoutException e) {
+            logger.warn("Premium lookup failed for {} (fail-closed): {}", userId, e.toString());
+        }
+        return PremiumStatus.NONE;
+    }
+
+    static PremiumStatus toStatus(UserAccountStatus status, Instant now) {
+        if (status == null) {
+            return PremiumStatus.NONE;
+        }
+        UserPremium premium = status.premium();
+        return new PremiumStatus(
+                status.premiumActive(now),
+                premium == null ? null : premium.premiumUntil(),
+                premium == null ? null : premium.source());
     }
 }

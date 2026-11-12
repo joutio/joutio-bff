@@ -21,7 +21,8 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Statut des comptes côté identity, avec cache local (Caffeine).
  *
- * <p>Deux usages : le filtre d'accès BFF (existence + suspension) et les badges publics
+ * <p>Trois usages : le filtre d'accès BFF (existence + suspension), le droit Premium
+ * ({@link PremiumAccessPolicy}) et les badges publics
  * « Compte suspendu » sur les vues où un joueur apparaît. Le cache est borné à 30 s et purgé
  * sur les événements identity (toutes les répliques via le groupe instance-scopé
  * {@code cache-invalidation}).</p>
@@ -121,7 +122,8 @@ public class IdentityLookup {
         return new UserAccountStatus(
                 user.userId(),
                 user.status(),
-                user.suspension() == null ? null : user.suspension().suspendedUntil());
+                user.suspension() == null ? null : user.suspension().suspendedUntil(),
+                user.premium());
     }
 
     public void invalidate(String userId) {

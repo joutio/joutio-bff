@@ -1,7 +1,9 @@
 package com.joutio.bff.application;
 
 import com.joutio.identity.domain.model.AccountStatus;
+import com.joutio.identity.domain.model.PremiumSource;
 import com.joutio.identity.domain.model.User;
+import com.joutio.identity.domain.model.UserPremium;
 import com.joutio.identity.domain.model.UserSuspension;
 import com.joutio.identity.domain.model.UserSuspensionReason;
 import com.joutio.identity.domain.model.UserAccountStatus;
@@ -42,6 +44,24 @@ class IdentityLookupTest {
         IdentityLookup lookup = new IdentityLookup(queryGateway);
 
         assertEquals(AccountStatus.ACTIVE, lookup.status("user-1").join().status());
+    }
+
+    @Test
+    void carriesPremiumGrantAndRefetchesAfterInvalidation() {
+        UserPremium grant = new UserPremium(PremiumSource.MANUAL, null, "admin-1", Instant.now());
+        User free = new User("user-1", "user@joutio.dev", Set.of(), Instant.now(), AccountStatus.ACTIVE, null);
+        User premium = new User("user-1", "user@joutio.dev", Set.of(), Instant.now(),
+                AccountStatus.ACTIVE, null, grant);
+        when(queryGateway.query(any(UserQuery.FindUserQuery.class), any(ResponseType.class)))
+                .thenReturn(CompletableFuture.completedFuture(Optional.of(free)))
+                .thenReturn(CompletableFuture.completedFuture(Optional.of(premium)));
+        IdentityLookup lookup = new IdentityLookup(queryGateway);
+
+        assertFalse(lookup.status("user-1").join().premiumActive(Instant.now()));
+        lookup.invalidate("user-1");
+        UserAccountStatus refreshed = lookup.status("user-1").join();
+        assertEquals(grant, refreshed.premium());
+        assertTrue(refreshed.premiumActive(Instant.now()));
     }
 
     @Test
