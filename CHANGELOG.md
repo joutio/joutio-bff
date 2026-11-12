@@ -1,3 +1,9 @@
+## [2.1.0](https://github.com/joutio/joutio-bff/compare/v2.0.0...v2.1.0) (2026-11-12)
+
+### Features
+
+* **bff:** read Premium from identity and add admin grant routes ([a8fcc4d](https://github.com/joutio/joutio-bff/commit/a8fcc4d350a7cf1d0e89c3337b05be357da097ca))
+
 ## [2.0.0](https://github.com/joutio/joutio-bff/compare/v1.7.0...v2.0.0) (2026-11-12)
 
 ### ⚠ BREAKING CHANGES
