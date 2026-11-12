@@ -41,8 +41,9 @@ class DuelCreationGuardTest {
 
     @BeforeEach
     void setUp() {
-        when(limits.maxPendingChallenges(any())).thenReturn(5);
-        when(limits.maxOpenRooms(any())).thenReturn(5);
+        when(limits.maxPendingChallenges(any())).thenReturn(CompletableFuture.completedFuture(5));
+        when(limits.maxOpenRooms(any())).thenReturn(CompletableFuture.completedFuture(5));
+        when(limits.maxBotRooms()).thenReturn(5);
     }
 
     @Test
@@ -63,7 +64,7 @@ class DuelCreationGuardTest {
 
     @Test
     void challenge_countsOnlyCreatedChallengesForQuota() {
-        when(limits.maxPendingChallenges(ME)).thenReturn(1);
+        when(limits.maxPendingChallenges(ME)).thenReturn(CompletableFuture.completedFuture(1));
         stubChallenges(
                 challenge("c1", ME, "a", "topic-2", ChallengeStatus.PENDING, NOW.plusSeconds(60)),
                 challenge("c2", "b", ME, "topic-3", ChallengeStatus.PENDING, NOW.plusSeconds(60)));
@@ -74,7 +75,7 @@ class DuelCreationGuardTest {
 
     @Test
     void challenge_ignoresExpiredAndResolvedForQuota() {
-        when(limits.maxPendingChallenges(ME)).thenReturn(1);
+        when(limits.maxPendingChallenges(ME)).thenReturn(CompletableFuture.completedFuture(1));
         stubChallenges(
                 challenge("c1", ME, "a", "topic-2", ChallengeStatus.PENDING, NOW.minusSeconds(1)),
                 challenge("c2", ME, "b", "topic-3", ChallengeStatus.DECLINED, NOW.plusSeconds(60)));
@@ -101,7 +102,7 @@ class DuelCreationGuardTest {
 
     @Test
     void room_appliesCreatedRoomsQuota() {
-        when(limits.maxOpenRooms(ME)).thenReturn(1);
+        when(limits.maxOpenRooms(ME)).thenReturn(CompletableFuture.completedFuture(1));
         stubRooms(
                 room("r1", ME, "topic-2", RoomStatus.WAITING_PLAYERS, NOW.plusSeconds(60)),
                 room("r2", ME, "topic-3", RoomStatus.WAITING_PLAYERS, NOW.plusSeconds(60)));
@@ -112,7 +113,7 @@ class DuelCreationGuardTest {
 
     @Test
     void room_ignoresExpiredAndTerminalRooms() {
-        when(limits.maxOpenRooms(ME)).thenReturn(1);
+        when(limits.maxOpenRooms(ME)).thenReturn(CompletableFuture.completedFuture(1));
         stubRooms(
                 room("r1", ME, "topic-2", RoomStatus.WAITING_PLAYERS, NOW.minusSeconds(1)),
                 room("r2", ME, "topic-3", RoomStatus.CANCELLED, NOW.plusSeconds(60)));
@@ -123,7 +124,7 @@ class DuelCreationGuardTest {
 
     @Test
     void room_ignoresBotRoomForHumanTopicUniquenessAndQuota() {
-        when(limits.maxOpenRooms(ME)).thenReturn(1);
+        when(limits.maxOpenRooms(ME)).thenReturn(CompletableFuture.completedFuture(1));
         stubRooms(botRoom("r1", ME, TOPIC, RoomStatus.WAITING_PLAYERS, NOW.plusSeconds(60)));
 
         assertThatCode(() -> guard.ensureRoomAllowed(ME, TOPIC).join())
@@ -140,7 +141,7 @@ class DuelCreationGuardTest {
 
     @Test
     void botRoom_hasItsOwnQuota() {
-        when(limits.maxOpenRooms(ME)).thenReturn(1);
+        when(limits.maxBotRooms()).thenReturn(1);
         stubRooms(botRoom("r1", ME, TOPIC, RoomStatus.WAITING_PLAYERS, NOW.plusSeconds(60)));
 
         assertThatThrownBy(() -> guard.ensureBotRoomAllowed(ME).join())

@@ -1,6 +1,7 @@
 package com.joutio.bff.application;
 
 import com.joutio.bff.infrastructure.in.api.response.MeView;
+import com.joutio.bff.infrastructure.in.api.response.PlanLimitsView;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.PlayerRewards;
 import com.joutio.profile.domain.model.Profile;
@@ -22,12 +23,18 @@ public class MeService {
     private final RewardLookup rewardLookup;
     private final FollowLookup followLookup;
     private final PremiumAccessPolicy premiumAccessPolicy;
+    private final DuelLimitPolicy duelLimitPolicy;
+    private final TopicCreationLimitPolicy creationLimitPolicy;
 
     public MeService(ProfileLookup profileLookup,
                      ProgressionLookup progressionLookup,
                      RewardLookup rewardLookup,
                      FollowLookup followLookup,
-                     PremiumAccessPolicy premiumAccessPolicy) {
+                     PremiumAccessPolicy premiumAccessPolicy,
+                     DuelLimitPolicy duelLimitPolicy,
+                     TopicCreationLimitPolicy creationLimitPolicy) {
+        this.duelLimitPolicy = duelLimitPolicy;
+        this.creationLimitPolicy = creationLimitPolicy;
         this.profileLookup = profileLookup;
         this.progressionLookup = progressionLookup;
         this.rewardLookup = rewardLookup;
@@ -74,10 +81,22 @@ public class MeService {
                             profile.interests(),
                             profile.autoTrainOnTimeout() == null || profile.autoTrainOnTimeout(),
                             premium.premiumUntil(),
-                            premium.source() == null ? null : premium.source().name());
+                            premium.source() == null ? null : premium.source().name(),
+                            planLimits(premium.premium()));
                 });
     }
 
+
+    private PlanLimitsView planLimits(boolean premium) {
+        DuelLimitPolicy.DuelLimits duel = duelLimitPolicy.limits(premium);
+        TopicCreationLimitPolicy.CreationLimits creation = creationLimitPolicy.limits(premium);
+        return new PlanLimitsView(
+                duel.pendingChallenges(),
+                duel.openRooms(),
+                duel.botRooms(),
+                creation.publishedTopics(),
+                creation.questionsPerTopic());
+    }
 
     public PremiumAccessPolicy.PremiumStatus premiumStatus() {
         return premiumAccessPolicy.status();

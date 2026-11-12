@@ -2,7 +2,11 @@ package com.joutio.bff.application;
 
 import com.joutio.identity.domain.model.PremiumSource;
 import com.joutio.identity.domain.model.UserAccountStatus;
+import com.joutio.identity.domain.model.UserEntitlements;
 import com.joutio.identity.domain.model.UserPremium;
+import com.joutio.identity.domain.query.UserQuery;
+import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
+import org.axonframework.queryhandling.QueryGateway;
 import com.joutio.microservice.security.SecurityHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -43,15 +48,29 @@ public class PremiumAccessPolicy {
     }
 
     private final IdentityLookup identityLookup;
+    private final QueryGateway queryGateway;
     private final Clock clock;
 
-    public PremiumAccessPolicy(IdentityLookup identityLookup) {
-        this(identityLookup, Clock.systemUTC());
+    @org.springframework.beans.factory.annotation.Autowired
+    public PremiumAccessPolicy(IdentityLookup identityLookup, QueryGateway queryGateway) {
+        this(identityLookup, queryGateway, Clock.systemUTC());
     }
 
-    PremiumAccessPolicy(IdentityLookup identityLookup, Clock clock) {
+    PremiumAccessPolicy(IdentityLookup identityLookup, QueryGateway queryGateway, Clock clock) {
         this.identityLookup = identityLookup;
+        this.queryGateway = queryGateway;
         this.clock = clock;
+    }
+
+    /**
+     * Droit Premium d'un joueur quelconque (admin compris), relu dans identity sans cache :
+     * utilisable hors du thread HTTP et pour un tiers (créateur d'un sujet, invité d'une équipe).
+     */
+    public CompletableFuture<Boolean> premium(String userId) {
+        return queryGateway.query(
+                        new UserQuery.GetUserEntitlementsQuery(userId),
+                        QueryResponseTypes.instanceOf(UserEntitlements.class))
+                .thenApply(UserEntitlements::premium);
     }
 
     /** Doit être appelé sur le thread HTTP (lit le {@code SecurityContext}). */

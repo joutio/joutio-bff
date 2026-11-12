@@ -1,8 +1,6 @@
 package com.joutio.bff.application;
 
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
-import com.joutio.identity.domain.model.UserEntitlements;
-import com.joutio.identity.domain.query.UserQuery;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.theme.domain.model.*;
 import com.joutio.theme.domain.query.TopicQuery;
@@ -15,16 +13,15 @@ import java.util.concurrent.CompletableFuture;
 @Service
 public class TopicAccessService {
     private final QueryGateway queries;
+    private final PremiumAccessPolicy premiumAccessPolicy;
 
-    public TopicAccessService(QueryGateway queries) {
+    public TopicAccessService(QueryGateway queries, PremiumAccessPolicy premiumAccessPolicy) {
         this.queries = queries;
+        this.premiumAccessPolicy = premiumAccessPolicy;
     }
 
     public CompletableFuture<Boolean> premium(String userId) {
-        return queries.query(
-                        new UserQuery.GetUserEntitlementsQuery(userId),
-                        QueryResponseTypes.instanceOf(UserEntitlements.class))
-                .thenApply(UserEntitlements::premium);
+        return premiumAccessPolicy.premium(userId);
     }
 
     public CompletableFuture<TopicPermissions> permissions(String topicId, String userId) {

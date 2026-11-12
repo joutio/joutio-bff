@@ -54,7 +54,7 @@ public class DuelCreationGuard {
         return queryGateway
                 .query(new ChallengeQuery.GetMyChallenges(challengerId),
                         QueryResponseTypes.multipleInstancesOf(Challenge.class))
-                .thenAccept(challenges -> {
+                .thenCombine(limits.maxPendingChallenges(challengerId), (challenges, limit) -> {
                     List<Challenge> active = activeChallenges(challenges);
                     boolean duplicate = active.stream().anyMatch(challenge ->
                             topicId.equals(challenge.topicId())
@@ -65,10 +65,10 @@ public class DuelCreationGuard {
                     long created = active.stream()
                             .filter(challenge -> challengerId.equals(challenge.challengerId()))
                             .count();
-                    int limit = limits.maxPendingChallenges(challengerId);
                     if (created >= limit) {
                         throw new BffProblems.ChallengeQuotaExceededProblem(limit);
                     }
+                    return null;
                 });
     }
 
@@ -77,7 +77,7 @@ public class DuelCreationGuard {
         return queryGateway
                 .query(new RoomQuery.GetMyOpenRooms(initiatorId),
                         QueryResponseTypes.multipleInstancesOf(Room.class))
-                .thenAccept(rooms -> {
+                .thenCombine(limits.maxOpenRooms(initiatorId), (rooms, limit) -> {
                     List<Room> active = humanRooms(rooms, initiatorId);
                     boolean duplicate = active.stream()
                             .anyMatch(room -> topicId.equals(room.topicId()));
@@ -89,10 +89,10 @@ public class DuelCreationGuard {
                                 .orElse(null);
                         throw new BffProblems.RoomAlreadyOpenOnTopicProblem(topicId, roomId);
                     }
-                    int limit = limits.maxOpenRooms(initiatorId);
                     if (active.size() >= limit) {
                         throw new BffProblems.RoomQuotaExceededProblem(limit);
                     }
+                    return null;
                 });
     }
 
@@ -109,7 +109,7 @@ public class DuelCreationGuard {
                             .filter(room -> initiatorId.equals(room.initiatorId()))
                             .filter(Room::vsBot)
                             .toList();
-                    int limit = limits.maxOpenRooms(initiatorId);
+                    int limit = limits.maxBotRooms();
                     if (active.size() >= limit) {
                         throw new BffProblems.RoomQuotaExceededProblem(limit);
                     }

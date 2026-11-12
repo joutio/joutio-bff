@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
 
 class TopicAccessServiceTest {
     private final QueryGateway queries = mock(QueryGateway.class);
-    private final TopicAccessService access = new TopicAccessService(queries);
+    private final TopicAccessService access = new TopicAccessService(queries, new PremiumAccessPolicy(mock(IdentityLookup.class), queries));
 
     private void member(TopicTeamRole role, boolean premium) {
         when(queries.query(any(TopicQuery.GetTopicByIdQuery.class), any(ResponseType.class)))

@@ -4,14 +4,20 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
- * Limites de création de duels ({@code joutio.duel.limits.*}). Valeurs surchargeables par
- * configuration/GitOps : la politique premium lira ces bornes comme plafond actuel avant de les
- * remplacer par un quota par joueur.
+ * Limites de création de duels ({@code joutio.duel.limits.*}), surchargeables par GitOps.
+ * Gratuit / Premium pour les défis et salons entre joueurs ; les salons bot ont un garde-fou
+ * anti-spam identique pour tous (décision du 2026-11-12, premium/CONTEXT.md).
  */
 @ConfigurationProperties(prefix = "joutio.duel.limits")
 public record DuelLimitsProperties(
-        /** Nombre maximal de défis PENDING créés par un joueur (0 = illimité). */
+        /** Défis PENDING créés par un joueur gratuit (0 = illimité). */
         @DefaultValue("5") int pendingChallenges,
-        /** Nombre maximal de salons WAITING_PLAYERS créés par un joueur (0 = illimité). */
-        @DefaultValue("5") int openRooms) {
+        /** Salons WAITING_PLAYERS (entre joueurs) créés par un joueur gratuit (0 = illimité). */
+        @DefaultValue("5") int openRooms,
+        /** Défis PENDING créés par un joueur Premium (0 = illimité). */
+        @DefaultValue("20") int premiumPendingChallenges,
+        /** Salons WAITING_PLAYERS (entre joueurs) créés par un joueur Premium (0 = illimité). */
+        @DefaultValue("20") int premiumOpenRooms,
+        /** Salons bot ouverts simultanément, pour tous (0 = illimité). */
+        @DefaultValue("5") int botRooms) {
 }

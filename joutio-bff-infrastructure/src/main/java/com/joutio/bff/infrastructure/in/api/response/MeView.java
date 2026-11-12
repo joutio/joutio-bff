@@ -42,13 +42,15 @@ public record MeView(
         /** Échéance du droit Premium accordé ; {@code null} = sans échéance ou aucun droit. */
         Instant premiumUntil,
         /** Origine du droit Premium ({@code MANUAL|APP_STORE|PLAY|WEB}) ; {@code null} = aucun droit. */
-        String premiumSource
+        String premiumSource,
+        /** Limites du plan (défis, salons, création), selon {@code premium}. */
+        PlanLimitsView limits
 ) {
 
     /** Copie avec le flag forcé (la projection profile peut être en retard juste après la commande). */
     public MeView withOnboardingCompleted(boolean completed) {
         return new MeView(userId, email, pseudonym, bio, country, avatarOptions, bannerUrl,
                 equippedTitle, language, progression, stats, followingCount, followersCount, completed,
-                rewards, premium, interests, autoTrainOnTimeout, premiumUntil, premiumSource);
+                rewards, premium, interests, autoTrainOnTimeout, premiumUntil, premiumSource, limits);
     }
 }

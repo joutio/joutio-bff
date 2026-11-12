@@ -28,7 +28,8 @@ class PremiumAccessPolicyTest {
 
     private final IdentityLookup identityLookup = mock(IdentityLookup.class);
     private final PremiumAccessPolicy policy =
-            new PremiumAccessPolicy(identityLookup, Clock.fixed(NOW, ZoneOffset.UTC));
+            new PremiumAccessPolicy(identityLookup, mock(org.axonframework.queryhandling.QueryGateway.class),
+                    Clock.fixed(NOW, ZoneOffset.UTC));
 
     @AfterEach
     void tearDown() {

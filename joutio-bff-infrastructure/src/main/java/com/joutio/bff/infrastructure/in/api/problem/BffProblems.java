@@ -507,4 +507,41 @@ public final class BffProblems {
                     Map.of("limit", limit));
         }
     }
+
+    /** Plafond de sujets publiés atteint (gratuit 1, Premium 10). */
+    public static class TopicQuotaExceededProblem extends BaseProblem {
+        public TopicQuotaExceededProblem(int limit) {
+            super("urn:joutio:bff:topic:quotaExceeded",
+                    ProblemCategory.BUSINESS_INVALID_COMMAND,
+                    "Topic quota exceeded",
+                    "The creator has reached the maximum number of published topics (" + limit + ")",
+                    Map.of("limit", limit));
+        }
+    }
+
+    /** Plafond de questions du sujet atteint (gratuit 30, Premium 150, plan du créateur). */
+    public static class QuestionQuotaExceededProblem extends BaseProblem {
+        public QuestionQuotaExceededProblem(int limit) {
+            super("urn:joutio:bff:question:quotaExceeded",
+                    ProblemCategory.BUSINESS_INVALID_COMMAND,
+                    "Question quota exceeded",
+                    "The topic has reached the maximum number of questions (" + limit + ")",
+                    Map.of("limit", limit));
+        }
+    }
+
+    /**
+     * Sujet gelé : son créateur n'est plus Premium et dépasse le plafond gratuit de sujets publiés.
+     * Dépublier des sujets ou repasser Premium lève le gel.
+     */
+    public static class TopicOverQuotaProblem extends BaseProblem {
+        public TopicOverQuotaProblem(String topicId, int limit, int published) {
+            super("urn:joutio:bff:topic:overQuota",
+                    ProblemCategory.BUSINESS_INVALID_COMMAND,
+                    "Topic locked",
+                    "The creator exceeds the free published topics limit (" + published + "/" + limit
+                            + "): unpublish topics or renew Premium to edit",
+                    Map.of("topicId", topicId, "limit", limit, "published", published));
+        }
+    }
 }

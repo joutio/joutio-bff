@@ -53,12 +53,17 @@ public class TopicAuthoringService {
     private final CommandGateway commandGateway;
     private final QueryGateway queryGateway;
     private final TopicAccessService access;
+    private final TopicCreationLimitPolicy limits;
 
     public TopicAuthoringService(
-            CommandGateway commandGateway, QueryGateway queryGateway, TopicAccessService access) {
+            CommandGateway commandGateway,
+            QueryGateway queryGateway,
+            TopicAccessService access,
+            TopicCreationLimitPolicy limits) {
         this.commandGateway = commandGateway;
         this.queryGateway = queryGateway;
         this.access = access;
+        this.limits = limits;
     }
 
     public CompletableFuture<String> create(String userId, CreateTopicRequest request) {
@@ -130,6 +135,7 @@ public class TopicAuthoringService {
 
     public CompletableFuture<Void> publish(String topicId, String userId) {
         return requireOwner(topicId, userId)
+                .thenCompose(_ -> limits.ensureCanPublish(topicId))
                 .thenCompose(
                         _ ->
                                 commandGateway.send(
@@ -140,6 +146,7 @@ public class TopicAuthoringService {
     public CompletableFuture<String> createQuestion(
             String topicId, String userId, CreateQuestionRequest request) {
         return access.requireMember(topicId, userId)
+                .thenCompose(_ -> limits.ensureCanAddQuestion(topicId))
                 .thenCompose(
                         _ -> {
                             String questionId = UUID.randomUUID().toString();
@@ -233,6 +240,7 @@ public class TopicAuthoringService {
     public CompletableFuture<Void> addTranslation(
             String questionId, String userId, AddQuestionTranslationRequest request) {
         return requireQuestionOwner(questionId, userId)
+                .thenCompose(q -> limits.ensureEditable(q.topicId()))
                 .thenCompose(
                         _ ->
                                 commandGateway.send(
@@ -248,6 +256,7 @@ public class TopicAuthoringService {
     public CompletableFuture<Void> updateQuestionText(
             String questionId, String userId, UpdateQuestionTextRequest request) {
         return requireQuestionOwner(questionId, userId)
+                .thenCompose(q -> limits.ensureEditable(q.topicId()))
                 .thenCompose(
                         _ ->
                                 commandGateway.send(
@@ -262,6 +271,7 @@ public class TopicAuthoringService {
     public CompletableFuture<Void> updateQuestionAnswers(
             String questionId, String userId, UpdateQuestionAnswersRequest request) {
         return requireQuestionOwner(questionId, userId)
+                .thenCompose(q -> limits.ensureEditable(q.topicId()))
                 .thenCompose(
                         _ ->
                                 commandGateway.send(
@@ -276,6 +286,7 @@ public class TopicAuthoringService {
     public CompletableFuture<Void> updateQuestionCorrectAnswer(
             String questionId, String userId, UpdateQuestionCorrectAnswerRequest request) {
         return requireQuestionOwner(questionId, userId)
+                .thenCompose(q -> limits.ensureEditable(q.topicId()))
                 .thenCompose(
                         _ ->
                                 commandGateway.send(
@@ -287,6 +298,7 @@ public class TopicAuthoringService {
     public CompletableFuture<Void> updateQuestionImageUrl(
             String questionId, String userId, UpdateQuestionImageUrlRequest request) {
         return requireQuestionOwner(questionId, userId)
+                .thenCompose(q -> limits.ensureEditable(q.topicId()))
                 .thenCompose(
                         _ ->
                                 commandGateway.send(
@@ -318,6 +330,7 @@ public class TopicAuthoringService {
     private CompletableFuture<Void> dispatchTopicField(
             String topicId, String userId, TopicCommand command) {
         return requireOwner(topicId, userId)
+                .thenCompose(_ -> limits.ensureEditable(topicId))
                 .thenCompose(_ -> commandGateway.send(command))
                 .thenAccept(_ -> {});
     }
@@ -445,6 +458,7 @@ public class TopicAuthoringService {
 
     public CompletableFuture<Void> resubmit(String questionId, String userId) {
         return requireQuestionOwner(questionId, userId)
+                .thenCompose(q -> limits.ensureCanAddQuestion(q.topicId()))
                 .thenCompose(
                         _ ->
                                 commandGateway.send(
@@ -465,6 +479,7 @@ public class TopicAuthoringService {
 
     public CompletableFuture<Void> restore(String questionId, String userId) {
         return requireQuestionManager(questionId, userId)
+                .thenCompose(q -> limits.ensureCanAddQuestion(q.topicId()))
                 .thenCompose(
                         _ ->
                                 commandGateway.send(

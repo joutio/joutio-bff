@@ -141,7 +141,7 @@ l'ancienne surface et sont migrés lot par lot.
 
 | Endpoint | Réponse | Notes |
 |---|---|---|
-| `GET /api/me` | `MeView` | Profil (+ `language` fr/en, + `equippedTitle` = clé du titre porté, + `interests` = codes `TopicCategory` ordonnés, premier = univers principal, max 3) + progression + stats de duel + `followingCount` + `followersCount` + `onboardingCompleted` (flag serveur, ou première partie humaine déjà jouée) + `rewards` (codes des récompenses persistées, ex. `MICAH_AVATAR`) + `premium` (`ROLE_ADMIN` ou droit accordé dans identity, lu par `PremiumAccessPolicy` via `IdentityLookup` — frais sans refresh du jeton) + `premiumUntil` (`null` = sans échéance ou aucun droit) + `premiumSource` (`MANUAL\|APP_STORE\|PLAY\|WEB`) |
+| `GET /api/me` | `MeView` | Profil (+ `language` fr/en, + `equippedTitle` = clé du titre porté, + `interests` = codes `TopicCategory` ordonnés, premier = univers principal, max 3) + progression + stats de duel + `followingCount` + `followersCount` + `onboardingCompleted` (flag serveur, ou première partie humaine déjà jouée) + `rewards` (codes des récompenses persistées, ex. `MICAH_AVATAR`) + `premium` (`ROLE_ADMIN` ou droit accordé dans identity, lu par `PremiumAccessPolicy` via `IdentityLookup` — frais sans refresh du jeton) + `premiumUntil` (`null` = sans échéance ou aucun droit) + `premiumSource` (`MANUAL\|APP_STORE\|PLAY\|WEB`) + `limits` (`PlanLimitsView` : `pendingChallenges`, `openRooms`, `botRooms`, `publishedTopics`, `questionsPerTopic` ; `2147483647` = illimité) |
 | `GET /api/me/rewards` | `RewardsView` | Catalogue complet des récompenses : `code`, `unlocked`, `unlockedAt`, `source`, `condition` (`badgeCode`, `badgeLabel`, `target`). Les déblocages viennent de `player_reward`, les verrouillées de `RewardRules.catalog()` ; réponse privée au joueur courant. |
 | `POST /api/me/onboarding/complete` | `MeView` | Fin explicite ou skip de l'onboarding ; idempotent, renvoie le flag `onboardingCompleted=true` sans attendre la projection profile |
 | `PUT /api/me/interests` | `204` | Remplace les centres d'intérêt du joueur courant (`{ interests: ["HISTORY","SCIENCE"] }`) : 0 à 3 codes `TopicCategory`, ordre conservé (premier = univers principal), doublons refusés (`400`), liste vide efface. Envoie `UpdateProfileInterestsCommand` et invalide le cache profil. |
@@ -181,7 +181,7 @@ et les rôles enregistrés. Les questions et signalements sont gardés côté BF
 | `POST /api/topics` | `201 + Location` | `{ names { fr (obligatoire), en? } ≤255 chacun, description ≤500, category, imageUrl? }` → DRAFT |
 | `PUT /api/topics/{topicId}/name` | `204` | `{ language, name ≤255 }` (nom d'une langue) |
 | `PUT /api/topics/{topicId}/description\|category\|image-url\|banner-url\|pictogram-url` | `204` | un champ par route (description, vignette, bannière, pictogramme : `null` efface). Le pictogramme carré (tuile du catalogue, 2026-11-12) s'envoie d'abord par `POST /api/media` (PNG/JPEG) ; les SVG viennent du seed seulement. `emoji`/`color` supprimés (code mort) |
-| `POST /api/topics/{topicId}/publish` | `200` | garde ≥ 7 questions approuvées |
+| `POST /api/topics/{topicId}/publish` | `200` | garde ≥ 7 questions approuvées ; plafonds du plan du créateur (sujets publiés, questions) |
 | `GET /api/topics/{topicId}/questions?page=&size=` | `PageResponse<QuestionEditorView>` | tous statuts, contenus FR/EN + statut + difficulté |
 | `POST /api/topics/{topicId}/questions` | `201 + Location` | contenus localisés `[{ language, text, answers[A-D] }]` + `correctAnswer` + `imageUrl?` → PENDING |
 | `POST /api/questions/{questionId}/translations` | `200` | ajout d'une langue absente (contenu complet) |
@@ -389,12 +389,26 @@ salle temps réel : l'acceptation crée la salle (saga matchmaking) qui porte pr
 **Garde de création** (`DuelCreationGuard`) : un joueur ne peut avoir qu'un salon **privé/partagé**
 `WAITING_PLAYERS` **créé** par sujet → `409 urn:joutio:bff:room:alreadyOpenOnTopic`. Le nombre de
 salons privés/partagés `WAITING_PLAYERS` créés est plafonné par `joutio.duel.limits.open-rooms`
-(défaut 5) → `429 urn:joutio:bff:room:quotaExceeded`. Les salons **bot** sont comptés séparément
-(même limite) et sont **exemptés de l'unicité par sujet** : un salon privé ouvert ne bloque pas
+(défaut 5, **20 en Premium**) → `429 urn:joutio:bff:room:quotaExceeded`. Les salons **bot** sont
+comptés séparément (`joutio.duel.limits.bot-rooms`, **5 pour tous**, garde-fou anti-spam) et sont
+**exemptés de l'unicité par sujet** : un salon privé ouvert ne bloque pas
 `POST /api/rooms/bot`, et un salon bot ne bloque pas `POST /api/rooms`. Les salons où le joueur
-n'est qu'invité ne comptent pas. `DuelLimitPolicy` est le point d'extension unique du premium
-(limites rehaussées ou illimitées quand le plan existera) ; les défauts sont surchargeables par
-`JOUTIO_DUEL_MAX_PENDING_CHALLENGES` / `JOUTIO_DUEL_MAX_OPEN_ROOMS`.
+n'est qu'invité ne comptent pas. `DuelLimitPolicy` est le point d'extension unique du premium :
+elle relit le plan du joueur dans identity (`PremiumAccessPolicy.premium(userId)`,
+`GetUserEntitlementsQuery`, admin compris) — défis en attente 5 / 20, salons 5 / 20. Surcharges :
+`JOUTIO_DUEL_MAX_PENDING_CHALLENGES`, `JOUTIO_DUEL_MAX_OPEN_ROOMS`,
+`JOUTIO_DUEL_PREMIUM_MAX_PENDING_CHALLENGES`, `JOUTIO_DUEL_PREMIUM_MAX_OPEN_ROOMS`,
+`JOUTIO_DUEL_MAX_BOT_ROOMS` (0 = illimité).
+
+**Plafonds de création** (`TopicCreationLimitPolicy`, `joutio.creation.limits.*`, 2026-11-12) :
+sujets publiés par créateur 1 / 10 (vérifié à `publish` → `urn:joutio:bff:topic:quotaExceeded`) ;
+questions par sujet 30 / 150 selon le plan du **créateur** du sujet, en comptant `PENDING`,
+`APPROVED`, `SUSPENDED` (création, restauration, nouvelle soumission, publication d'un sujet trop
+gros → `urn:joutio:bff:question:quotaExceeded`). **Gel** : un créateur non Premium qui dépasse le
+plafond gratuit de sujets publiés ne peut plus modifier ses sujets **publiés** ni leurs questions
+(`urn:joutio:bff:topic:overQuota`, contexte `limit`/`published`) ; brouillons, dépublication,
+archivage, suppression, modération et équipe restent possibles. Sujets du compte système exemptés.
+Les limites du plan sont exposées dans `MeView.limits`.
 
 ### Notifications personnelles (joutio-notification)
 
