@@ -1,3 +1,9 @@
+## [2.2.0](https://github.com/joutio/joutio-bff/compare/v2.1.0...v2.2.0) (2026-11-12)
+
+### Features
+
+* **bff:** Premium duel quotas and server-side creation limits ([66bf365](https://github.com/joutio/joutio-bff/commit/66bf3650e9ea7326a379e3a278ac682c6fd967d5))
+
 ## [2.1.0](https://github.com/joutio/joutio-bff/compare/v2.0.0...v2.1.0) (2026-11-12)
 
 ### Features
