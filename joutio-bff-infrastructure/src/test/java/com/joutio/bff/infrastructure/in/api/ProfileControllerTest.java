@@ -70,6 +70,22 @@ class ProfileControllerTest {
     }
 
     @Test
+    void pseudonymAvailability_is_resolved_for_current_player() throws Exception {
+        when(profileViewService.pseudonymAvailability(USER_ID, "SwiftFox42"))
+                .thenReturn(CompletableFuture.completedFuture(
+                        new com.joutio.profile.domain.model.PseudonymAvailability("SwiftFox42", true, false)));
+
+        MvcResult result = mockMvc.perform(get("/api/profiles/pseudonym-availability").param("value", "SwiftFox42"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.available").value(false));
+    }
+
+    @Test
     void profile_returns_enriched_view() throws Exception {
         PlayerProfileView view = new PlayerProfileView("user-2", "Bravo", null, "FR", null, null,
                 null,

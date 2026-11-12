@@ -655,4 +655,15 @@ public class ProfileViewService {
                 .toLowerCase()
                 .trim();
     }
+
+    /**
+     * Disponibilité d'un pseudonyme en saisie (règles et unicité tenues par {@code joutio-profile}) ;
+     * le pseudonyme actuel du joueur est « disponible ».
+     */
+    public CompletableFuture<com.joutio.profile.domain.model.PseudonymAvailability> pseudonymAvailability(
+            String viewerId, String pseudonym) {
+        return queryGateway.query(
+                new com.joutio.profile.domain.query.ProfileQuery.CheckPseudonymAvailabilityQuery(pseudonym, viewerId),
+                QueryResponseTypes.instanceOf(com.joutio.profile.domain.model.PseudonymAvailability.class));
+    }
 }

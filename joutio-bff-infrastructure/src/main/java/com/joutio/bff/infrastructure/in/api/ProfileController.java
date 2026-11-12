@@ -79,6 +79,19 @@ public class ProfileController {
         return profileViewService.ratings(ids).thenApply(ResponseEntity::ok);
     }
 
+    /**
+     * Vérification en saisie : {@code valid} (3 à 20 caractères, lettres ASCII, chiffres ou
+     * {@code _}, commence par une lettre) et {@code available} (libre sans tenir compte de la casse,
+     * ou déjà détenu par le joueur courant).
+     */
+    @GetMapping("/pseudonym-availability")
+    public CompletableFuture<ResponseEntity<com.joutio.profile.domain.model.PseudonymAvailability>> pseudonymAvailability(
+            @RequestParam("value") String value) {
+        return profileViewService
+                .pseudonymAvailability(SecurityHelper.getUserId(), value)
+                .thenApply(ResponseEntity::ok);
+    }
+
     @GetMapping("/{userId}")
     public CompletableFuture<ResponseEntity<PlayerProfileView>> profile(@PathVariable String userId) {
         return profileViewService
