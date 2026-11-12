@@ -1,3 +1,14 @@
+## [2.0.0](https://github.com/joutio/joutio-bff/compare/v1.7.0...v2.0.0) (2026-11-12)
+
+### ⚠ BREAKING CHANGES
+
+* emoji and color are removed from topic views, from the
+topic creation body, and their PUT routes are gone.
+
+### Features
+
+* topic pictogram in views and authoring, emoji and color removed ([6646a26](https://github.com/joutio/joutio-bff/commit/6646a26e108e812ace630c151d4414aa77f2465a))
+
 ## [1.7.0](https://github.com/joutio/joutio-bff/compare/v1.6.0...v1.7.0) (2026-11-11)
 
 ### Features
