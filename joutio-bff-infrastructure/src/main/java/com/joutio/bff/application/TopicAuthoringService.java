@@ -11,9 +11,8 @@ import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionImageUrlReques
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionTextRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicBannerUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicCategoryRequest;
-import com.joutio.bff.infrastructure.in.api.request.UpdateTopicColorRequest;
+import com.joutio.bff.infrastructure.in.api.request.UpdateTopicPictogramUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicDescriptionRequest;
-import com.joutio.bff.infrastructure.in.api.request.UpdateTopicEmojiRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicImageUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicNameRequest;
 import com.joutio.bff.infrastructure.in.api.response.PageResponse;
@@ -71,9 +70,8 @@ public class TopicAuthoringService {
                                 request.names(),
                                 request.description(),
                                 request.category(),
-                                request.emoji(),
-                                request.color(),
                                 request.imageUrl(),
+                                null,
                                 null,
                                 userId))
                 .thenApply(_ -> topicId);
@@ -105,22 +103,6 @@ public class TopicAuthoringService {
                 new TopicCommand.UpdateTopicCategoryCommand(topicId, userId, request.category()));
     }
 
-    public CompletableFuture<Void> updateEmoji(
-            String topicId, String userId, UpdateTopicEmojiRequest request) {
-        return dispatchTopicField(
-                topicId,
-                userId,
-                new TopicCommand.UpdateTopicEmojiCommand(topicId, userId, request.emoji()));
-    }
-
-    public CompletableFuture<Void> updateColor(
-            String topicId, String userId, UpdateTopicColorRequest request) {
-        return dispatchTopicField(
-                topicId,
-                userId,
-                new TopicCommand.UpdateTopicColorCommand(topicId, userId, request.color()));
-    }
-
     public CompletableFuture<Void> updateImageUrl(
             String topicId, String userId, UpdateTopicImageUrlRequest request) {
         return dispatchTopicField(
@@ -135,6 +117,15 @@ public class TopicAuthoringService {
                 topicId,
                 userId,
                 new TopicCommand.UpdateTopicBannerUrlCommand(topicId, userId, request.bannerUrl()));
+    }
+
+    public CompletableFuture<Void> updatePictogramUrl(
+            String topicId, String userId, UpdateTopicPictogramUrlRequest request) {
+        return dispatchTopicField(
+                topicId,
+                userId,
+                new TopicCommand.UpdateTopicPictogramUrlCommand(
+                        topicId, userId, request.pictogramUrl()));
     }
 
     public CompletableFuture<Void> publish(String topicId, String userId) {

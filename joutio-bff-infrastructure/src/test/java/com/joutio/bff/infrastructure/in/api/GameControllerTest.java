@@ -86,7 +86,7 @@ class GameControllerTest {
     void active_games_returns_the_collection() throws Exception {
         ActiveGameView view = new ActiveGameView(
                 "game-1",
-                new TopicRefView("topic-1", java.util.Map.of(com.joutio.microservice.core.domain.model.i18n.Language.FR, "Culture générale"), "GENERAL", "🌍", "#ffffff", null, null),
+                new TopicRefView("topic-1", java.util.Map.of(com.joutio.microservice.core.domain.model.i18n.Language.FR, "Culture générale"), "GENERAL", null, null, null),
                 new UserRefView("opponent-1", "Bob", null),
                 GamePlayerType.HUMAN,
                 GameStatus.IN_PROGRESS,
@@ -146,7 +146,7 @@ class GameControllerTest {
                 200,
                 -12,
                 true,
-                new TopicRefView("topic-1", java.util.Map.of(com.joutio.microservice.core.domain.model.i18n.Language.FR, "Culture générale"), "GENERAL", "🌍", "#ffffff", null, null),
+                new TopicRefView("topic-1", java.util.Map.of(com.joutio.microservice.core.domain.model.i18n.Language.FR, "Culture générale"), "GENERAL", null, null, null),
                 new UserRefView("opponent-1", "Bob", null),
                 "opponent-1",
                 null,

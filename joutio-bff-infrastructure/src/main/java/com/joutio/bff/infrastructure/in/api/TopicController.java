@@ -10,9 +10,8 @@ import com.joutio.bff.infrastructure.in.api.request.LeaderboardScope;
 import com.joutio.bff.infrastructure.in.api.request.PageParams;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicBannerUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicCategoryRequest;
-import com.joutio.bff.infrastructure.in.api.request.UpdateTopicColorRequest;
+import com.joutio.bff.infrastructure.in.api.request.UpdateTopicPictogramUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicDescriptionRequest;
-import com.joutio.bff.infrastructure.in.api.request.UpdateTopicEmojiRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicImageUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicNameRequest;
 import com.joutio.bff.infrastructure.in.api.response.PageResponse;
@@ -175,22 +174,6 @@ public class TopicController {
                 .thenApply(_ -> ResponseEntity.noContent().build());
     }
 
-    @PutMapping("/{topicId}/emoji")
-    public CompletableFuture<ResponseEntity<Void>> updateEmoji(
-            @PathVariable String topicId, @Valid @RequestBody UpdateTopicEmojiRequest request) {
-        return topicAuthoringService
-                .updateEmoji(topicId, SecurityHelper.getUserId(), request)
-                .thenApply(_ -> ResponseEntity.noContent().build());
-    }
-
-    @PutMapping("/{topicId}/color")
-    public CompletableFuture<ResponseEntity<Void>> updateColor(
-            @PathVariable String topicId, @Valid @RequestBody UpdateTopicColorRequest request) {
-        return topicAuthoringService
-                .updateColor(topicId, SecurityHelper.getUserId(), request)
-                .thenApply(_ -> ResponseEntity.noContent().build());
-    }
-
     @PutMapping("/{topicId}/image-url")
     public CompletableFuture<ResponseEntity<Void>> updateImageUrl(
             @PathVariable String topicId, @Valid @RequestBody UpdateTopicImageUrlRequest request) {
@@ -204,6 +187,16 @@ public class TopicController {
             @PathVariable String topicId, @Valid @RequestBody UpdateTopicBannerUrlRequest request) {
         return topicAuthoringService
                 .updateBannerUrl(topicId, SecurityHelper.getUserId(), request)
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
+    /** Pictogramme carré de la tuile du catalogue (créateur et administrateurs Premium). */
+    @PutMapping("/{topicId}/pictogram-url")
+    public CompletableFuture<ResponseEntity<Void>> updatePictogramUrl(
+            @PathVariable String topicId,
+            @Valid @RequestBody UpdateTopicPictogramUrlRequest request) {
+        return topicAuthoringService
+                .updatePictogramUrl(topicId, SecurityHelper.getUserId(), request)
                 .thenApply(_ -> ResponseEntity.noContent().build());
     }
 

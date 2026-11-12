@@ -15,9 +15,9 @@ public record SuggestionView(
         String subtitle,
         /** Catégorie du sujet (enum `TopicCategory`, `null` pour un joueur) : couleur côté web. */
         String category,
-        String emoji,
-        String color,
         String imageUrl,
+        /** Pictogramme carré du sujet (`null` pour un joueur). */
+        String pictogramUrl,
         String avatarOptions,
         Map<Language, String> names,
         boolean suspended
@@ -28,12 +28,11 @@ public record SuggestionView(
                           String label,
                           String subtitle,
                           String category,
-                          String emoji,
-                          String color,
                           String imageUrl,
+                          String pictogramUrl,
                           String avatarOptions,
                           Map<Language, String> names) {
-        this(type, id, label, subtitle, category, emoji, color, imageUrl, avatarOptions, names, false);
+        this(type, id, label, subtitle, category, imageUrl, pictogramUrl, avatarOptions, names, false);
     }
 
     public enum Type {

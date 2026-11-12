@@ -178,9 +178,9 @@ et les rôles enregistrés. Les questions et signalements sont gardés côté BF
 
 | Endpoint | Réponse | Notes |
 |---|---|---|
-| `POST /api/topics` | `201 + Location` | `{ names { fr (obligatoire), en? } ≤255 chacun, description ≤500, category, emoji?, color?, imageUrl? }` → DRAFT |
+| `POST /api/topics` | `201 + Location` | `{ names { fr (obligatoire), en? } ≤255 chacun, description ≤500, category, imageUrl? }` → DRAFT |
 | `PUT /api/topics/{topicId}/name` | `204` | `{ language, name ≤255 }` (nom d'une langue) |
-| `PUT /api/topics/{topicId}/description\|category\|emoji\|color\|image-url\|banner-url` | `204` | un champ par route (description/image/bannière/emoji/color `null` efface) |
+| `PUT /api/topics/{topicId}/description\|category\|image-url\|banner-url\|pictogram-url` | `204` | un champ par route (description, vignette, bannière, pictogramme : `null` efface). Le pictogramme carré (tuile du catalogue, 2026-11-12) s'envoie d'abord par `POST /api/media` (PNG/JPEG) ; les SVG viennent du seed seulement. `emoji`/`color` supprimés (code mort) |
 | `POST /api/topics/{topicId}/publish` | `200` | garde ≥ 7 questions approuvées |
 | `GET /api/topics/{topicId}/questions?page=&size=` | `PageResponse<QuestionEditorView>` | tous statuts, contenus FR/EN + statut + difficulté |
 | `POST /api/topics/{topicId}/questions` | `201 + Location` | contenus localisés `[{ language, text, answers[A-D] }]` + `correctAnswer` + `imageUrl?` → PENDING |
@@ -326,7 +326,7 @@ de sujet, illustration de question, bannière de profil) : objet référencé �
 | `PUT /api/profiles/{userId}/follow` | `204` | Idempotent |
 | `DELETE /api/profiles/{userId}/follow` | `204` | |
 | `GET /api/profiles/{userId}/games?topicId=&opponentId=&opponentType=&outcome=&sort=&page=&size=` | `PageResponse<GameHistoryItemView>` | Historique enrichi (adversaire, sujet, résultat, XP). Filtres optionnels : `topicId`, `opponentId`, `opponentType` ∈ `HUMAN\|BOT` (isole les entraînements), `outcome` ∈ `ALL\|WIN\|LOSS\|DRAW\|IN_PROGRESS\|CANCELLED` (**relatif au joueur consulté** : `WIN`/`LOSS` se lisent sur le vainqueur). `sort` ∈ `RECENT\|OLDEST\|SCORE` (défaut `RECENT` ; `SCORE` = meilleur score du joueur consulté). Filtres et tri sont appliqués **côté service game** — la pagination reste exacte. Fiche sujet / « Tes duels contre X » passent le scope par `topicId` / `opponentId` |
-| `GET /api/profiles/{userId}/topics` | `List<TopicStatView>` | Répartition des **parties humaines** par sujet (donut « Sujets joués ») : `names`, `emoji`, `color`, `imageUrl`, `games`, `xp` ; tri par parties décroissantes, sujets supprimés ignorés |
+| `GET /api/profiles/{userId}/topics` | `List<TopicStatView>` | Répartition des **parties humaines** par sujet (donut « Sujets joués ») : `names`, `category` (couleur de la part), `imageUrl`, `pictogramUrl`, `games`, `xp` ; tri par parties décroissantes, sujets supprimés ignorés |
 | `GET /api/profiles/{userId}/head-to-head?against=` | `HeadToHeadView` | V/N/D des duels communs **du point de vue de `userId`** ; la fiche d'un autre joueur appelle `userId = viewer` et `against = joueur consulté` |
 | `PUT /api/profiles/{userId}/pseudonym` | `204` | `{ pseudonym }` |
 | `PUT /api/profiles/{userId}/bio` | `204` | `{ bio }` (`null` efface) |

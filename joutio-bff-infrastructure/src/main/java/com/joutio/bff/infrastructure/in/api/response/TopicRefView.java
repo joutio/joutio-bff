@@ -11,9 +11,9 @@ public record TopicRefView(
         String topicId,
         Map<Language, String> names,
         String category,
-        String emoji,
-        String color,
         String imageUrl,
+        /** Pictogramme carré (`null` : repli sur la vignette, puis la catégorie). */
+        String pictogramUrl,
         /** Titres thématiques par palier et par langue (null → repli « palier · nom »). */
         Map<Language, Map<String, String>> titles
 ) {

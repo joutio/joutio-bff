@@ -15,10 +15,12 @@ public record TopicCardView(
         String description,
         TopicCategory category,
         String categoryLabel,
-        String emoji,
-        String color,
+        /** Vignette (celle de `TopicCard`). */
         String imageUrl,
+        /** Bannière panoramique de la fiche sujet. */
         String bannerUrl,
+        /** Pictogramme carré de la tuile du catalogue (`TopicTile`) ; repli : vignette, puis catégorie. */
+        String pictogramUrl,
         int followersCount,
         int questionsCount,
         boolean followed,

@@ -129,8 +129,8 @@ class ProfileControllerTest {
     void topics_returns_topic_stats() throws Exception {
         when(profileViewService.topics("user-2"))
                 .thenReturn(CompletableFuture.completedFuture(List.of(
-                        new TopicStatView("topic-1", Map.of(Language.FR, "DotA"), "🎮", "#f00",
-                                "https://example.com/img.png", 7, 200))));
+                        new TopicStatView("topic-1", Map.of(Language.FR, "DotA"), "GAMES",
+                                "https://example.com/img.png", null, 7, 200))));
 
         MvcResult result = mockMvc.perform(get("/api/profiles/user-2/topics"))
                 .andExpect(request().asyncStarted())
@@ -182,7 +182,7 @@ class ProfileControllerTest {
                 new TitlesView("topic-1:OR", List.of(new TitlesView.TitleView(
                         "topic-1:OR", "topic-1", "OR", 40, 1_400, "PLATINE",
                         new TopicRefView("topic-1", Map.of(Language.FR, "Histoire"),
-                                null, null, null, null, null))))));
+                                null, null, null, null))))));
 
         MvcResult result = mockMvc.perform(get("/api/profiles/user-2/titles"))
                 .andExpect(request().asyncStarted())

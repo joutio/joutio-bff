@@ -165,8 +165,8 @@ class MeControllerTest {
     void onboardingRecommendations_returnsPlayableTopics() throws Exception {
         TopicCardView card = new TopicCardView(
                 "t1", Map.of(Language.FR, "Révolution"), null,
-                TopicCategory.HISTORY, "Histoire", "🏛️", "#a855f7",
-                null, null, 3, 7, false, TopicStatus.PUBLISHED);
+                TopicCategory.HISTORY, "Histoire",
+                null, null, null, 3, 7, false, TopicStatus.PUBLISHED);
         when(topicRecommendationService.recommend(any(), any(), eq(3)))
                 .thenReturn(CompletableFuture.completedFuture(List.of(card)));
 

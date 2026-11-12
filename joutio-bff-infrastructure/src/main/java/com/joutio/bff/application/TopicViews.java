@@ -26,10 +26,9 @@ final class TopicViews {
                 topic.description(),
                 topic.category(),
                 topic.category() == null ? null : topic.category().label(),
-                topic.emoji(),
-                topic.color(),
                 topic.imageUrl(),
                 topic.bannerUrl(),
+                topic.pictogramUrl(),
                 topic.followersCounter() == null ? 0 : topic.followersCounter(),
                 questionsCount,
                 followed,
@@ -38,14 +37,13 @@ final class TopicViews {
 
     static TopicRefView toRef(String topicId, Topic topic) {
         return topic == null
-                ? new TopicRefView(topicId, Map.of(Language.FR, topicId), null, null, null, null, null)
+                ? new TopicRefView(topicId, Map.of(Language.FR, topicId), null, null, null, null)
                 : new TopicRefView(
                         topic.topicId(),
                         topic.names(),
                         topic.category() == null ? null : topic.category().name(),
-                        topic.emoji(),
-                        topic.color(),
                         topic.imageUrl(),
+                        topic.pictogramUrl(),
                         topic.titles());
     }
 }

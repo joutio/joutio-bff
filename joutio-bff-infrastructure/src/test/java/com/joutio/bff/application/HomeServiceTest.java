@@ -93,7 +93,7 @@ class HomeServiceTest {
         TopicCardView recommendation = new TopicCardView(
                 "h1", Map.of(Language.FR, "Histoire"), null,
                 com.joutio.theme.domain.model.TopicCategory.HISTORY, "Histoire",
-                "🏛️", "#a855f7", null, null, 2, 7, false,
+                null, null, null, 2, 7, false,
                 com.joutio.theme.domain.model.TopicStatus.PUBLISHED);
         when(topicRecommendationService.recommend(
                 List.of(com.joutio.theme.domain.model.TopicCategory.HISTORY),

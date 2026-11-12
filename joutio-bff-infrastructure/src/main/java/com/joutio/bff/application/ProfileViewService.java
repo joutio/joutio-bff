@@ -476,8 +476,10 @@ public class ProfileViewService {
                                 .filter(progress -> topicById.containsKey(progress.topicId()))
                                 .map(progress -> {
                                     Topic topic = topicById.get(progress.topicId());
-                                    return new TopicStatView(topic.topicId(), topic.names(), topic.emoji(),
-                                            topic.color(), topic.imageUrl(),
+                                    return new TopicStatView(topic.topicId(), topic.names(),
+                                            topic.category() == null ? null : topic.category().name(),
+                                            topic.imageUrl(),
+                                            topic.pictogramUrl(),
                                             progress.games(), progress.xp());
                                 })
                                 .toList();

@@ -74,7 +74,7 @@ class ChallengeControllerTest {
     void get_delegates() throws Exception {
         ChallengeView view = new ChallengeView(
                 "challenge-1",
-                new TopicRefView("topic-1", java.util.Map.of(com.joutio.microservice.core.domain.model.i18n.Language.FR, "Culture"), "GENERAL", "🌍", "#fff", null, null),
+                new TopicRefView("topic-1", java.util.Map.of(com.joutio.microservice.core.domain.model.i18n.Language.FR, "Culture"), "GENERAL", null, null, null),
                 new UserRefView("challenger-1", "Alice", null),
                 new UserRefView("opponent-1", "Bob", null),
                 ChallengeStatus.PENDING,

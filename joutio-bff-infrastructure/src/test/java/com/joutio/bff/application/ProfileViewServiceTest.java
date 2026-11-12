@@ -63,8 +63,7 @@ class ProfileViewServiceTest {
                         Topic.builder()
                                 .topicId("topic-1")
                                 .names(Map.of(Language.FR, "DotA"))
-                                .emoji("🎮")
-                                .color("#f00")
+                                .pictogramUrl("https://media.test/dota.png")
                                 .imageUrl("https://example.com/img.png")
                                 .build())));
 
@@ -73,7 +72,7 @@ class ProfileViewServiceTest {
         assertThat(view).hasSize(1);
         assertThat(view.get(0).topicId()).isEqualTo("topic-1");
         assertThat(view.get(0).names()).containsEntry(Language.FR, "DotA");
-        assertThat(view.get(0).emoji()).isEqualTo("🎮");
+        assertThat(view.get(0).pictogramUrl()).isEqualTo("https://media.test/dota.png");
         assertThat(view.get(0).games()).isEqualTo(7);
         assertThat(view.get(0).xp()).isEqualTo(200);
     }

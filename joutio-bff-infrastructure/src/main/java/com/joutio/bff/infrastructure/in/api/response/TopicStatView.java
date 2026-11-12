@@ -11,9 +11,11 @@ import java.util.Map;
 public record TopicStatView(
         String topicId,
         Map<Language, String> names,
-        String emoji,
-        String color,
+        /** Catégorie du sujet (enum `TopicCategory`) : couleur de sa part dans le donut. */
+        String category,
         String imageUrl,
+        /** Pictogramme carré de la tuile (`null` : repli sur la vignette, puis la catégorie). */
+        String pictogramUrl,
         int games,
         int xp
 ) {

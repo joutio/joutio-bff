@@ -68,9 +68,8 @@ public class SuggestionService {
                         topic.name(),
                         topic.category() == null ? null : topic.category().label(),
                         topic.category() == null ? null : topic.category().name(),
-                        topic.emoji(),
-                        topic.color(),
                         topic.imageUrl(),
+                        topic.pictogramUrl(),
                         null,
                         topic.names())));
                 players.forEach(profile -> suggestions.add(new SuggestionView(
@@ -79,7 +78,6 @@ public class SuggestionService {
                         profile.pseudonym(),
                         "Elo " + progressById.getOrDefault(profile.userId(),
                                 PlayerProgress.empty(profile.userId())).rating(),
-                        null,
                         null,
                         null,
                         null,
