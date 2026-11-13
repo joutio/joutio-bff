@@ -1,3 +1,9 @@
+## [2.4.0](https://github.com/joutio/joutio-bff/compare/v2.3.0...v2.4.0) (2026-11-13)
+
+### Features
+
+* **bff:** birth date, referral and go.joutio.com share links ([34d0491](https://github.com/joutio/joutio-bff/commit/34d0491150cc7d47bf38a7bd4e46f8bb0d55928f))
+
 ## [2.3.0](https://github.com/joutio/joutio-bff/compare/v2.2.0...v2.3.0) (2026-11-12)
 
 ### Features
