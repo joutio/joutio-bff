@@ -60,6 +60,17 @@ joutio:
       premium-published-topics: ${JOUTIO_CREATION_PREMIUM_MAX_PUBLISHED_TOPICS:10}
       questions-per-topic: ${JOUTIO_CREATION_MAX_QUESTIONS_PER_TOPIC:30}
       premium-questions-per-topic: ${JOUTIO_CREATION_PREMIUM_MAX_QUESTIONS_PER_TOPIC:150}
+  # Compte : la date de naissance est exigée des comptes créés à partir de cet instant (ISO-8601) ; vide = jamais.
+  account:
+    birth-date-required-since: ${JOUTIO_BIRTH_DATE_REQUIRED_SINCE:}
+  # Liens universels go.joutio.com (design/specs/screens/partage.md).
+  share:
+    web-url: ${JOUTIO_SHARE_WEB_URL:https://app.joutio.com}
+    app-store-url: ${JOUTIO_SHARE_APP_STORE_URL:https://apps.apple.com/app/joutio}
+    android-package: ${JOUTIO_SHARE_ANDROID_PACKAGE:com.joutio.app}
+    apple-app-ids: ${JOUTIO_SHARE_APPLE_APP_IDS:}
+    android-sha256: ${JOUTIO_SHARE_ANDROID_SHA256:}
+    default-image: ${JOUTIO_SHARE_DEFAULT_IMAGE:https://joutio.com/og.png}
   axon:
     instance-scoped-groups:
       - game-notification

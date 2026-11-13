@@ -41,6 +41,11 @@ public class IdentityLookup {
             .expireAfterWrite(TTL)
             .maximumSize(MAX_SIZE)
             .build();
+    /** Compte complet du joueur courant (date de naissance privée, date d'inscription) pour {@code /api/me}. */
+    private final Cache<String, User> accounts = Caffeine.newBuilder()
+            .expireAfterWrite(TTL)
+            .maximumSize(MAX_SIZE)
+            .build();
     /** Après une invalidation, la projection identity peut être en retard : ne pas re-cacher. */
     private final Cache<String, Instant> recentlyInvalidated = Caffeine.newBuilder()
             .expireAfterWrite(REFRESH_GRACE)
@@ -113,6 +118,26 @@ public class IdentityLookup {
                 });
     }
 
+    /**
+     * Compte complet (identity), pour les seules vues du joueur concerné : il porte la date de naissance privée.
+     * Le future échoue avec {@code UserNotFoundProblem} si le compte n'existe pas.
+     */
+    public CompletableFuture<User> account(String userId) {
+        User cached = accounts.getIfPresent(userId);
+        if (cached != null) {
+            return CompletableFuture.completedFuture(cached);
+        }
+        return queryGateway
+                .query(new UserQuery.FindUserQuery(userId), QueryResponseTypes.optionalInstanceOf(User.class))
+                .thenApply(user -> user.orElseThrow(() -> new UserProblems.UserNotFoundProblem(userId)))
+                .thenApply(user -> {
+                    if (recentlyInvalidated.getIfPresent(userId) == null) {
+                        accounts.put(userId, user);
+                    }
+                    return user;
+                });
+    }
+
     /** Statut effectif : une suspension temporaire échue est active. */
     public static boolean suspended(UserAccountStatus status, Instant now) {
         return status != null && status.suspended(now);
@@ -128,6 +153,7 @@ public class IdentityLookup {
 
     public void invalidate(String userId) {
         cache.invalidate(userId);
+        accounts.invalidate(userId);
         recentlyInvalidated.put(userId, Instant.now());
     }
 

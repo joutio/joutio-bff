@@ -298,6 +298,7 @@ public class ProfileViewService {
             case DAILY_STREAK -> effectiveCurrentDayStreak(progress);
             case FOLLOWERS_GAINED -> progress.followersGained();
             case CHALLENGES_SENT -> progress.challengesSent();
+            case REFERRALS_QUALIFIED -> progress.referralsQualified();
             case IMAGE_CORRECT -> progress.imageCorrectTotal();
             case EARNED_BADGES -> progress.badges().size();
             case ONE_SHOT -> 0;

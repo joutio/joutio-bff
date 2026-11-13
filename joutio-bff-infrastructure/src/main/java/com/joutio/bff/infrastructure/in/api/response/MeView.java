@@ -44,13 +44,18 @@ public record MeView(
         /** Origine du droit Premium ({@code MANUAL|APP_STORE|PLAY|WEB}) ; {@code null} = aucun droit. */
         String premiumSource,
         /** Limites du plan (défis, salons, création), selon {@code premium}. */
-        PlanLimitsView limits
+        PlanLimitsView limits,
+        /** Date de naissance privée ({@code AAAA-MM-JJ}) ; {@code null} = non renseignée. Jamais dans une vue publique. */
+        String birthDate,
+        /** La date doit être demandée avant de jouer : compte créé après la mise en service, sans date. */
+        boolean birthDateRequired
 ) {
 
     /** Copie avec le flag forcé (la projection profile peut être en retard juste après la commande). */
     public MeView withOnboardingCompleted(boolean completed) {
         return new MeView(userId, email, pseudonym, bio, country, avatarOptions, bannerUrl,
                 equippedTitle, language, progression, stats, followingCount, followersCount, completed,
-                rewards, premium, interests, autoTrainOnTimeout, premiumUntil, premiumSource, limits);
+                rewards, premium, interests, autoTrainOnTimeout, premiumUntil, premiumSource, limits,
+                birthDate, birthDateRequired);
     }
 }

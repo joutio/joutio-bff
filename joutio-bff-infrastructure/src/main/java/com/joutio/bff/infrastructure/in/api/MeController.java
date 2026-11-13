@@ -1,15 +1,19 @@
 package com.joutio.bff.infrastructure.in.api;
 
 import com.joutio.bff.application.AccountDeletionService;
+import com.joutio.bff.application.AccountService;
 import com.joutio.bff.application.MeService;
 import com.joutio.bff.application.PremiumAccessPolicy;
 import com.joutio.bff.application.ProfileUpdateService;
 import com.joutio.bff.application.RewardService;
 import com.joutio.bff.application.TopicRecommendationService;
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
+import com.joutio.bff.infrastructure.in.api.request.ApplyReferralRequest;
 import com.joutio.bff.infrastructure.in.api.request.DeleteAccountRequest;
+import com.joutio.bff.infrastructure.in.api.request.UpdateBirthDateRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateInterestsRequest;
 import com.joutio.bff.infrastructure.in.api.response.MeView;
+import com.joutio.bff.infrastructure.in.api.response.ReferralView;
 import com.joutio.bff.infrastructure.in.api.response.RewardsView;
 import com.joutio.bff.infrastructure.in.api.response.TopicCardView;
 import com.joutio.microservice.security.SecurityHelper;
@@ -41,12 +45,15 @@ public class MeController {
     private final ProfileUpdateService profileUpdateService;
     private final RewardService rewardService;
     private final TopicRecommendationService topicRecommendationService;
+    private final AccountService accountService;
 
     public MeController(MeService meService,
                         AccountDeletionService accountDeletionService,
                         ProfileUpdateService profileUpdateService,
                         RewardService rewardService,
-                        TopicRecommendationService topicRecommendationService) {
+                        TopicRecommendationService topicRecommendationService,
+                        AccountService accountService) {
+        this.accountService = accountService;
         this.meService = meService;
         this.accountDeletionService = accountDeletionService;
         this.profileUpdateService = profileUpdateService;
@@ -98,6 +105,26 @@ public class MeController {
             @Valid @RequestBody UpdateInterestsRequest request) {
         String userId = SecurityHelper.getUserId();
         return profileUpdateService.updateInterests(userId, userId, request.interests())
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
+    /** Renseigne ou corrige la date de naissance privée (15 ans minimum, identity). */
+    @PutMapping("/birth-date")
+    public CompletableFuture<ResponseEntity<Void>> updateBirthDate(@Valid @RequestBody UpdateBirthDateRequest request) {
+        return accountService.setBirthDate(SecurityHelper.getUserId(), request.birthDate())
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
+    /** Code de parrainage du joueur courant, filleuls rattachés et qualifiés, parrain éventuel. */
+    @GetMapping("/referral")
+    public CompletableFuture<ResponseEntity<ReferralView>> referral() {
+        return accountService.referral(SecurityHelper.getUserId()).thenApply(ResponseEntity::ok);
+    }
+
+    /** Applique un code de parrainage (une fois, dans les 30 jours suivant l'inscription). */
+    @PutMapping("/referral")
+    public CompletableFuture<ResponseEntity<Void>> applyReferral(@Valid @RequestBody ApplyReferralRequest request) {
+        return accountService.applyReferral(SecurityHelper.getUserId(), request.code())
                 .thenApply(_ -> ResponseEntity.noContent().build());
     }
 

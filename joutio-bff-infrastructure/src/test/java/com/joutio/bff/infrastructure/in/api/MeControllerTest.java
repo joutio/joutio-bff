@@ -50,6 +50,7 @@ class MeControllerTest {
     private final AccountDeletionService accountDeletionService = mock(AccountDeletionService.class);
     private final ProfileUpdateService profileUpdateService = mock(ProfileUpdateService.class);
     private final RewardService rewardService = mock(RewardService.class);
+    private final com.joutio.bff.application.AccountService accountService = org.mockito.Mockito.mock(com.joutio.bff.application.AccountService.class);
     private final TopicRecommendationService topicRecommendationService =
             mock(TopicRecommendationService.class);
     private MockMvc mockMvc;
@@ -58,7 +59,7 @@ class MeControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new MeController(
                 meService, accountDeletionService, profileUpdateService, rewardService,
-                topicRecommendationService)).build();
+                topicRecommendationService, accountService)).build();
         JoutioPrincipal principal = new JoutioPrincipal() {
             @Override
             public String getUserId() {
@@ -84,7 +85,7 @@ class MeControllerTest {
                 Language.FR,
                 new ProgressionView(List.of(), 200, 200, 0, true),
                 new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 3, 5, false, List.of(), false,
-                List.of("HISTORY"), true, null, null, null);
+                List.of("HISTORY"), true, null, null, null, "1998-03-04", false);
         when(meService.me(USER_ID)).thenReturn(CompletableFuture.completedFuture(view));
 
         MvcResult result = mockMvc.perform(get("/api/me"))
@@ -98,7 +99,9 @@ class MeControllerTest {
                 .andExpect(jsonPath("$.progression.rating").value(200))
                 .andExpect(jsonPath("$.rewards").isEmpty())
                 .andExpect(jsonPath("$.premium").value(false))
-                .andExpect(jsonPath("$.interests[0]").value("HISTORY"));
+                .andExpect(jsonPath("$.interests[0]").value("HISTORY"))
+                .andExpect(jsonPath("$.birthDate").value("1998-03-04"))
+                .andExpect(jsonPath("$.birthDateRequired").value(false));
     }
     @Test
     void rewards_returnsRewardCatalogue() throws Exception {
@@ -127,7 +130,7 @@ class MeControllerTest {
                 Language.FR,
                 new ProgressionView(List.of(), 200, 200, 0, true),
                 new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 3, 5, false, List.of(), false,
-                List.of(), true, null, null, null);
+                List.of(), true, null, null, null, null, false);
         when(profileUpdateService.completeOnboarding(USER_ID))
                 .thenReturn(CompletableFuture.completedFuture(null));
         PremiumAccessPolicy.PremiumStatus none = new PremiumAccessPolicy.PremiumStatus(false, null, null);

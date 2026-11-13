@@ -142,6 +142,10 @@ l'ancienne surface et sont migrés lot par lot.
 | Endpoint | Réponse | Notes |
 |---|---|---|
 | `GET /api/me` | `MeView` | Profil (+ `language` fr/en, + `equippedTitle` = clé du titre porté, + `interests` = codes `TopicCategory` ordonnés, premier = univers principal, max 3) + progression + stats de duel + `followingCount` + `followersCount` + `onboardingCompleted` (flag serveur, ou première partie humaine déjà jouée) + `rewards` (codes des récompenses persistées, ex. `MICAH_AVATAR`) + `premium` (`ROLE_ADMIN` ou droit accordé dans identity, lu par `PremiumAccessPolicy` via `IdentityLookup` — frais sans refresh du jeton) + `premiumUntil` (`null` = sans échéance ou aucun droit) + `premiumSource` (`MANUAL\|APP_STORE\|PLAY\|WEB`) + `limits` (`PlanLimitsView` : `pendingChallenges`, `openRooms`, `botRooms`, `publishedTopics`, `questionsPerTopic` ; `2147483647` = illimité) |
+| `GET /api/me` (2026-11-13) | `MeView` | + `birthDate` (privée, `AAAA-MM-JJ`, lue dans identity via `IdentityLookup.account`, jamais dans une vue publique) + `birthDateRequired` (compte créé après `joutio.account.birth-date-required-since` sans date : l'app la demande avant de jouer). |
+| `PUT /api/me/birth-date` | `204` | `{ birthDate }` → `SetBirthDateCommand` (identity) : 15 ans minimum (`urn:joutio:identity:underage`), date future ou > 120 ans refusée (`invalidBirthDate`). |
+| `GET /api/me/referral` | `ReferralView` | Parrainage : `code` (6 caractères, créé à la première lecture), `invited` (filleuls rattachés, identity), `qualified` (filleuls au premier duel terminé, `PlayerProgress.referralsQualified`, badge Recruteur), `referredBy` (`PlayerCardView` du parrain ou `null`). |
+| `PUT /api/me/referral` | `204` | `{ code }` : code résolu par `FindUserIdByReferralCodeQuery`, parrain actif vérifié ici, puis `ApplyReferralCommand` (une fois, 30 jours après l'inscription, jamais soi-même). Code inconnu, parrain supprimé ou suspendu : `invalidReferralCode`. Effets : suivi automatique du parrain (social), badge Recruteur (profile). |
 | `GET /api/me/rewards` | `RewardsView` | Catalogue complet des récompenses : `code`, `unlocked`, `unlockedAt`, `source`, `condition` (`badgeCode`, `badgeLabel`, `target`). Les déblocages viennent de `player_reward`, les verrouillées de `RewardRules.catalog()` ; réponse privée au joueur courant. |
 | `POST /api/me/onboarding/complete` | `MeView` | Fin explicite ou skip de l'onboarding ; idempotent, renvoie le flag `onboardingCompleted=true` sans attendre la projection profile |
 | `PUT /api/me/interests` | `204` | Remplace les centres d'intérêt du joueur courant (`{ interests: ["HISTORY","SCIENCE"] }`) : 0 à 3 codes `TopicCategory`, ordre conservé (premier = univers principal), doublons refusés (`400`), liste vide efface. Envoie `UpdateProfileInterestsCommand` et invalide le cache profil. |
@@ -471,6 +475,18 @@ invitations d'un même défi et les **relances** d'une même salle. Configuratio
 | `GET /api/games/{gameId}/notifications` | `List<EventEnvelopeResponse>` (payload `GameNotification`) | Même contrat que le push WS. **Privé** : la participation est vérifiée **sur le flux d'événements lui-même** (`GameCreatedEvent`), jamais sur la projection `game` (asynchrone) — l'historique est donc disponible dès l'accusé `ROOM_GAME_CREATED`, sans 404 transitoire. Flux vide ⇒ `404 urn:joutio:game:notFound` ; tiers ⇒ `403 urn:joutio:bff:game:accessDenied`. Aucun historique de partie pour un tiers |
 
 ---
+
+### Liens universels `go.joutio.com` (public, 2026-11-13)
+
+**Exception actée** : seule surface **sans authentification** du BFF (`ShareSecurityConfiguration`, chaîne `@Order(1)`
+limitée à ces chemins). L'ingress `go.joutio.com` préfixe par `/go` ; `/.well-known/*` passe tel quel. Spec :
+`design/specs/screens/partage.md`.
+
+| Route | Réponse | Notes |
+|---|---|---|
+| `GET /go/p/{userId}`, `/go/t/{topicId}`, `/go/j/{roomId}`, `/go/i/{code}` (`?ref=`) | HTML | Aperçu Open Graph / Twitter (titre, description, bannière ou couverture, sinon `joutio.share.default-image`), puis redirection : Android `intent://` avec repli Play Store (`referrer=ref=…&link=…`), iOS App Store, ordinateur boutons web + stores. Compte suspendu, supprimé ou inconnu, sujet non publié : page générique. Identifiants filtrés (`[A-Za-z0-9_-]{1,64}`), contenu échappé. |
+| `GET /.well-known/apple-app-site-association` | JSON | Universal Links : `joutio.share.apple-app-ids` (`TEAMID.com.joutio.app`), chemins `/p/*`, `/t/*`, `/j/*`, `/i/*`. |
+| `GET /.well-known/assetlinks.json` | JSON | App Links : `joutio.share.android-package`, `joutio.share.android-sha256`. |
 
 ## 4. WebSocket (STOMP)
 

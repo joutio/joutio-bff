@@ -1,6 +1,8 @@
 package com.joutio.bff.application;
 
 import com.joutio.bff.infrastructure.in.api.response.MeView;
+import com.joutio.identity.domain.model.BirthDateRules;
+import com.joutio.identity.domain.model.User;
 import com.joutio.bff.infrastructure.in.api.response.PlanLimitsView;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.PlayerRewards;
@@ -25,6 +27,8 @@ public class MeService {
     private final PremiumAccessPolicy premiumAccessPolicy;
     private final DuelLimitPolicy duelLimitPolicy;
     private final TopicCreationLimitPolicy creationLimitPolicy;
+    private final IdentityLookup identityLookup;
+    private final AccountProperties accountProperties;
 
     public MeService(ProfileLookup profileLookup,
                      ProgressionLookup progressionLookup,
@@ -32,7 +36,11 @@ public class MeService {
                      FollowLookup followLookup,
                      PremiumAccessPolicy premiumAccessPolicy,
                      DuelLimitPolicy duelLimitPolicy,
-                     TopicCreationLimitPolicy creationLimitPolicy) {
+                     TopicCreationLimitPolicy creationLimitPolicy,
+                     IdentityLookup identityLookup,
+                     AccountProperties accountProperties) {
+        this.identityLookup = identityLookup;
+        this.accountProperties = accountProperties;
         this.duelLimitPolicy = duelLimitPolicy;
         this.creationLimitPolicy = creationLimitPolicy;
         this.profileLookup = profileLookup;
@@ -55,13 +63,16 @@ public class MeService {
         CompletableFuture<PlayerRewards> rewardsFuture = rewardLookup.get(userId)
                 .exceptionally(_ -> PlayerRewards.empty(userId));
         CompletableFuture<UserFollowCounts> countsFuture = followLookup.userCounts(userId);
+        // Lecture identity tolérante : sans réponse, la date est absente et n'est pas exigée (jamais de blocage).
+        CompletableFuture<User> accountFuture = identityLookup.account(userId).exceptionally(_ -> null);
 
-        return CompletableFuture.allOf(profileFuture, progressFuture, rewardsFuture, countsFuture)
+        return CompletableFuture.allOf(profileFuture, progressFuture, rewardsFuture, countsFuture, accountFuture)
                 .thenApply(_ -> {
                     Profile profile = profileFuture.join();
                     PlayerProgress progress = progressFuture.join();
                     PlayerRewards rewards = rewardsFuture.join();
                     UserFollowCounts counts = countsFuture.join();
+                    User account = accountFuture.join();
                     return new MeView(
                             profile.userId(),
                             profile.email(),
@@ -82,7 +93,9 @@ public class MeService {
                             profile.autoTrainOnTimeout() == null || profile.autoTrainOnTimeout(),
                             premium.premiumUntil(),
                             premium.source() == null ? null : premium.source().name(),
-                            planLimits(premium.premium()));
+                            planLimits(premium.premium()),
+                            account == null || account.birthDate() == null ? null : account.birthDate().toString(),
+                            account != null && BirthDateRules.required(account, accountProperties.birthDateRequiredSince()));
                 });
     }
 

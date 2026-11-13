@@ -139,6 +139,18 @@ public class CacheInvalidationHandler {
     }
 
     @EventHandler
+    public void on(UserEvent.UserBirthDateSetEvent event) {
+        identityLookup.invalidate(event.userId());
+    }
+
+    @EventHandler
+    public void on(UserEvent.UserReferredEvent event) {
+        identityLookup.invalidate(event.userId());
+        followLookup.invalidateCounts(event.userId());
+        followLookup.invalidateCounts(event.referrerId());
+    }
+
+    @EventHandler
     public void on(UserEvent.UserPremiumRevokedEvent event) {
         identityLookup.invalidate(event.userId());
         logger.debug("Statut identity invalidé (Premium retiré): userId={}", event.userId());
