@@ -94,7 +94,10 @@ public class TopicTeamService {
                                                 topic ->
                                                         new TopicWorkshopView(
                                                                 TopicViews.toCard(topic, false),
-                                                                p)));
+                                                                p,
+                                                                topic.titles() == null
+                                                                        ? java.util.Map.of()
+                                                                        : topic.titles())));
     }
 
     public CompletableFuture<PageResponse<TopicCardView>> contributed(

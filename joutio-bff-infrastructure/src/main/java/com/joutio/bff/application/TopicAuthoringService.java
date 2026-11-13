@@ -15,6 +15,7 @@ import com.joutio.bff.infrastructure.in.api.request.UpdateTopicPictogramUrlReque
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicDescriptionRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicImageUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicNameRequest;
+import com.joutio.bff.infrastructure.in.api.request.UpdateTopicTitlesRequest;
 import com.joutio.bff.infrastructure.in.api.response.PageResponse;
 import com.joutio.bff.infrastructure.in.api.response.QuestionEditorView;
 import com.joutio.microservice.core.domain.model.i18n.Language;
@@ -131,6 +132,15 @@ public class TopicAuthoringService {
                 userId,
                 new TopicCommand.UpdateTopicPictogramUrlCommand(
                         topicId, userId, request.pictogramUrl()));
+    }
+
+    /** Titres par palier (créateur et gestionnaires) ; {@code null} réinitialise le repli. */
+    public CompletableFuture<Void> updateTitles(
+            String topicId, String userId, UpdateTopicTitlesRequest request) {
+        return dispatchTopicField(
+                topicId,
+                userId,
+                new TopicCommand.UpdateTopicTitlesCommand(topicId, userId, request.titles()));
     }
 
     public CompletableFuture<Void> publish(String topicId, String userId) {

@@ -165,8 +165,8 @@ l'ancienne surface et sont migrés lot par lot.
 
 | Endpoint | Réponse | Notes |
 |---|---|---|
-| `GET /api/topics?q=&category=&followed=&mine=&sort=&page=&size=` | `PageResponse<TopicCardView>` | `sort` ∈ `POPULAR\|MOST_PLAYED\|ALPHA\|RECENT` (défaut `POPULAR` ; `MOST_PLAYED` = compteur communautaire de parties du thème) ; `followed=true` filtre côté serveur ; `mine=true` = sujets créés par le joueur courant (brouillons + publiés, tri `updatedAt desc`), exclusif de `followed`/`q`/`category`/`sort` (400 sinon). `TopicCardView.status` expose le statut |
-| `GET /api/topics/facets?q=&followed=` | `TopicFacetsView` | `total` + `categories[{ category, label, count }]` |
+| `GET /api/topics?q=&category=&followed=&mine=&sort=&page=&size=` | `PageResponse<TopicCardView>` | `sort` ∈ `POPULAR\|MOST_PLAYED\|ALPHA\|RECENT` (défaut `POPULAR` ; `MOST_PLAYED` = compteur communautaire de parties du thème) ; `followed=true` filtre côté serveur ; `mine=true` = sujets créés par le joueur courant (brouillons + publiés, tri `updatedAt desc`) ; exclusif de `followed` (400), combinable avec `q`/`category`/`sort` depuis le 2026-11-13 (filtre « Mes thèmes › Mes sujets » de Sujets : filtrés et triés côté BFF, 200 sujets lus au plus). `TopicCardView.status` expose le statut |
+| `GET /api/topics/facets?q=&followed=&mine=` | `TopicFacetsView` | `total` + `categories[{ category, label, count }]` ; `mine=true` (2026-11-13) : facettes des sujets créés, exclusif de `followed` |
 | `GET /api/topic-categories` | `List<TopicCategoryView>` | `category`, `label` |
 | `GET /api/topics/{topicId}/overview` | `TopicOverviewView` | `topic`, `titles` (titres thématiques par langue puis palier — onglet « Titres » de la fiche sujet), `followersCount`, `myRank`, `myProgress`, `canManage` (créateur). `myProgress` porte la **maîtrise du sujet** : `games` (parties humaines terminées — verrou du titre Fer), `tier` (`MasteryTier`), `tierProgressPercent`, `tierRemainingXp`, `nextTier`, `completedQuestions`, `totalQuestions`, `completionPercent` — plus de niveau/titre de compte. |
 | `PUT /api/topics/{topicId}/follow` | `204` | Idempotent |
@@ -184,6 +184,7 @@ et les rôles enregistrés. Les questions et signalements sont gardés côté BF
 |---|---|---|
 | `POST /api/topics` | `201 + Location` | `{ names { fr (obligatoire), en? } ≤255 chacun, description ≤500, category, imageUrl? }` → DRAFT |
 | `PUT /api/topics/{topicId}/name` | `204` | `{ language, name ≤255 }` (nom d'une langue) |
+| `PUT /api/topics/{topicId}/titles` | `204` | Titres par palier (2026-11-13) : `{ titles: { fr: { OR: "Connétable" }, en: {…} } \| null }` → `UpdateTopicTitlesCommand` (créateur ou administrateur de l'équipe ; `null` = repli « Or · Sujet » partout ; paliers `FER..DIAMANT`, libellé non vide ≤ 40, sinon `urn:joutio:topic:invalidTitles`). Lus par `GET /api/topics/{id}/workshop` (`titles`) et `TopicOverviewView.titles` |
 | `PUT /api/topics/{topicId}/description\|category\|image-url\|banner-url\|pictogram-url` | `204` | un champ par route (description, vignette, bannière, pictogramme : `null` efface). Le pictogramme carré (tuile du catalogue, 2026-11-12) s'envoie d'abord par `POST /api/media` (PNG/JPEG) ; les SVG viennent du seed seulement. `emoji`/`color` supprimés (code mort) |
 | `POST /api/topics/{topicId}/publish` | `200` | garde ≥ 7 questions approuvées ; plafonds du plan du créateur (sujets publiés, questions) |
 | `GET /api/topics/{topicId}/questions?page=&size=` | `PageResponse<QuestionEditorView>` | tous statuts, contenus FR/EN + statut + difficulté |
@@ -572,7 +573,7 @@ l'`EventEnvelope` du SDK (payload typé via `eventType`, sans annotation), mapp�
 - `DELETE /api/topics/{id}` : supprime un **brouillon** (créateur seul, `TopicNotOwner`/`TopicNotInDraft` sinon) ;
   ses questions sont supprimées par le service theme.
   `mine=true` garde son contrat de liste des sujets créés.
-- `GET /api/topics/{id}/workshop` : `TopicWorkshopView(topic,permissions)`. Les mêmes permissions
+- `GET /api/topics/{id}/workshop` : `TopicWorkshopView(topic,permissions,titles)` (`titles` ajouté le 2026-11-13, vide sans titre saisi). Les mêmes permissions
   enrichissent `TopicOverviewView`, dont `canManage` reste réservé aux gestionnaires effectifs.
 - `GET /api/topics/{id}/team` : membres et rôles ; `PUT .../team/{userId}` `{role}` retourne le membre
   préparé côté serveur (`200`) ; `DELETE .../team/{userId}` retourne `204`. Ajout immédiat, créateur protégé.

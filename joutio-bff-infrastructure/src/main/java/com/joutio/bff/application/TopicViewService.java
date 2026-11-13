@@ -82,14 +82,15 @@ public class TopicViewService {
             int page,
             int size) {
         if (mine) {
-            if (followedOnly
-                    || (query != null && !query.isBlank())
-                    || category != null
-                    || sort != null) {
+            if (followedOnly) {
                 throw new BffProblems.InvalidTopicListRequestProblem(
-                        "mine=true est exclusif de followed, q, category et sort");
+                        "mine=true est exclusif de followed");
             }
-            return myTopics(viewerId, page, size);
+            boolean filtered =
+                    (query != null && !query.isBlank()) || category != null || sort != null;
+            return filtered
+                    ? filteredMyTopics(viewerId, query, category, sort, page, size)
+                    : myTopics(viewerId, page, size);
         }
         if (!followedOnly) {
             CompletableFuture<TopicPage> pageFuture =
@@ -129,49 +130,74 @@ public class TopicViewService {
                                                 new TopicQuery.GetTopicsByIdsQuery(followedIds),
                                                 QueryResponseTypes.multipleInstancesOf(Topic.class))
                                         .thenApply(
-                                                topics -> {
-                                                    String normalizedQuery =
-                                                            SearchText.normalize(query);
-                                                    List<TopicCardView> cards =
-                                                            topics.stream()
-                                                                    .filter(
-                                                                            topic ->
-                                                                                    category == null
-                                                                                            || topic
-                                                                                                            .category()
-                                                                                                    == category)
-                                                                    .filter(
-                                                                            topic ->
-                                                                                    normalizedQuery
-                                                                                                    == null
-                                                                                            || normalizedQuery
-                                                                                                    .isBlank()
-                                                                                            || topic
-                                                                                                    .names()
-                                                                                                    .values()
-                                                                                                    .stream()
-                                                                                                    .map(
-                                                                                                            SearchText
-                                                                                                                    ::normalize)
-                                                                                                    .anyMatch(
-                                                                                                            candidate ->
-                                                                                                                    candidate
-                                                                                                                            .contains(
-                                                                                                                                    normalizedQuery)))
-                                                                    .sorted(topicComparator(sort))
-                                                                    .map(
-                                                                            topic ->
-                                                                                    TopicViews
-                                                                                            .toCard(
-                                                                                                    topic,
-                                                                                                    true))
-                                                                    .toList();
-                                                    return PageResponse.of(
-                                                            slice(cards, page, size),
-                                                            page,
-                                                            size,
-                                                            cards.size());
-                                                }));
+                                                topics ->
+                                                        filterSortAndPage(
+                                                                topics,
+                                                                Set.copyOf(followedIds),
+                                                                query,
+                                                                category,
+                                                                sort,
+                                                                page,
+                                                                size)));
+    }
+
+    /**
+     * Sujets créés par l'appelant, filtrés (texte, univers) et triés côté BFF : le volume par
+     * créateur est borné (au plus {@link FollowLookup#MAX_LIST_SIZE} sujets lus).
+     */
+    private CompletableFuture<PageResponse<TopicCardView>> filteredMyTopics(
+            String viewerId,
+            String query,
+            TopicCategory category,
+            TopicSort sort,
+            int page,
+            int size) {
+        CompletableFuture<TopicPage> mineFuture =
+                queryGateway.query(
+                        new TopicQuery.GetTopicsByCreatorQuery(
+                                viewerId, 0, FollowLookup.MAX_LIST_SIZE),
+                        QueryResponseTypes.instanceOf(TopicPage.class));
+        CompletableFuture<List<String>> followedFuture =
+                followLookup.followedTopicIds(viewerId, FollowLookup.MAX_LIST_SIZE);
+        return CompletableFuture.allOf(mineFuture, followedFuture)
+                .thenApply(
+                        _ ->
+                                filterSortAndPage(
+                                        mineFuture.join().topics(),
+                                        Set.copyOf(followedFuture.join()),
+                                        query,
+                                        category,
+                                        sort,
+                                        page,
+                                        size));
+    }
+
+    private static PageResponse<TopicCardView> filterSortAndPage(
+            List<Topic> topics,
+            Set<String> followed,
+            String query,
+            TopicCategory category,
+            TopicSort sort,
+            int page,
+            int size) {
+        String normalizedQuery = SearchText.normalize(query);
+        List<TopicCardView> cards =
+                topics.stream()
+                        .filter(topic -> category == null || topic.category() == category)
+                        .filter(topic -> matchesQuery(topic, normalizedQuery))
+                        .sorted(topicComparator(sort))
+                        .map(topic -> TopicViews.toCard(topic, followed.contains(topic.topicId())))
+                        .toList();
+        return PageResponse.of(slice(cards, page, size), page, size, cards.size());
+    }
+
+    private static boolean matchesQuery(Topic topic, String normalizedQuery) {
+        if (normalizedQuery == null || normalizedQuery.isBlank()) {
+            return true;
+        }
+        return topic.names().values().stream()
+                .map(SearchText::normalize)
+                .anyMatch(candidate -> candidate.contains(normalizedQuery));
     }
 
     private CompletableFuture<PageResponse<TopicCardView>> myTopics(
@@ -204,10 +230,34 @@ public class TopicViewService {
 
     public CompletableFuture<TopicFacetsView> facets(
             String viewerId, String query, boolean followedOnly) {
-        CompletableFuture<List<String>> topicIdsFuture =
-                followedOnly
-                        ? followLookup.followedTopicIds(viewerId, FollowLookup.MAX_LIST_SIZE)
-                        : CompletableFuture.completedFuture(null);
+        return facets(viewerId, query, followedOnly, false);
+    }
+
+    /** Facettes du catalogue, restreintes aux sujets suivis ou aux sujets créés par l'appelant. */
+    public CompletableFuture<TopicFacetsView> facets(
+            String viewerId, String query, boolean followedOnly, boolean mine) {
+        if (followedOnly && mine) {
+            throw new BffProblems.InvalidTopicListRequestProblem(
+                    "mine=true est exclusif de followed");
+        }
+        CompletableFuture<List<String>> topicIdsFuture;
+        if (followedOnly) {
+            topicIdsFuture = followLookup.followedTopicIds(viewerId, FollowLookup.MAX_LIST_SIZE);
+        } else if (mine) {
+            topicIdsFuture =
+                    queryGateway
+                            .query(
+                                    new TopicQuery.GetTopicsByCreatorQuery(
+                                            viewerId, 0, FollowLookup.MAX_LIST_SIZE),
+                                    QueryResponseTypes.instanceOf(TopicPage.class))
+                            .thenApply(
+                                    result ->
+                                            result.topics().stream()
+                                                    .map(Topic::topicId)
+                                                    .toList());
+        } else {
+            topicIdsFuture = CompletableFuture.completedFuture(null);
+        }
 
         return topicIdsFuture.thenCompose(
                 topicIds ->
@@ -505,6 +555,18 @@ public class TopicViewService {
     private static Comparator<Topic> topicComparator(TopicSort sort) {
         if (sort == TopicSort.ALPHA) {
             return Comparator.comparing(Topic::name, String.CASE_INSENSITIVE_ORDER);
+        }
+        if (sort == TopicSort.MOST_PLAYED) {
+            return Comparator.comparingInt(
+                            (Topic topic) ->
+                                    topic.gamesCounter() == null ? 0 : topic.gamesCounter())
+                    .reversed()
+                    .thenComparing(Topic::name, String.CASE_INSENSITIVE_ORDER);
+        }
+        if (sort == TopicSort.RECENT) {
+            return Comparator.comparing(
+                            Topic::createdAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                    .thenComparing(Topic::name, String.CASE_INSENSITIVE_ORDER);
         }
         return Comparator.comparingInt(
                         (Topic topic) ->

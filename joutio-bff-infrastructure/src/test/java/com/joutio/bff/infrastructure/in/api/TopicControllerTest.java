@@ -6,7 +6,11 @@ import com.joutio.bff.infrastructure.in.api.problem.BffProblemExceptionHandler;
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.bff.infrastructure.in.api.request.LeaderboardPeriod;
 import com.joutio.bff.infrastructure.in.api.request.LeaderboardScope;
+import com.joutio.bff.infrastructure.in.api.request.UpdateTopicTitlesRequest;
 import com.joutio.bff.infrastructure.in.api.response.PageResponse;
+import com.joutio.bff.infrastructure.in.api.response.TopicFacetsView;
+import com.joutio.microservice.core.domain.model.i18n.Language;
+import com.joutio.theme.domain.model.TopicCategory;
 import com.joutio.bff.infrastructure.in.api.response.TopicLeaderboardView;
 import com.joutio.theme.domain.model.TopicSort;
 import org.axonframework.commandhandling.gateway.CommandGateway;
@@ -19,6 +23,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -144,6 +149,82 @@ class TopicControllerTest {
         mockMvc.perform(asyncDispatch(result))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.type").value("urn:joutio:bff:topic:notOwner"));
+    }
+
+    @Test
+    void update_titles_forwards_language_tier_map() throws Exception {
+        when(topicAuthoringService.updateTitles(eq("topic-1"), eq(USER_ID), any()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        MvcResult result = mockMvc.perform(put("/api/topics/topic-1/titles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"titles\":{\"fr\":{\"OR\":\"Connétable\"},\"en\":{\"FER\":\"Squire\"}}}"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result)).andExpect(status().isNoContent());
+        verify(topicAuthoringService).updateTitles(eq("topic-1"), eq(USER_ID),
+                eq(new UpdateTopicTitlesRequest(Map.of(
+                        Language.FR, Map.of("OR", "Connétable"),
+                        Language.EN, Map.of("FER", "Squire")))));
+    }
+
+    @Test
+    void update_titles_accepts_null_reset() throws Exception {
+        when(topicAuthoringService.updateTitles(eq("topic-1"), eq(USER_ID), any()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        MvcResult result = mockMvc.perform(put("/api/topics/topic-1/titles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"titles\":null}"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result)).andExpect(status().isNoContent());
+        verify(topicAuthoringService).updateTitles(eq("topic-1"), eq(USER_ID),
+                eq(new UpdateTopicTitlesRequest(null)));
+    }
+
+    @Test
+    void update_titles_by_non_manager_returns_403() throws Exception {
+        when(topicAuthoringService.updateTitles(eq("topic-1"), eq(USER_ID), any()))
+                .thenReturn(CompletableFuture.failedFuture(new BffProblems.NotTopicOwnerProblem("topic-1")));
+
+        MvcResult result = mockMvc.perform(put("/api/topics/topic-1/titles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"titles\":{\"fr\":{\"OR\":\"Connétable\"}}}"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void list_forwards_mine_with_filters() throws Exception {
+        when(topicViewService.list(eq(USER_ID), eq("ciné"), eq(TopicCategory.MOVIES), eq(false), eq(true),
+                eq(TopicSort.ALPHA), eq(0), eq(24)))
+                .thenReturn(CompletableFuture.completedFuture(PageResponse.of(List.of(), 0, 24, 0)));
+
+        MvcResult result = mockMvc.perform(get("/api/topics")
+                        .param("mine", "true").param("q", "ciné")
+                        .param("category", "MOVIES").param("sort", "ALPHA"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result)).andExpect(status().isOk());
+    }
+
+    @Test
+    void facets_forward_mine_scope() throws Exception {
+        when(topicViewService.facets(USER_ID, null, false, true))
+                .thenReturn(CompletableFuture.completedFuture(new TopicFacetsView(0, List.of())));
+
+        MvcResult result = mockMvc.perform(get("/api/topics/facets").param("mine", "true"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result)).andExpect(status().isOk());
+        verify(topicViewService).facets(USER_ID, null, false, true);
     }
 
     @Test

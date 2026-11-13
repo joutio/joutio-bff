@@ -14,6 +14,7 @@ import com.joutio.bff.infrastructure.in.api.request.UpdateTopicPictogramUrlReque
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicDescriptionRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicImageUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicNameRequest;
+import com.joutio.bff.infrastructure.in.api.request.UpdateTopicTitlesRequest;
 import com.joutio.bff.infrastructure.in.api.response.PageResponse;
 import com.joutio.bff.infrastructure.in.api.response.QuestionEditorView;
 import com.joutio.bff.infrastructure.in.api.response.TopicCardView;
@@ -86,9 +87,10 @@ public class TopicController {
     @GetMapping("/facets")
     public CompletableFuture<ResponseEntity<TopicFacetsView>> facets(
             @RequestParam(required = false) String q,
-            @RequestParam(defaultValue = "false") boolean followed) {
+            @RequestParam(defaultValue = "false") boolean followed,
+            @RequestParam(defaultValue = "false") boolean mine) {
         return topicViewService
-                .facets(SecurityHelper.getUserId(), q, followed)
+                .facets(SecurityHelper.getUserId(), q, followed, mine)
                 .thenApply(ResponseEntity::ok);
     }
 
@@ -197,6 +199,15 @@ public class TopicController {
             @Valid @RequestBody UpdateTopicPictogramUrlRequest request) {
         return topicAuthoringService
                 .updatePictogramUrl(topicId, SecurityHelper.getUserId(), request)
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
+    /** Titres par palier (gentilés éditoriaux) ; {@code titles: null} réinitialise le repli. */
+    @PutMapping("/{topicId}/titles")
+    public CompletableFuture<ResponseEntity<Void>> updateTitles(
+            @PathVariable String topicId, @RequestBody UpdateTopicTitlesRequest request) {
+        return topicAuthoringService
+                .updateTitles(topicId, SecurityHelper.getUserId(), request)
                 .thenApply(_ -> ResponseEntity.noContent().build());
     }
 
