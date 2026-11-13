@@ -1,3 +1,9 @@
+## [2.6.0](https://github.com/joutio/joutio-bff/compare/v2.5.0...v2.6.0) (2026-11-13)
+
+### Features
+
+* **topics:** localized description, published-only "my topics" ([f4aa06f](https://github.com/joutio/joutio-bff/commit/f4aa06f9dd60d02b16481e4175c092e080239185))
+
 ## [2.5.0](https://github.com/joutio/joutio-bff/compare/v2.4.0...v2.5.0) (2026-11-13)
 
 ### Features
