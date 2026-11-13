@@ -1,10 +1,15 @@
 package com.joutio.bff.infrastructure.in.api.request;
 
+import com.joutio.microservice.core.domain.model.i18n.Language;
 import com.joutio.theme.domain.model.TopicRules;
 import jakarta.validation.constraints.Size;
 
-/** Mise à jour de la description d'un sujet ({@code null} efface). */
+/**
+ * Mise à jour de la description d'un sujet dans une langue ({@code null} efface). Sans {@code language} : français,
+ * comme avant la description localisée (2026-11-13).
+ */
 public record UpdateTopicDescriptionRequest(
-        @Size(max = TopicRules.MAX_DESCRIPTION_LENGTH) String description
+        @Size(max = TopicRules.MAX_DESCRIPTION_LENGTH) String description,
+        Language language
 ) {
 }

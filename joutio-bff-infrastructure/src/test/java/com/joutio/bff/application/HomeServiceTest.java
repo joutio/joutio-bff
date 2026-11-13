@@ -91,7 +91,7 @@ class HomeServiceTest {
         when(profileLookup.get("me")).thenReturn(CompletableFuture.completedFuture(
                 Profile.builder().userId("me").interests(List.of("HISTORY")).build()));
         TopicCardView recommendation = new TopicCardView(
-                "h1", Map.of(Language.FR, "Histoire"), null,
+                "h1", Map.of(Language.FR, "Histoire"), null, java.util.Map.of(),
                 com.joutio.theme.domain.model.TopicCategory.HISTORY, "Histoire",
                 null, null, null, 2, 7, false,
                 com.joutio.theme.domain.model.TopicStatus.PUBLISHED);

@@ -26,6 +26,7 @@ import com.joutio.theme.domain.model.TopicCategory;
 import com.joutio.theme.domain.model.TopicFacetCount;
 import com.joutio.theme.domain.model.TopicPage;
 import com.joutio.theme.domain.model.TopicSort;
+import com.joutio.theme.domain.model.TopicStatus;
 import com.joutio.theme.domain.query.TopicQuery;
 import com.joutio.theme.domain.util.SearchText;
 
@@ -86,11 +87,10 @@ public class TopicViewService {
                 throw new BffProblems.InvalidTopicListRequestProblem(
                         "mine=true est exclusif de followed");
             }
-            boolean filtered =
-                    (query != null && !query.isBlank()) || category != null || sort != null;
-            return filtered
-                    ? filteredMyTopics(viewerId, query, category, sort, page, size)
-                    : myTopics(viewerId, page, size);
+            // « Mes thèmes › Mes sujets » du catalogue : seulement mes sujets publiés (2026-11-13) ; brouillons et
+            // archives restent dans l'onglet Création (`/api/topics/contributed`).
+            return filteredMyTopics(
+                    viewerId, query, category, sort == null ? TopicSort.RECENT : sort, page, size);
         }
         if (!followedOnly) {
             CompletableFuture<TopicPage> pageFuture =
@@ -163,7 +163,7 @@ public class TopicViewService {
                 .thenApply(
                         _ ->
                                 filterSortAndPage(
-                                        mineFuture.join().topics(),
+                                        publishedOnly(mineFuture.join().topics()),
                                         Set.copyOf(followedFuture.join()),
                                         query,
                                         category,
@@ -200,32 +200,8 @@ public class TopicViewService {
                 .anyMatch(candidate -> candidate.contains(normalizedQuery));
     }
 
-    private CompletableFuture<PageResponse<TopicCardView>> myTopics(
-            String viewerId, int page, int size) {
-        CompletableFuture<TopicPage> pageFuture =
-                queryGateway.query(
-                        new TopicQuery.GetTopicsByCreatorQuery(viewerId, page, size),
-                        QueryResponseTypes.instanceOf(TopicPage.class));
-        CompletableFuture<List<String>> followedFuture =
-                followLookup.followedTopicIds(viewerId, FollowLookup.MAX_LIST_SIZE);
-
-        return CompletableFuture.allOf(pageFuture, followedFuture)
-                .thenApply(
-                        _ -> {
-                            Set<String> followed = Set.copyOf(followedFuture.join());
-                            TopicPage result = pageFuture.join();
-                            List<TopicCardView> cards =
-                                    result.topics().stream()
-                                            .map(
-                                                    topic ->
-                                                            TopicViews.toCard(
-                                                                    topic,
-                                                                    followed.contains(
-                                                                            topic.topicId())))
-                                            .toList();
-                            return PageResponse.of(
-                                    cards, result.page(), result.size(), result.totalElements());
-                        });
+    private static List<Topic> publishedOnly(List<Topic> topics) {
+        return topics.stream().filter(topic -> topic.status() == TopicStatus.PUBLISHED).toList();
     }
 
     public CompletableFuture<TopicFacetsView> facets(
@@ -252,7 +228,7 @@ public class TopicViewService {
                                     QueryResponseTypes.instanceOf(TopicPage.class))
                             .thenApply(
                                     result ->
-                                            result.topics().stream()
+                                            publishedOnly(result.topics()).stream()
                                                     .map(Topic::topicId)
                                                     .toList());
         } else {

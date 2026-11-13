@@ -98,7 +98,7 @@ public class TopicAuthoringService {
                 topicId,
                 userId,
                 new TopicCommand.UpdateTopicDescriptionCommand(
-                        topicId, userId, request.description()));
+                        topicId, userId, request.description(), request.language()));
     }
 
     public CompletableFuture<Void> updateCategory(

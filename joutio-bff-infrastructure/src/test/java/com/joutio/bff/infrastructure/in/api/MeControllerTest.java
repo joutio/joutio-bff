@@ -169,7 +169,7 @@ class MeControllerTest {
     @Test
     void onboardingRecommendations_returnsPlayableTopics() throws Exception {
         TopicCardView card = new TopicCardView(
-                "t1", Map.of(Language.FR, "Révolution"), null,
+                "t1", Map.of(Language.FR, "Révolution"), null, java.util.Map.of(),
                 TopicCategory.HISTORY, "Histoire",
                 null, null, null, 3, 7, false, TopicStatus.PUBLISHED);
         when(topicRecommendationService.recommend(any(), any(), eq(3)))

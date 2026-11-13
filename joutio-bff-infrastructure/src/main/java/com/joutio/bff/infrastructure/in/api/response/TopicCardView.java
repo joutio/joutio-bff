@@ -12,7 +12,10 @@ import java.util.Map;
 public record TopicCardView(
         String topicId,
         Map<Language, String> names,
+        /** Description française (contrat initial) ; voir {@link #descriptions()}. */
         String description,
+        /** Description par langue (2026-11-13) ; l'app lit sa langue, sinon le français. */
+        Map<Language, String> descriptions,
         TopicCategory category,
         String categoryLabel,
         /** Vignette (celle de `TopicCard`). */

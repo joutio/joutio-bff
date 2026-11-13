@@ -24,6 +24,7 @@ final class TopicViews {
                 topic.topicId(),
                 topic.names(),
                 topic.description(),
+                topic.descriptions() == null ? Map.of() : topic.descriptions(),
                 topic.category(),
                 topic.category() == null ? null : topic.category().label(),
                 topic.imageUrl(),
