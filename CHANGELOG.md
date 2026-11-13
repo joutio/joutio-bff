@@ -1,3 +1,9 @@
+## [2.5.0](https://github.com/joutio/joutio-bff/compare/v2.4.0...v2.5.0) (2026-11-13)
+
+### Features
+
+* **bff:** topic titles per tier and mine filter with search, universe and sort ([729ade1](https://github.com/joutio/joutio-bff/commit/729ade10af670c58330ede5f8c5e5eed4f0dfc98))
+
 ## [2.4.0](https://github.com/joutio/joutio-bff/compare/v2.3.0...v2.4.0) (2026-11-13)
 
 ### Features
