@@ -1,3 +1,9 @@
+## [3.1.2](https://github.com/joutio/joutio-bff/compare/v3.1.1...v3.1.2) (2026-11-14)
+
+### Bug Fixes
+
+* **bff:** pin joutio-profile-domain 2.0.0, Recruiter badges no longer listed ([480d1c5](https://github.com/joutio/joutio-bff/commit/480d1c5d84b8219de9c263a17eb5205bb439cbf1))
+
 ## [3.1.1](https://github.com/joutio/joutio-bff/compare/v3.1.0...v3.1.1) (2026-11-14)
 
 ### Bug Fixes
