@@ -1,3 +1,9 @@
+## [3.1.0](https://github.com/joutio/joutio-bff/compare/v3.0.0...v3.1.0) (2026-11-14)
+
+### Features
+
+* **bff:** announce the suspension reason code in the 403 accountSuspended ([5e2ac9e](https://github.com/joutio/joutio-bff/commit/5e2ac9ef827b4446017c59495e1a66c53b1fd757))
+
 ## [3.0.0](https://github.com/joutio/joutio-bff/compare/v2.6.0...v3.0.0) (2026-11-14)
 
 ### ⚠ BREAKING CHANGES
