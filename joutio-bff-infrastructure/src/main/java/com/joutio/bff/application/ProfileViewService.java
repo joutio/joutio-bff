@@ -298,8 +298,6 @@ public class ProfileViewService {
             case DAILY_STREAK -> effectiveCurrentDayStreak(progress);
             case FOLLOWERS_GAINED -> progress.followersGained();
             case CHALLENGES_SENT -> progress.challengesSent();
-            // Retiré avec la métrique après la release de joutio-profile et le bump du pin (parrainage supprimé).
-            case REFERRALS_QUALIFIED -> 0;
             case IMAGE_CORRECT -> progress.imageCorrectTotal();
             case EARNED_BADGES -> progress.badges().size();
             case ONE_SHOT -> 0;
