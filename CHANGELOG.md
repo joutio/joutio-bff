@@ -1,3 +1,13 @@
+## [3.0.0](https://github.com/joutio/joutio-bff/compare/v2.6.0...v3.0.0) (2026-11-14)
+
+### ⚠ BREAKING CHANGES
+
+* **bff:** remove the referral endpoints and the invite share page
+
+### Features
+
+* **bff:** remove the referral endpoints and the invite share page ([d794ec8](https://github.com/joutio/joutio-bff/commit/d794ec83e6eb06576814c54ae5febdbc18920a8e))
+
 ## [2.6.0](https://github.com/joutio/joutio-bff/compare/v2.5.0...v2.6.0) (2026-11-13)
 
 ### Features
