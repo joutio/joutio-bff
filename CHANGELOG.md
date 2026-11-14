@@ -1,3 +1,9 @@
+## [3.1.1](https://github.com/joutio/joutio-bff/compare/v3.1.0...v3.1.1) (2026-11-14)
+
+### Bug Fixes
+
+* **bff:** retry room presence while the room is not projected yet ([9e36435](https://github.com/joutio/joutio-bff/commit/9e364356791ea72ccf9dfaa183f8e3c08f115af4))
+
 ## [3.1.0](https://github.com/joutio/joutio-bff/compare/v3.0.0...v3.1.0) (2026-11-14)
 
 ### Features
