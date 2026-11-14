@@ -16,14 +16,13 @@ class SharePageRendererTest {
             List.of("TEAM.com.joutio.app"), List.of("AB:CD"), "https://joutio.com/og.png");
 
     @Test
-    void render_escapesContentAndCarriesReferral() {
+    void render_escapesContentAndBuildsLinks() {
         SharePage page = new SharePage(Kind.PROFILE, "<b>Sofia</b> te défie", "\"bio\"", "https://media/x.jpg", "/players/u1");
-        String html = new SharePageRenderer(properties).render(page, "/p/u1", "NADJ7K");
+        String html = new SharePageRenderer(properties).render(page, "/p/u1");
 
         assertThat(html).contains("<meta property=\"og:title\" content=\"&lt;b&gt;Sofia&lt;/b&gt; te défie\">");
         assertThat(html).doesNotContain("<b>Sofia</b>");
-        assertThat(html).contains("https://app.joutio.com/players/u1?ref=NADJ7K");
-        assertThat(html).contains("intent://go.joutio.com/p/u1?ref=NADJ7K#Intent;scheme=https;package=com.joutio.app");
-        assertThat(html).contains("referrer%3Dref%253DNADJ7K%2526link%253D%252Fp%252Fu1");
+        assertThat(html).contains("https://app.joutio.com/players/u1");
+        assertThat(html).contains("intent://go.joutio.com/p/u1#Intent;scheme=https;package=com.joutio.app");
     }
 }

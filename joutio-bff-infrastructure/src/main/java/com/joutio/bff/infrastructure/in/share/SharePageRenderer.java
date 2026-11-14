@@ -8,7 +8,7 @@ import org.springframework.web.util.HtmlUtils;
  * Page HTML d'un lien {@code go.joutio.com} : méta Open Graph et Twitter, puis redirection selon l'appareil.
  *
  * <ul>
- *   <li>Android : {@code intent://} vers l'app, repli Play Store avec {@code referrer=ref=…&link=…} (Install Referrer).</li>
+ *   <li>Android : {@code intent://} vers l'app, repli Play Store.</li>
  *   <li>iOS : l'app installée a déjà intercepté le lien (Universal Link) ; sinon App Store.</li>
  *   <li>Ordinateur : pas de redirection, boutons « Continuer sur le web » et stores.</li>
  * </ul>
@@ -22,12 +22,10 @@ final class SharePageRenderer {
         this.properties = properties;
     }
 
-    String render(SharePage page, String linkPath, String ref) {
-        String webUrl = properties.webUrl() + page.appPath()
-                + (ref != null && !page.appPath().contains("?") ? "?ref=" + ref : "");
-        String referrer = (ref == null ? "" : "ref=" + ref + "&") + "link=" + linkPath;
-        String playUrl = properties.playStoreUrl(referrer);
-        String intentUrl = "intent://go.joutio.com" + linkPath + (ref == null ? "" : "?ref=" + ref)
+    String render(SharePage page, String linkPath) {
+        String webUrl = properties.webUrl() + page.appPath();
+        String playUrl = properties.playStoreUrl();
+        String intentUrl = "intent://go.joutio.com" + linkPath
                 + "#Intent;scheme=https;package=" + properties.androidPackage()
                 + ";S.browser_fallback_url=" + java.net.URLEncoder.encode(playUrl, java.nio.charset.StandardCharsets.UTF_8) + ";end";
         String title = escape(page.title());

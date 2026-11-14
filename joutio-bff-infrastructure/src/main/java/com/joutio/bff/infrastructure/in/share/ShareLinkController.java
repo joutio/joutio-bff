@@ -45,29 +45,24 @@ public class ShareLinkController {
     }
 
     @GetMapping("/go/p/{userId}")
-    public CompletableFuture<ResponseEntity<String>> profile(@PathVariable String userId, @RequestParam(required = false) String ref) {
-        return render(userId, ref, "p", pages::profile);
+    public CompletableFuture<ResponseEntity<String>> profile(@PathVariable String userId) {
+        return render(userId, "p", pages::profile);
     }
 
     @GetMapping("/go/t/{topicId}")
-    public CompletableFuture<ResponseEntity<String>> topic(@PathVariable String topicId, @RequestParam(required = false) String ref) {
-        return render(topicId, ref, "t", pages::topic);
+    public CompletableFuture<ResponseEntity<String>> topic(@PathVariable String topicId) {
+        return render(topicId, "t", pages::topic);
     }
 
     @GetMapping("/go/j/{roomId}")
-    public CompletableFuture<ResponseEntity<String>> room(@PathVariable String roomId, @RequestParam(required = false) String ref) {
-        return render(roomId, ref, "j", pages::room);
-    }
-
-    @GetMapping("/go/i/{code}")
-    public CompletableFuture<ResponseEntity<String>> invite(@PathVariable String code) {
-        return render(code, code, "i", pages::invite);
+    public CompletableFuture<ResponseEntity<String>> room(@PathVariable String roomId) {
+        return render(roomId, "j", pages::room);
     }
 
     @GetMapping(value = "/.well-known/apple-app-site-association", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> appleAppSiteAssociation() {
         List<Map<String, String>> components = List.of(
-                Map.of("/", "/p/*"), Map.of("/", "/t/*"), Map.of("/", "/j/*"), Map.of("/", "/i/*"));
+                Map.of("/", "/p/*"), Map.of("/", "/t/*"), Map.of("/", "/j/*"));
         Map<String, Object> details = Map.of("appIDs", properties.appleAppIds().stream().filter(id -> !id.isBlank()).toList(),
                 "components", components);
         return ResponseEntity.ok()
@@ -86,15 +81,14 @@ public class ShareLinkController {
                 .body(List.of(Map.of("relation", List.of("delegate_permission/common.handle_all_urls"), "target", target)));
     }
 
-    private CompletableFuture<ResponseEntity<String>> render(String id, String ref, String prefix,
+    private CompletableFuture<ResponseEntity<String>> render(String id, String prefix,
                                                             java.util.function.Function<String, CompletableFuture<SharePage>> resolve) {
         if (!ID.matcher(id).matches()) {
             return CompletableFuture.completedFuture(ResponseEntity.notFound().build());
         }
-        String safeRef = ref != null && ID.matcher(ref).matches() ? ref : null;
         return resolve.apply(id).thenApply(page -> ResponseEntity.ok()
                 .contentType(HTML)
                 .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic())
-                .body(renderer.render(page, "/" + prefix + "/" + id, safeRef)));
+                .body(renderer.render(page, "/" + prefix + "/" + id)));
     }
 }

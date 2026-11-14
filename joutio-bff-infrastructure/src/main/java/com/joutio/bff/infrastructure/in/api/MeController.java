@@ -8,12 +8,10 @@ import com.joutio.bff.application.ProfileUpdateService;
 import com.joutio.bff.application.RewardService;
 import com.joutio.bff.application.TopicRecommendationService;
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
-import com.joutio.bff.infrastructure.in.api.request.ApplyReferralRequest;
 import com.joutio.bff.infrastructure.in.api.request.DeleteAccountRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateBirthDateRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateInterestsRequest;
 import com.joutio.bff.infrastructure.in.api.response.MeView;
-import com.joutio.bff.infrastructure.in.api.response.ReferralView;
 import com.joutio.bff.infrastructure.in.api.response.RewardsView;
 import com.joutio.bff.infrastructure.in.api.response.TopicCardView;
 import com.joutio.microservice.security.SecurityHelper;
@@ -115,18 +113,6 @@ public class MeController {
                 .thenApply(_ -> ResponseEntity.noContent().build());
     }
 
-    /** Code de parrainage du joueur courant, filleuls rattachés et qualifiés, parrain éventuel. */
-    @GetMapping("/referral")
-    public CompletableFuture<ResponseEntity<ReferralView>> referral() {
-        return accountService.referral(SecurityHelper.getUserId()).thenApply(ResponseEntity::ok);
-    }
-
-    /** Applique un code de parrainage (une fois, dans les 30 jours suivant l'inscription). */
-    @PutMapping("/referral")
-    public CompletableFuture<ResponseEntity<Void>> applyReferral(@Valid @RequestBody ApplyReferralRequest request) {
-        return accountService.applyReferral(SecurityHelper.getUserId(), request.code())
-                .thenApply(_ -> ResponseEntity.noContent().build());
-    }
 
     /** Envoie le code OTP de confirmation de suppression à l'email du compte. */
     @PostMapping("/deletion-code")

@@ -1,7 +1,6 @@
 package com.joutio.bff.application;
 
 import com.joutio.identity.domain.model.AccountStatus;
-import com.joutio.identity.domain.model.ReferralRules;
 import com.joutio.identity.domain.query.UserQuery;
 import com.joutio.microservice.core.domain.model.i18n.Language;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
@@ -23,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
 @Service
 public class SharePageService {
 
-    public enum Kind { PROFILE, TOPIC, ROOM, INVITE }
+    public enum Kind { PROFILE, TOPIC, ROOM }
 
     /** @param appPath chemin de l'écran dans l'app (web et lien universel), sans origine */
     public record SharePage(Kind kind, String title, String description, String image, String appPath) {
@@ -84,21 +83,6 @@ public class SharePageService {
         return CompletableFuture.completedFuture(new SharePage(
                 Kind.ROOM, "Un défi t'attend sur Joutio", "Rejoins le salon et affronte ton adversaire en direct.",
                 properties.defaultImage(), "/join/" + roomId));
-    }
-
-    public CompletableFuture<SharePage> invite(String rawCode) {
-        String code = ReferralRules.normalizeCode(rawCode);
-        if (code == null) {
-            return CompletableFuture.completedFuture(generic(Kind.INVITE, "/"));
-        }
-        return queryGateway.query(new UserQuery.FindUserIdByReferralCodeQuery(code), QueryResponseTypes.instanceOf(String.class))
-                .thenCompose(userId -> userId == null || userId.isBlank()
-                        ? CompletableFuture.completedFuture(generic(Kind.INVITE, "/"))
-                        : profile(userId).thenApply(page -> page.appPath().equals("/")
-                        ? generic(Kind.INVITE, "/")
-                        : new SharePage(Kind.INVITE, page.title().replace(" te défie sur Joutio", " t'invite sur Joutio"),
-                        "Rejoins-moi sur " + TAGLINE, page.image(), "/?ref=" + code)))
-                .exceptionally(_ -> generic(Kind.INVITE, "/"));
     }
 
     private SharePage generic(Kind kind, String appPath) {

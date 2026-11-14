@@ -24,8 +24,7 @@ public record ShareProperties(
         @DefaultValue("") List<String> androidSha256,
         @DefaultValue("https://joutio.com/og.png") String defaultImage) {
 
-    public String playStoreUrl(String referrer) {
-        String base = "https://play.google.com/store/apps/details?id=" + androidPackage;
-        return referrer == null ? base : base + "&referrer=" + java.net.URLEncoder.encode(referrer, java.nio.charset.StandardCharsets.UTF_8);
+    public String playStoreUrl() {
+        return "https://play.google.com/store/apps/details?id=" + androidPackage;
     }
 }
