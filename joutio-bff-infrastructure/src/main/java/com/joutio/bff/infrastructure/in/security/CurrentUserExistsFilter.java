@@ -179,7 +179,28 @@ public class CurrentUserExistsFilter extends OncePerRequestFilter {
         if (status.suspendedUntil() != null) {
             body.put("suspendedUntil", status.suspendedUntil().toString());
         }
+        String reason = suspensionReason(status.userId());
+        if (reason != null) {
+            body.put("suspensionReason", reason);
+        }
         objectMapper.writeValue(response.getWriter(), body);
+    }
+
+    /** Code du motif de la suspension (jamais la note de modération) ; {@code null} si indisponible. */
+    private String suspensionReason(String userId) {
+        try {
+            var account = identityLookup.account(userId);
+            if (account == null) {
+                return null;
+            }
+            var user = account.get(LOOKUP_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            return user.suspension() == null || user.suspension().reason() == null ? null : user.suspension().reason().name();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /** Sans ces en-têtes, le navigateur masque la 401/403 (CORS) et le web ne purge pas sa session. */
