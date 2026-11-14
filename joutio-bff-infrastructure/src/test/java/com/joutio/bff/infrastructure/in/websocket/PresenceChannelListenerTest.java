@@ -2,6 +2,7 @@ package com.joutio.bff.infrastructure.in.websocket;
 
 import com.joutio.bff.application.MatchmakingViewService;
 import com.joutio.bff.application.RoomViewService;
+import com.joutio.matchmaking.domain.exception.RoomExceptions;
 import com.joutio.matchmaking.domain.model.RoomLeaveReason;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.after;
+import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
@@ -39,7 +42,7 @@ class PresenceChannelListenerTest {
     private final MatchmakingViewService tickets = mock(MatchmakingViewService.class);
     private final SimpMessagingTemplate messaging = mock(SimpMessagingTemplate.class);
     private final PresenceChannelListener listener =
-            new PresenceChannelListener(rooms, tickets, messaging, Duration.ofMillis(50));
+            new PresenceChannelListener(rooms, tickets, messaging, Duration.ofMillis(50), Duration.ofMillis(600));
 
     PresenceChannelListenerTest() {
         when(rooms.join(anyString(), anyString(), anyString()))
@@ -124,6 +127,45 @@ class PresenceChannelListenerTest {
         verify(messaging).convertAndSendToUser(eq("u1"), eq("/queue/room-presence"), payload.capture());
         Map<String, Object> body = (Map<String, Object>) payload.getValue();
         assertThat(body).containsEntry("roomId", "r1").containsKey("problem");
+    }
+
+    @Test
+    void roomNotYetProjected_isRetriedUntilItExists() {
+        when(rooms.join("r1", "u1", "s1"))
+                .thenReturn(CompletableFuture.failedFuture(notFound()))
+                .thenReturn(CompletableFuture.failedFuture(notFound()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        listener.onSubscribe(subscribe("s1", "sub-1", "/topic/rooms/r1/presence"));
+
+        verify(rooms, timeout(2000).times(3)).join("r1", "u1", "s1");
+        verify(messaging, never()).convertAndSendToUser(anyString(), anyString(), any(Object.class));
+    }
+
+    @Test
+    void roomStillUnknownAfterTheGrace_isRefused() {
+        when(rooms.join("r1", "u1", "s1")).thenReturn(CompletableFuture.failedFuture(notFound()));
+
+        listener.onSubscribe(subscribe("s1", "sub-1", "/topic/rooms/r1/presence"));
+
+        verify(messaging, timeout(3000))
+                .convertAndSendToUser(eq("u1"), eq("/queue/room-presence"), any(Object.class));
+    }
+
+    @Test
+    void leavingDuringTheGrace_stopsTheRetries() {
+        when(rooms.join("r1", "u1", "s1")).thenReturn(CompletableFuture.failedFuture(notFound()));
+
+        listener.onSubscribe(subscribe("s1", "sub-1", "/topic/rooms/r1/presence"));
+        listener.onUnsubscribe(unsubscribe("s1", "sub-1"));
+
+        verify(messaging, after(1000).never())
+                .convertAndSendToUser(anyString(), anyString(), any(Object.class));
+        verify(rooms, atMost(2)).join("r1", "u1", "s1");
+    }
+
+    private static RoomExceptions.RoomNotFoundProblem notFound() {
+        return new RoomExceptions.RoomNotFoundProblem("r1");
     }
 
     @Test

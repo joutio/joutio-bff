@@ -27,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
@@ -63,6 +64,10 @@ public class PresenceChannelListener {
     static final Pattern TICKET_CHANNEL =
             Pattern.compile("^/topic/matchmaking/tickets/([^/]+)/presence$");
     static final String ERROR_QUEUE = "/queue/room-presence";
+    static final String ROOM_NOT_FOUND = "urn:joutio:room:notFound";
+    /** Premier délai de réessai d'une salle encore inconnue (doublé à chaque tentative, plafonné à 1 s). */
+    private static final long FIRST_RETRY_MS = 150;
+    private static final long MAX_RETRY_MS = 1000;
 
     enum Kind {
         ROOM,
@@ -75,6 +80,7 @@ public class PresenceChannelListener {
     private final MatchmakingViewService matchmakingViewService;
     private final SimpMessagingTemplate messagingTemplate;
     private final Duration disconnectGrace;
+    private final Duration notFoundGrace;
     private final ScheduledExecutorService scheduler;
 
     /** Canaux ouverts par session : sessionId → subscriptionId → canal. */
@@ -84,11 +90,13 @@ public class PresenceChannelListener {
             RoomViewService roomViewService,
             MatchmakingViewService matchmakingViewService,
             SimpMessagingTemplate messagingTemplate,
-            @Value("${joutio.room-presence.disconnect-grace:10s}") Duration disconnectGrace) {
+            @Value("${joutio.room-presence.disconnect-grace:10s}") Duration disconnectGrace,
+            @Value("${joutio.room-presence.not-found-grace:5s}") Duration notFoundGrace) {
         this.roomViewService = roomViewService;
         this.matchmakingViewService = matchmakingViewService;
         this.messagingTemplate = messagingTemplate;
         this.disconnectGrace = disconnectGrace;
+        this.notFoundGrace = notFoundGrace;
         this.scheduler =
                 Executors.newSingleThreadScheduledExecutor(
                         runnable -> {
@@ -115,7 +123,7 @@ public class PresenceChannelListener {
         channels.computeIfAbsent(sessionId, _ -> new ConcurrentHashMap<>())
                 .put(subscriptionId, channel);
         if (channel.kind() == Kind.ROOM) {
-            enter(channel, sessionId);
+            enter(channel, sessionId, subscriptionId, System.currentTimeMillis(), FIRST_RETRY_MS);
         }
     }
 
@@ -177,7 +185,13 @@ public class PresenceChannelListener {
         return channels.values().stream().mapToInt(Map::size).sum();
     }
 
-    private void enter(Channel channel, String sessionId) {
+    /**
+     * Entrée dans le salon. Le client s'abonne dès la création de la salle (salle bot surtout) :
+     * sa projection peut ne pas exister encore. Un {@code room:notFound} est donc réessayé, à
+     * délais croissants, pendant {@code notFoundGrace} tant que le canal reste ouvert ; le refus
+     * n'est poussé au joueur qu'au-delà.
+     */
+    private void enter(Channel channel, String sessionId, String subscriptionId, long startedAt, long retryMs) {
         CompletableFuture<Void> joined;
         try {
             joined = roomViewService.join(channel.id(), channel.userId(), sessionId);
@@ -187,6 +201,12 @@ public class PresenceChannelListener {
         joined.exceptionally(
                 error -> {
                     Map<String, Object> problem = problemOf(error);
+                    if (ROOM_NOT_FOUND.equals(problem.get("type"))
+                            && System.currentTimeMillis() + retryMs - startedAt <= notFoundGrace.toMillis()
+                            && isOpen(sessionId, subscriptionId, channel)) {
+                        scheduleRetry(channel, sessionId, subscriptionId, startedAt, retryMs);
+                        return null;
+                    }
                     logger.info(
                             "Présence salon refusée: roomId={}, userId={}, type={}",
                             channel.id(),
@@ -198,6 +218,29 @@ public class PresenceChannelListener {
                     messagingTemplate.convertAndSendToUser(channel.userId(), ERROR_QUEUE, payload);
                     return null;
                 });
+    }
+
+    private void scheduleRetry(
+            Channel channel, String sessionId, String subscriptionId, long startedAt, long retryMs) {
+        try {
+            scheduler.schedule(
+                    () -> {
+                        if (isOpen(sessionId, subscriptionId, channel)) {
+                            enter(channel, sessionId, subscriptionId, startedAt,
+                                    Math.min(retryMs * 2, MAX_RETRY_MS));
+                        }
+                    },
+                    retryMs,
+                    TimeUnit.MILLISECONDS);
+        } catch (RejectedExecutionException stopped) {
+            // Instance en arrêt : le client se réabonnera ailleurs.
+        }
+    }
+
+    /** Le canal est toujours ouvert (écran du salon encore affiché, même session). */
+    private boolean isOpen(String sessionId, String subscriptionId, Channel channel) {
+        Map<String, Channel> session = channels.get(sessionId);
+        return session != null && channel.equals(session.get(subscriptionId));
     }
 
     private void depart(Channel channel, String sessionId, RoomLeaveReason reason) {
