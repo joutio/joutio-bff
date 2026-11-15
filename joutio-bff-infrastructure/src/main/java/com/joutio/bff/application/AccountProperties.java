@@ -13,13 +13,12 @@ import java.time.Instant;
  * @param termsVersion           version des CGU en vigueur (2026-11-15, `joutio-landing/src/data/legal.ts`) : un joueur
  *                               qui ne l'a pas acceptée doit le faire avant de jouer ({@code MeView.termsUpToDate}) ;
  *                               absente = aucune acceptation exigée.
+ *
+ * <p>Un seul constructeur : avec deux, Spring Boot ne sait plus lier le record et le démarrage échoue
+ * (« No default constructor found »).</p>
  */
 @ConfigurationProperties(prefix = "joutio.account")
 public record AccountProperties(Instant birthDateRequiredSince, String termsVersion) {
-
-    public AccountProperties(Instant birthDateRequiredSince) {
-        this(birthDateRequiredSince, null);
-    }
 
     /** Le joueur a accepté la version en vigueur, ou aucune n'est exigée. */
     public boolean termsUpToDate(String acceptedVersion) {
