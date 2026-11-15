@@ -67,10 +67,14 @@ public class TopicAuthoringService {
         this.limits = limits;
     }
 
-    public CompletableFuture<String> create(String userId, CreateTopicRequest request) {
+    /**
+     * Crée un brouillon. {@code official} vient du rôle de l'appelant ({@code ROLE_ADMIN}), jamais de la requête : un
+     * sujet créé par un administrateur porte le badge « Officiel » (2026-11-15).
+     */
+    public CompletableFuture<String> create(String userId, CreateTopicRequest request, boolean official) {
         String topicId = UUID.randomUUID().toString();
-        return commandGateway
-                .send(
+        CompletableFuture<Object> created =
+                commandGateway.send(
                         new TopicCommand.CreateTopicCommand(
                                 topicId,
                                 request.names(),
@@ -79,7 +83,11 @@ public class TopicAuthoringService {
                                 request.imageUrl(),
                                 null,
                                 null,
-                                userId))
+                                userId));
+        return (official
+                        ? created.thenCompose(
+                                _ -> commandGateway.send(new TopicCommand.SetTopicOfficialCommand(topicId, true, userId)))
+                        : created)
                 .thenApply(_ -> topicId);
     }
 

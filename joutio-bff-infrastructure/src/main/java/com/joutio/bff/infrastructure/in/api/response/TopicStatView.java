@@ -17,6 +17,13 @@ public record TopicStatView(
         /** Pictogramme carré de la tuile (`null` : repli sur la vignette, puis la catégorie). */
         String pictogramUrl,
         int games,
-        int xp
+        int xp,
+        /** Sujet éditorial de Joutio (badge « Officiel », 2026-11-15). */
+        boolean official
 ) {
+
+    public TopicStatView(String topicId, Map<Language, String> names, String category, String imageUrl, String pictogramUrl,
+                         int games, int xp) {
+        this(topicId, names, category, imageUrl, pictogramUrl, games, xp, false);
+    }
 }

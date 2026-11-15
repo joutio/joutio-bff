@@ -143,6 +143,7 @@ l'ancienne surface et sont migrés lot par lot.
 |---|---|---|
 | `GET /api/me` | `MeView` | Profil (+ `language` fr/en, + `equippedTitle` = clé du titre porté, + `interests` = codes `TopicCategory` ordonnés, premier = univers principal, max 3) + progression + stats de duel + `followingCount` + `followersCount` + `onboardingCompleted` (flag serveur, ou première partie humaine déjà jouée) + `rewards` (codes des récompenses persistées, ex. `MICAH_AVATAR`) + `premium` (`ROLE_ADMIN` ou droit accordé dans identity, lu par `PremiumAccessPolicy` via `IdentityLookup` — frais sans refresh du jeton) + `premiumUntil` (`null` = sans échéance ou aucun droit) + `premiumSource` (`MANUAL\|APP_STORE\|PLAY\|WEB`) + `limits` (`PlanLimitsView` : `pendingChallenges`, `openRooms`, `botRooms`, `publishedTopics`, `questionsPerTopic` ; `2147483647` = illimité) |
 | `GET /api/me` (2026-11-13) | `MeView` | + `birthDate` (privée, `AAAA-MM-JJ`, lue dans identity via `IdentityLookup.account`, jamais dans une vue publique) + `birthDateRequired` (compte créé après `joutio.account.birth-date-required-since` sans date : l'app la demande avant de jouer). |
+| `PUT /api/me/terms` (2026-11-15) | `204` | `{ version }` → `AcceptTermsCommand` (identity, idempotent) : acceptation explicite des CGU, version et date conservées. `MeView.termsVersion` = version en vigueur (`joutio.account.terms-version`, `JOUTIO_TERMS_VERSION`, défaut `2026-11-15`, vide = non exigée) ; `MeView.termsUpToDate=false` → les apps présentent les CGU avant de jouer. |
 | `PUT /api/me/birth-date` | `204` | `{ birthDate }` → `SetBirthDateCommand` (identity) : 15 ans minimum (`urn:joutio:identity:underage`), date future ou > 120 ans refusée (`invalidBirthDate`). |
 | `GET /api/me/rewards` | `RewardsView` | Catalogue complet des récompenses : `code`, `unlocked`, `unlockedAt`, `source`, `condition` (`badgeCode`, `badgeLabel`, `target`). Les déblocages viennent de `player_reward`, les verrouillées de `RewardRules.catalog()` ; réponse privée au joueur courant. |
 | `POST /api/me/onboarding/complete` | `MeView` | Fin explicite ou skip de l'onboarding ; idempotent, renvoie le flag `onboardingCompleted=true` sans attendre la projection profile |
@@ -293,8 +294,18 @@ les images mirorées du workspace (`product/wikipedia/`, voir `scripts/seed-imag
 
 | Endpoint | Réponse | Notes |
 |---|---|---|
-| `POST /api/media` | `201 + Location` | multipart `file` (JPEG/PNG ≤ 5 Mo) → `MediaView { id, url, contentType, sizeBytes, width, height }` ; déduplication par contenu, acteur = JWT |
+| `POST /api/media` | `201 + Location` | multipart `file` (JPEG/PNG ≤ 5 Mo) + `rightsDeclared=true` + `termsVersion` (2026-11-15 : déclaration de droits de l'auteur, conservée sur `media_asset` ; absente → `400 urn:joutio:bff:media:rightsNotDeclared`, désactivable par `joutio.media.require-rights-declaration=false`) + `sourceNote` facultatif → `MediaView { id, url, contentType, sizeBytes, width, height }` ; déduplication par contenu, acteur = JWT |
 | `DELETE /api/media/{mediaId}` | `204` | propriétaire de l'image uniquement ; l'objet n'est supprimé que si plus aucune référence ne le partage |
+
+### Contenus illicites et sujets officiels (2026-11-15)
+
+| Endpoint | Réponse | Notes |
+|---|---|---|
+| `POST /api/public/content-notices` | `202 { id }` | **Sans authentification** (chaîne `PublicApiSecurityConfiguration`). `ContentNoticeRequest` : `name`, `email`, `quality` (`RIGHTS_HOLDER\|REPRESENTATIVE\|THIRD_PARTY`), `contentUrl`, `category` (`COPYRIGHT\|IMAGE_RIGHTS\|IMPERSONATION\|OTHER_ILLEGAL`), `description` (20–4 000), `rightsEvidence?`, `goodFaith` (obligatoire), `website` (champ piège : réponse identique, rien d'enregistré). 5 envois par heure et par IP (`urn:joutio:bff:notice:tooMany`). Table `content_notice`. |
+| `GET /api/admin/content-notices?status=&page=&size=` | `List<ContentNotice>` | `ROLE_ADMIN` ; `status` absent = toutes, des plus récentes aux plus anciennes. `GET …/summary` → `{ received }`. |
+| `POST /api/admin/content-notices/{id}/decision` | `ContentNotice` | `{ decision: IMAGE_REMOVED\|QUESTION_REMOVED\|TOPIC_CLOSED\|REJECTED, reason }` ; l'action elle-même passe par les endpoints média, questions ou sujets. |
+| `PUT /api/admin/topics/{id}/official` | `204` | `{ official }` → `SetTopicOfficialCommand`. Un sujet créé par un `ROLE_ADMIN` (`POST /api/topics`) reçoit le badge d'office ; jamais lu depuis la requête d'un joueur. `official` est exposé sur `TopicCardView`, `TopicRefView`, `SuggestionView`, `TopicStatView`, `AdminTopicOptionView`. |
+| `POST /api/admin/topics/{id}/close` · `POST …/reopen` | `204` | `{ reason }` → `CloseTopicCommand` : brouillon, publication refusée (`urn:joutio:topic:closed`) jusqu'à `ReopenTopicCommand`. Le motif est exposé à l'équipe par `TopicWorkshopView.closedReason`. |
 
 #### Administration média (console d'exploitation)
 

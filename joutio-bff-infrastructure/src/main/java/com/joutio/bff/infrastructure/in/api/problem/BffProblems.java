@@ -301,6 +301,17 @@ public final class BffProblems {
     }
 
     /** Aucun fichier fourni (part manquante ou vide). */
+    /** Envoi d'image sans la déclaration de droits de son auteur (CGU, cadre LCEN/DSA). */
+    public static class MediaRightsNotDeclaredProblem extends BaseProblem {
+        public MediaRightsNotDeclaredProblem() {
+            super("urn:joutio:bff:media:rightsNotDeclared",
+                    ProblemCategory.VALIDATION,
+                    "Image rights not declared",
+                    "Confirm that you hold the rights to this image, or that it is free of rights (rightsDeclared=true)",
+                    Map.of());
+        }
+    }
+
     public static class MediaFileMissingProblem extends BaseProblem {
         public MediaFileMissingProblem() {
             super("urn:joutio:bff:media:fileMissing",
@@ -542,6 +553,38 @@ public final class BffProblems {
                     "The creator exceeds the free published topics limit (" + published + "/" + limit
                             + "): unpublish topics or renew Premium to edit",
                     Map.of("topicId", topicId, "limit", limit, "published", published));
+        }
+    }
+
+    /** Notification de contenu sans déclaration de bonne foi (LCEN art. 6-I-5). */
+    public static class ContentNoticeGoodFaithRequiredProblem extends BaseProblem {
+        public ContentNoticeGoodFaithRequiredProblem() {
+            super("urn:joutio:bff:notice:goodFaithRequired",
+                    ProblemCategory.VALIDATION,
+                    "Good faith statement required",
+                    "Confirm that the information in the notice is accurate (goodFaith=true)",
+                    Map.of());
+        }
+    }
+
+    /** Trop de notifications de contenu depuis la même adresse en une heure. */
+    public static class ContentNoticeTooManyProblem extends BaseProblem {
+        public ContentNoticeTooManyProblem() {
+            super("urn:joutio:bff:notice:tooMany",
+                    ProblemCategory.BUSINESS_INVALID_COMMAND,
+                    "Too many notices",
+                    "Too many notices from this address. Try again later or write to contact@joutio.com",
+                    Map.of());
+        }
+    }
+
+    public static class ContentNoticeNotFoundProblem extends BaseProblem {
+        public ContentNoticeNotFoundProblem(String id) {
+            super("urn:joutio:bff:notice:notFound",
+                    ProblemCategory.BUSINESS_RESOURCE_MISSING,
+                    "Notice not found",
+                    "The content notice " + id + " was not found",
+                    Map.of());
         }
     }
 }

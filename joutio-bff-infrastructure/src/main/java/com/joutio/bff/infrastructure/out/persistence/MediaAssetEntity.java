@@ -44,6 +44,15 @@ public class MediaAssetEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "rights_declared_at")
+    private Instant rightsDeclaredAt;
+
+    @Column(name = "terms_version", length = 32)
+    private String termsVersion;
+
+    @Column(name = "source_note", length = 255)
+    private String sourceNote;
+
     protected MediaAssetEntity() {
     }
 
@@ -59,6 +68,27 @@ public class MediaAssetEntity {
         this.sha256 = sha256;
         this.uploadedBy = uploadedBy;
         this.createdAt = createdAt;
+    }
+
+    public MediaAssetEntity(UUID id, String objectKey, String url, String contentType, long sizeBytes,
+                            int width, int height, String sha256, String uploadedBy, Instant createdAt,
+                            Instant rightsDeclaredAt, String termsVersion, String sourceNote) {
+        this(id, objectKey, url, contentType, sizeBytes, width, height, sha256, uploadedBy, createdAt);
+        this.rightsDeclaredAt = rightsDeclaredAt;
+        this.termsVersion = termsVersion;
+        this.sourceNote = sourceNote;
+    }
+
+    public Instant getRightsDeclaredAt() {
+        return rightsDeclaredAt;
+    }
+
+    public String getTermsVersion() {
+        return termsVersion;
+    }
+
+    public String getSourceNote() {
+        return sourceNote;
     }
 
     public UUID getId() {

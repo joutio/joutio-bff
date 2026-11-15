@@ -91,7 +91,7 @@ public class PremiumAccessPolicy {
         return admin ? new PremiumStatus(true, granted.premiumUntil(), granted.source()) : granted;
     }
 
-    static boolean isAdmin(Authentication authentication) {
+    public static boolean isAdmin(Authentication authentication) {
         return authentication != null && authentication.isAuthenticated()
                 && authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)

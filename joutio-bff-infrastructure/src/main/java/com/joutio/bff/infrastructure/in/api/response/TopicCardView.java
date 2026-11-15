@@ -27,6 +27,27 @@ public record TopicCardView(
         int followersCount,
         int questionsCount,
         boolean followed,
-        TopicStatus status
+        TopicStatus status,
+        /** Badge « Officiel » (2026-11-15) : sujet éditorial de Joutio, jamais un sujet de joueur. */
+        boolean official
 ) {
+
+    /** Carte sans badge (vues antérieures au badge « Officiel », tests). */
+    public TopicCardView(
+            String topicId,
+            Map<Language, String> names,
+            String description,
+            Map<Language, String> descriptions,
+            TopicCategory category,
+            String categoryLabel,
+            String imageUrl,
+            String bannerUrl,
+            String pictogramUrl,
+            int followersCount,
+            int questionsCount,
+            boolean followed,
+            TopicStatus status) {
+        this(topicId, names, description, descriptions, category, categoryLabel, imageUrl, bannerUrl, pictogramUrl,
+                followersCount, questionsCount, followed, status, false);
+    }
 }

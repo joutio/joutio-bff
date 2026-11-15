@@ -33,7 +33,8 @@ final class TopicViews {
                 topic.followersCounter() == null ? 0 : topic.followersCounter(),
                 questionsCount,
                 followed,
-                topic.status());
+                topic.status(),
+                topic.official());
     }
 
     static TopicRefView toRef(String topicId, Topic topic) {
@@ -45,6 +46,7 @@ final class TopicViews {
                         topic.category() == null ? null : topic.category().name(),
                         topic.imageUrl(),
                         topic.pictogramUrl(),
-                        topic.titles());
+                        topic.titles(),
+                        topic.official());
     }
 }

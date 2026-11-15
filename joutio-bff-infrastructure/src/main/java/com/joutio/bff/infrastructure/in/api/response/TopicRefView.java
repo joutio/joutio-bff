@@ -15,6 +15,19 @@ public record TopicRefView(
         /** Pictogramme carré (`null` : repli sur la vignette, puis la catégorie). */
         String pictogramUrl,
         /** Titres thématiques par palier et par langue (null → repli « palier · nom »). */
-        Map<Language, Map<String, String>> titles
+        Map<Language, Map<String, String>> titles,
+        /** Badge « Officiel » (2026-11-15). */
+        boolean official
 ) {
+
+    /** Référence sans badge (sujet inconnu, tests). */
+    public TopicRefView(
+            String topicId,
+            Map<Language, String> names,
+            String category,
+            String imageUrl,
+            String pictogramUrl,
+            Map<Language, Map<String, String>> titles) {
+        this(topicId, names, category, imageUrl, pictogramUrl, titles, false);
+    }
 }

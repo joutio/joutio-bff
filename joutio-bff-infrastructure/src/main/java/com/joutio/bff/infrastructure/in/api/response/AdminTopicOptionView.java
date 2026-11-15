@@ -10,6 +10,10 @@ public record AdminTopicOptionView(
         String topicId,
         Map<Language, String> names,
         TopicStatus status,
-        Integer questionsCount
+        Integer questionsCount,
+        /** Badge « Officiel » (2026-11-15). */
+        boolean official,
+        /** Fermé par la modération (2026-11-15) : publication bloquée jusqu'à réouverture. */
+        boolean closed
 ) {
 }

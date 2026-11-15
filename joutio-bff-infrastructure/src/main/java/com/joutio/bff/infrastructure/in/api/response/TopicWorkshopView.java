@@ -11,4 +11,9 @@ import java.util.Map;
 public record TopicWorkshopView(
         TopicCardView topic,
         TopicPermissions permissions,
-        Map<Language, Map<String, String>> titles) {}
+        Map<Language, Map<String, String>> titles,
+        /**
+         * Motif de fermeture par la modération (2026-11-15, DSA art. 17), affiché à l'équipe du sujet ; {@code null} si
+         * le sujet n'est pas fermé. Tant qu'il est fermé, la publication est refusée ({@code urn:joutio:topic:closed}).
+         */
+        String closedReason) {}

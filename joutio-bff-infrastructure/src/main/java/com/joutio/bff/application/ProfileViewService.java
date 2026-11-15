@@ -480,7 +480,7 @@ public class ProfileViewService {
                                             topic.category() == null ? null : topic.category().name(),
                                             topic.imageUrl(),
                                             topic.pictogramUrl(),
-                                            progress.games(), progress.xp());
+                                            progress.games(), progress.xp(), topic.official());
                                 })
                                 .toList();
                     });

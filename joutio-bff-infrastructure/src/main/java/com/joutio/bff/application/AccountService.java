@@ -27,4 +27,10 @@ public class AccountService {
         return commandGateway.send(new UserCommand.SetBirthDateCommand(userId, birthDate, userId, Instant.now()))
                 .thenRun(() -> identityLookup.invalidate(userId));
     }
+
+    /** Acceptation explicite d'une version des CGU (preuve du consentement, conservée dans identity). */
+    public CompletableFuture<Void> acceptTerms(String userId, String version) {
+        return commandGateway.send(new UserCommand.AcceptTermsCommand(userId, version, Instant.now()))
+                .thenRun(() -> identityLookup.invalidate(userId));
+    }
 }

@@ -125,12 +125,13 @@ public class MediaAssetRepositoryAdapter implements MediaAssetRepository {
     private static MediaAssetEntity toEntity(MediaAsset asset) {
         return new MediaAssetEntity(asset.id(), asset.objectKey(), asset.url(), asset.contentType(),
                 asset.sizeBytes(), asset.width(), asset.height(), asset.sha256(), asset.uploadedBy(),
-                asset.createdAt());
+                asset.createdAt(), asset.rightsDeclaredAt(), asset.termsVersion(), asset.sourceNote());
     }
 
     private static MediaAsset toDomain(MediaAssetEntity entity) {
         return new MediaAsset(entity.getId(), entity.getObjectKey(), entity.getUrl(),
                 entity.getContentType(), entity.getSizeBytes(), entity.getWidth(), entity.getHeight(),
-                entity.getSha256(), entity.getUploadedBy(), entity.getCreatedAt());
+                entity.getSha256(), entity.getUploadedBy(), entity.getCreatedAt(), entity.getRightsDeclaredAt(),
+                entity.getTermsVersion(), entity.getSourceNote());
     }
 }

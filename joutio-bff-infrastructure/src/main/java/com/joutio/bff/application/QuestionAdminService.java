@@ -236,7 +236,9 @@ public class QuestionAdminService {
                                                                                 .getOrDefault(
                                                                                         QuestionStatus
                                                                                                 .APPROVED,
-                                                                                        0)))
+                                                                                        0),
+                                                                topic.official(),
+                                                                topic.closed()))
                                         .toList());
     }
 

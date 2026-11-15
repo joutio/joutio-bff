@@ -10,7 +10,19 @@ import java.time.Instant;
  * @param birthDateRequiredSince mise en service de la date de naissance : les comptes créés à partir de cet instant
  *                               doivent la renseigner avant de jouer ({@code MeView.birthDateRequired}) ; absent = jamais
  *                               exigée.
+ * @param termsVersion           version des CGU en vigueur (2026-11-15, `joutio-landing/src/data/legal.ts`) : un joueur
+ *                               qui ne l'a pas acceptée doit le faire avant de jouer ({@code MeView.termsUpToDate}) ;
+ *                               absente = aucune acceptation exigée.
  */
 @ConfigurationProperties(prefix = "joutio.account")
-public record AccountProperties(Instant birthDateRequiredSince) {
+public record AccountProperties(Instant birthDateRequiredSince, String termsVersion) {
+
+    public AccountProperties(Instant birthDateRequiredSince) {
+        this(birthDateRequiredSince, null);
+    }
+
+    /** Le joueur a accepté la version en vigueur, ou aucune n'est exigée. */
+    public boolean termsUpToDate(String acceptedVersion) {
+        return termsVersion == null || termsVersion.isBlank() || termsVersion.equals(acceptedVersion);
+    }
 }

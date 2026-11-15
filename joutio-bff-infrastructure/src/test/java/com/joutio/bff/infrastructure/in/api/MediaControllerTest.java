@@ -36,7 +36,7 @@ class MediaControllerTest {
     void setUp() {
         TestSecurity.authenticate(USER_ID);
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new MediaController(mediaService))
+                .standaloneSetup(new MediaController(mediaService, false))
                 .setControllerAdvice(new BffProblemExceptionHandler())
                 .build();
     }
@@ -48,7 +48,7 @@ class MediaControllerTest {
 
     @Test
     void upload_returns_created_media_view() throws Exception {
-        when(mediaService.upload(eq(USER_ID), any()))
+        when(mediaService.upload(eq(USER_ID), any(), any()))
                 .thenReturn(new MediaView(UUID.randomUUID(), URL, "image/jpeg", 1234, 100, 50));
 
         mockMvc.perform(multipart("/api/media")
@@ -62,8 +62,31 @@ class MediaControllerTest {
     }
 
     @Test
+    void upload_requires_the_rights_declaration_when_enforced() throws Exception {
+        MockMvc enforced = MockMvcBuilders
+                .standaloneSetup(new MediaController(mediaService, true))
+                .setControllerAdvice(new BffProblemExceptionHandler())
+                .build();
+
+        enforced.perform(multipart("/api/media")
+                        .file(new MockMultipartFile("file", "cover.png", "image/png", new byte[]{1})))
+                .andExpect(status().isBadRequest());
+
+        when(mediaService.upload(eq(USER_ID), any(), any()))
+                .thenReturn(new MediaView(UUID.randomUUID(), URL, "image/jpeg", 1234, 100, 50));
+        enforced.perform(multipart("/api/media")
+                        .file(new MockMultipartFile("file", "cover.png", "image/png", new byte[]{1}))
+                        .param("rightsDeclared", "true")
+                        .param("termsVersion", "2026-11-15"))
+                .andExpect(status().isCreated());
+        org.mockito.Mockito.verify(mediaService).upload(eq(USER_ID), any(),
+                org.mockito.ArgumentMatchers.argThat(declaration -> declaration != null
+                        && "2026-11-15".equals(declaration.termsVersion())));
+    }
+
+    @Test
     void upload_maps_too_large_to_413() throws Exception {
-        when(mediaService.upload(eq(USER_ID), any()))
+        when(mediaService.upload(eq(USER_ID), any(), any()))
                 .thenThrow(new BffProblems.MediaTooLargeProblem("trop gros"));
 
         mockMvc.perform(multipart("/api/media")
@@ -73,7 +96,7 @@ class MediaControllerTest {
 
     @Test
     void upload_maps_quota_to_429() throws Exception {
-        when(mediaService.upload(eq(USER_ID), any()))
+        when(mediaService.upload(eq(USER_ID), any(), any()))
                 .thenThrow(new BffProblems.MediaQuotaExceededProblem("quota"));
 
         mockMvc.perform(multipart("/api/media")
@@ -83,7 +106,7 @@ class MediaControllerTest {
 
     @Test
     void upload_maps_storage_failure_to_503() throws Exception {
-        when(mediaService.upload(eq(USER_ID), any()))
+        when(mediaService.upload(eq(USER_ID), any(), any()))
                 .thenThrow(new BffProblems.MediaStorageUnavailableProblem("stockage"));
 
         mockMvc.perform(multipart("/api/media")
@@ -93,7 +116,7 @@ class MediaControllerTest {
 
     @Test
     void upload_maps_unsupported_format_to_400() throws Exception {
-        when(mediaService.upload(eq(USER_ID), any()))
+        when(mediaService.upload(eq(USER_ID), any(), any()))
                 .thenThrow(new BffProblems.MediaUnsupportedFormatProblem());
 
         mockMvc.perform(multipart("/api/media")

@@ -97,7 +97,10 @@ public class TopicTeamService {
                                                                 p,
                                                                 topic.titles() == null
                                                                         ? java.util.Map.of()
-                                                                        : topic.titles())));
+                                                                        : topic.titles(),
+                                                                topic.closed()
+                                                                        ? (topic.closedReason() == null ? "" : topic.closedReason())
+                                                                        : null)));
     }
 
     public CompletableFuture<PageResponse<TopicCardView>> contributed(

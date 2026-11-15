@@ -20,8 +20,15 @@ public record SuggestionView(
         String pictogramUrl,
         String avatarOptions,
         Map<Language, String> names,
-        boolean suspended
+        boolean suspended,
+        /** Sujet éditorial de Joutio (badge « Officiel », 2026-11-15) ; toujours faux pour un joueur. */
+        boolean official
 ) {
+
+    public SuggestionView(Type type, String id, String label, String subtitle, String category, String imageUrl,
+                          String pictogramUrl, String avatarOptions, Map<Language, String> names, boolean suspended) {
+        this(type, id, label, subtitle, category, imageUrl, pictogramUrl, avatarOptions, names, suspended, false);
+    }
 
     public SuggestionView(Type type,
                           String id,

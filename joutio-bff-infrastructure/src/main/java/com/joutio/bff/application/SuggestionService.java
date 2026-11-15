@@ -71,7 +71,9 @@ public class SuggestionService {
                         topic.imageUrl(),
                         topic.pictogramUrl(),
                         null,
-                        topic.names())));
+                        topic.names(),
+                        false,
+                        topic.official())));
                 players.forEach(profile -> suggestions.add(new SuggestionView(
                         SuggestionView.Type.PLAYER,
                         profile.userId(),

@@ -43,6 +43,11 @@ public class MediaService {
     }
 
     public MediaView upload(String userId, MultipartFile file) {
+        return upload(userId, file, null);
+    }
+
+    /** Envoi avec la déclaration de droits de l'auteur ({@code null} : envoi sans déclaration, réservé au système). */
+    public MediaView upload(String userId, MultipartFile file, MediaRightsDeclaration declaration) {
         if (file == null || file.isEmpty()) {
             throw new BffProblems.MediaFileMissingProblem();
         }
@@ -74,7 +79,10 @@ public class MediaService {
         String objectKey = "uploads/" + sha256.substring(0, 16) + image.extension();
         storage.put(objectKey, image.content(), image.contentType(), sha256);
         MediaAsset asset = new MediaAsset(UUID.randomUUID(), objectKey, urlFor(objectKey),
-                image.contentType(), bytes, image.width(), image.height(), sha256, userId, Instant.now());
+                image.contentType(), bytes, image.width(), image.height(), sha256, userId, Instant.now(),
+                declaration == null ? null : declaration.declaredAt(),
+                declaration == null ? null : declaration.termsVersion(),
+                declaration == null ? null : declaration.sourceNote());
         repository.save(asset);
         logger.info("Image uploadée par {} : {} ({} octets, {}x{})", userId, objectKey, bytes,
                 image.width(), image.height());

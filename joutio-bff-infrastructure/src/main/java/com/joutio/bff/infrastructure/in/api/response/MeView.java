@@ -48,7 +48,11 @@ public record MeView(
         /** Date de naissance privée ({@code AAAA-MM-JJ}) ; {@code null} = non renseignée. Jamais dans une vue publique. */
         String birthDate,
         /** La date doit être demandée avant de jouer : compte créé après la mise en service, sans date. */
-        boolean birthDateRequired
+        boolean birthDateRequired,
+        /** Version des CGU en vigueur, à afficher et à renvoyer à l'acceptation ({@code null} = aucune exigée). */
+        String termsVersion,
+        /** Le joueur a accepté la version en vigueur ; sinon l'app la lui présente avant de jouer (2026-11-15). */
+        boolean termsUpToDate
 ) {
 
     /** Copie avec le flag forcé (la projection profile peut être en retard juste après la commande). */
@@ -56,6 +60,6 @@ public record MeView(
         return new MeView(userId, email, pseudonym, bio, country, avatarOptions, bannerUrl,
                 equippedTitle, language, progression, stats, followingCount, followersCount, completed,
                 rewards, premium, interests, autoTrainOnTimeout, premiumUntil, premiumSource, limits,
-                birthDate, birthDateRequired);
+                birthDate, birthDateRequired, termsVersion, termsUpToDate);
     }
 }

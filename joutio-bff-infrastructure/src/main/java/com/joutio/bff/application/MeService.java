@@ -95,7 +95,9 @@ public class MeService {
                             premium.source() == null ? null : premium.source().name(),
                             planLimits(premium.premium()),
                             account == null || account.birthDate() == null ? null : account.birthDate().toString(),
-                            account != null && BirthDateRules.required(account, accountProperties.birthDateRequiredSince()));
+                            account != null && BirthDateRules.required(account, accountProperties.birthDateRequiredSince()),
+                            accountProperties.termsVersion(),
+                            account == null || accountProperties.termsUpToDate(account.termsVersion()));
                 });
     }
 

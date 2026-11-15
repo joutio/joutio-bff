@@ -9,6 +9,7 @@ import com.joutio.bff.application.RewardService;
 import com.joutio.bff.application.TopicRecommendationService;
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.bff.infrastructure.in.api.request.DeleteAccountRequest;
+import com.joutio.bff.infrastructure.in.api.request.AcceptTermsRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateBirthDateRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateInterestsRequest;
 import com.joutio.bff.infrastructure.in.api.response.MeView;
@@ -113,6 +114,13 @@ public class MeController {
                 .thenApply(_ -> ResponseEntity.noContent().build());
     }
 
+
+    /** Acceptation explicite de la version en vigueur des CGU (2026-11-15). */
+    @PutMapping("/terms")
+    public CompletableFuture<ResponseEntity<Void>> acceptTerms(@Valid @RequestBody AcceptTermsRequest request) {
+        return accountService.acceptTerms(SecurityHelper.getUserId(), request.version())
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
 
     /** Envoie le code OTP de confirmation de suppression à l'email du compte. */
     @PostMapping("/deletion-code")

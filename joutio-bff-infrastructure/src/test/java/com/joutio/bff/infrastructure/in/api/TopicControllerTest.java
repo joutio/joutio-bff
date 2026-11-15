@@ -93,7 +93,7 @@ class TopicControllerTest {
 
     @Test
     void create_returns_created_location() throws Exception {
-        when(topicAuthoringService.create(eq(USER_ID), any()))
+        when(topicAuthoringService.create(eq(USER_ID), any(), org.mockito.ArgumentMatchers.anyBoolean()))
                 .thenReturn(CompletableFuture.completedFuture("topic-1"));
 
         MvcResult result = mockMvc.perform(post("/api/topics")
