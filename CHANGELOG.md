@@ -1,3 +1,9 @@
+## [3.3.2](https://github.com/joutio/joutio-bff/compare/v3.3.1...v3.3.2) (2026-11-15)
+
+### Bug Fixes
+
+* **bff:** ContentNoticeService constructor injection at startup ([ee48843](https://github.com/joutio/joutio-bff/commit/ee48843ff0c68b6fae81b485c9dfce0d8a2c30af))
+
 ## [3.3.1](https://github.com/joutio/joutio-bff/compare/v3.3.0...v3.3.1) (2026-11-15)
 
 ### Bug Fixes
