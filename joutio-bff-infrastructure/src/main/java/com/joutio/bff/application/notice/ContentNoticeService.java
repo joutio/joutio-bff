@@ -30,6 +30,7 @@ public class ContentNoticeService {
     private final Clock clock;
     private final Map<String, Deque<Instant>> recentByIp = new ConcurrentHashMap<>();
 
+    @org.springframework.beans.factory.annotation.Autowired
     public ContentNoticeService(ContentNoticeRepository repository) {
         this(repository, Clock.systemUTC());
     }
