@@ -6,10 +6,12 @@ import com.joutio.profile.domain.command.ProfileCommand;
 import com.joutio.profile.domain.model.MasteryTier;
 import com.joutio.profile.domain.model.PlayerTitle;
 import com.joutio.profile.domain.model.RewardCode;
+import com.joutio.profile.domain.model.TitleUnlock;
 import com.joutio.theme.domain.model.TopicCategory;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -120,8 +122,8 @@ public class ProfileUpdateService {
 
     /**
      * Titre thématique porté. La commande ne porte que la clé : la **légitimité** du titre
-     * (sujet avec **au moins une partie humaine terminée** — abandon inclus, entraînement bot
-     * exclu — et palier réellement atteint dans ce sujet) est vérifiée **ici**, avant l'envoi —
+     * (palier présent dans les déblocages datés du joueur, la même source que la liste des
+     * titres) est vérifiée **ici**, avant l'envoi —
      * l'agrégat ne connaît pas la progression (`best-practices/.backend/command-preparation.md`).
      * {@code titleKey} {@code null} efface le titre porté.
      */
@@ -134,12 +136,17 @@ public class ProfileUpdateService {
         PlayerTitle title = PlayerTitle.parse(titleKey)
                 .orElseThrow(() -> new BffProblems.InvalidEquippedTitleProblem(titleKey));
 
-        return progressionLookup.get(userId).thenCompose(progress -> {
-            int topicXp = progress.xpForTopic(title.topicId());
-            MasteryTier reached = MasteryTier.tierFor(topicXp);
-            if (progress.gamesForTopic(title.topicId()) <= 0
-                    || reached.ordinal() < title.tier().ordinal()) {
-                throw new BffProblems.TitleNotEarnedProblem(titleKey, reached.name());
+        return progressionLookup.getUnlocks(userId).thenCompose(unlocks -> {
+            List<TitleUnlock> topicTitles = unlocks.titles().stream()
+                    .filter(unlock -> unlock.topicId().equals(title.topicId()))
+                    .toList();
+            if (topicTitles.stream().noneMatch(unlock -> unlock.tier() == title.tier())) {
+                String reached = topicTitles.stream()
+                        .map(TitleUnlock::tier)
+                        .max(Comparator.naturalOrder())
+                        .map(MasteryTier::name)
+                        .orElse("NONE");
+                throw new BffProblems.TitleNotEarnedProblem(titleKey, reached);
             }
 
             return dispatch(userId,

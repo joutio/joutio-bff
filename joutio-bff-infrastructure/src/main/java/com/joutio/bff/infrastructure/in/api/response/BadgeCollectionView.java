@@ -1,5 +1,6 @@
 package com.joutio.bff.infrastructure.in.api.response;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -30,7 +31,9 @@ public record BadgeCollectionView(
             int target,
             boolean earned,
             /** Valeur courante du compteur, **plafonnée** à {@code target} (`target` si acquis). */
-            int progress
+            int progress,
+            /** Date d'obtention (ISO-8601), {@code null} si le badge n'est pas acquis. */
+            Instant earnedAt
     ) {
     }
 }

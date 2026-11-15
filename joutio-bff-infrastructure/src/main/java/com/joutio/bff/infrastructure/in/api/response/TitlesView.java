@@ -1,13 +1,14 @@
 package com.joutio.bff.infrastructure.in.api.response;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
  * Titres thématiques d'un joueur : le **titre porté** ({@code equippedKey}) et les titres qu'il a
- * débloqués — **tous les paliers atteints** de chaque sujet avec **au moins une partie humaine
- * terminée** (abandon inclus ; un entraînement bot, à 0 XP, ne débloque rien), le palier d'entrée
- * Fer compris même à 0 XP. Un joueur peut équiper un palier dépassé : la vue expose donc aussi
- * les paliers inférieurs au palier courant, pas seulement ce dernier.
+ * débloqués, **datés** et triés du plus récent au plus ancien — **tous les paliers atteints** de
+ * chaque sujet : le Fer à la première partie humaine terminée (abandon inclus ; un entraînement
+ * bot ne débloque rien), les suivants à leur seuil d'XP. Un joueur peut équiper un palier
+ * dépassé : la vue expose donc aussi les paliers inférieurs au palier courant.
  * Le libellé n'est pas composé côté serveur : le client combine le palier
  * ({@code tier}, à traduire), sa rareté (le palier lui-même) et le nom du sujet
  * ({@code topic.names}, dans la langue du lecteur).
@@ -29,7 +30,9 @@ public record TitlesView(
             int tierRemainingXp,
             /** Palier suivant du sujet ({@code null} au dernier palier). */
             String nextTier,
-            TopicRefView topic
+            TopicRefView topic,
+            /** Date de déblocage du palier (ISO-8601). */
+            Instant unlockedAt
     ) {
     }
 }

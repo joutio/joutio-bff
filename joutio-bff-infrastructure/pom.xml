@@ -22,7 +22,7 @@
         <joutio.social-domain.version>5.3.1</joutio.social-domain.version>
         <joutio.game-domain.version>9.0.0</joutio.game-domain.version>
         <!-- 1.2.0 : pseudonymes uniques (CheckPseudonymAvailabilityQuery, PseudonymAvailability). -->
-        <joutio.profile-domain.version>2.0.0</joutio.profile-domain.version>
+        <joutio.profile-domain.version>3.0.0</joutio.profile-domain.version>
         <joutio.matchmaking-domain.version>1.2.0</joutio.matchmaking-domain.version>
         <joutio.leaderboard-domain.version>5.0.0</joutio.leaderboard-domain.version>
         <!-- 2.5.0 : delete-all. -->

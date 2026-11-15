@@ -28,6 +28,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -177,7 +178,7 @@ class ProfileControllerTest {
                 new BadgeCollectionView(2, 88, List.of(new BadgeCollectionView.FamilyView(
                         "VOLUME", List.of(new BadgeCollectionView.BadgeItemView(
                                 "DUELIST_BRONZE", "Duelliste", "BRONZE", "HUMAN_DUELS", 3,
-                                true, 3)))))));
+                                true, 3, Instant.parse("2026-11-15T10:00:00Z"))))))));
 
         MvcResult result = mockMvc.perform(get("/api/profiles/user-2/badges"))
                 .andExpect(request().asyncStarted())
@@ -189,7 +190,8 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.families[0].family").value("VOLUME"))
                 .andExpect(jsonPath("$.families[0].badges[0].code").value("DUELIST_BRONZE"))
                 .andExpect(jsonPath("$.families[0].badges[0].earned").value(true))
-                .andExpect(jsonPath("$.families[0].badges[0].progress").value(3));
+                .andExpect(jsonPath("$.families[0].badges[0].progress").value(3))
+                .andExpect(jsonPath("$.families[0].badges[0].earnedAt").exists());
     }
 
     @Test
@@ -198,7 +200,8 @@ class ProfileControllerTest {
                 new TitlesView("topic-1:OR", List.of(new TitlesView.TitleView(
                         "topic-1:OR", "topic-1", "OR", 40, 1_400, "PLATINE",
                         new TopicRefView("topic-1", Map.of(Language.FR, "Histoire"),
-                                null, null, null, null))))));
+                                null, null, null, null),
+                        Instant.parse("2026-11-14T10:00:00Z"))))));
 
         MvcResult result = mockMvc.perform(get("/api/profiles/user-2/titles"))
                 .andExpect(request().asyncStarted())
@@ -209,7 +212,8 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.equippedKey").value("topic-1:OR"))
                 .andExpect(jsonPath("$.titles[0].tier").value("OR"))
                 .andExpect(jsonPath("$.titles[0].key").value("topic-1:OR"))
-                .andExpect(jsonPath("$.titles[0].topic.names.fr").value("Histoire"));
+                .andExpect(jsonPath("$.titles[0].topic.names.fr").value("Histoire"))
+                .andExpect(jsonPath("$.titles[0].unlockedAt").exists());
     }
 
     @Test

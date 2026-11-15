@@ -10,9 +10,12 @@ import com.joutio.microservice.core.domain.model.i18n.Language;
 import com.joutio.profile.domain.model.ActivityDay;
 import com.joutio.profile.domain.model.ActivityView;
 import com.joutio.profile.domain.model.Badge;
+import com.joutio.profile.domain.model.BadgeUnlock;
 import com.joutio.profile.domain.model.MasteryTier;
 import com.joutio.profile.domain.model.PlayerProgress;
+import com.joutio.profile.domain.model.PlayerUnlocks;
 import com.joutio.profile.domain.model.Profile;
+import com.joutio.profile.domain.model.TitleUnlock;
 import com.joutio.profile.domain.model.TopicProgress;
 import com.joutio.profile.domain.query.ActivityQuery;
 import com.joutio.profile.domain.query.ProgressionQuery;
@@ -23,6 +26,7 @@ import org.axonframework.queryhandling.QueryGateway;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +51,12 @@ class ProfileViewServiceTest {
     private final IdentityLookup identityLookup = mock(IdentityLookup.class);
     private final ProfileViewService service =
             new ProfileViewService(queryGateway, profileLookup, progressionLookup, followLookup, identityLookup);
+
+    {
+        // Par défaut, aucun déblocage daté (les tests de titres le surchargent).
+        when(progressionLookup.getUnlocks(any())).thenAnswer(invocation -> CompletableFuture.completedFuture(
+                PlayerUnlocks.empty(invocation.getArgument(0))));
+    }
 
     @Test
     void topics_enrich_progressions_and_skip_missing_topics() {
@@ -90,105 +100,42 @@ class ProfileViewServiceTest {
     }
 
     @Test
-    void titles_expose_reached_tiers_sorted_and_carry_the_equipped_key() {
-        when(profileLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(
-                Profile.builder().userId("user-1").equippedTitle("topic-2:PLATINE").build()));
-        when(progressionLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(
-                PlayerProgress.empty("user-1").toBuilder()
-                        .xpByTopic(Map.of(
-                                "topic-1", MasteryTier.OR.xpThreshold(),
-                                "topic-2", MasteryTier.PLATINE.xpThreshold(),
-                                "topic-3", 120,     // Fer : titre débloqué dès une partie humaine
-                                "topic-4", MasteryTier.BRONZE.xpThreshold()))
-                        // XP seule, aucune partie humaine : topic-4 est exclu
-                        .gamesByTopic(Map.of("topic-1", 1, "topic-2", 1, "topic-3", 1))
-                        .build()));
-        when(queryGateway.query(
-                any(TopicQuery.GetTopicsByIdsQuery.class),
-                ArgumentMatchers.<ResponseType<List<Topic>>>any()))
-                .thenReturn(CompletableFuture.completedFuture(List.of(
-                        Topic.builder().topicId("topic-1").names(Map.of(Language.FR, "Histoire")).build(),
-                        Topic.builder().topicId("topic-2").names(Map.of(Language.FR, "Java")).build(),
-                        Topic.builder().topicId("topic-3").names(Map.of(Language.FR, "DotA")).build())));
-
-        TitlesView view = service.titles("user-1").join();
-
-        assertThat(view.equippedKey()).isEqualTo("topic-2:PLATINE");
-        assertThat(view.titles()).extracting(TitlesView.TitleView::key)
-                .containsExactly(
-                        "topic-2:PLATINE",
-                        "topic-1:OR", "topic-2:OR",
-                        "topic-1:ARGENT", "topic-2:ARGENT",
-                        "topic-1:BRONZE", "topic-2:BRONZE",
-                        "topic-3:FER", "topic-1:FER", "topic-2:FER");
-        assertThat(view.titles()).extracting(TitlesView.TitleView::tier)
-                .containsExactly(
-                        "PLATINE",
-                        "OR", "OR",
-                        "ARGENT", "ARGENT",
-                        "BRONZE", "BRONZE",
-                        "FER", "FER", "FER");
-        assertThat(view.titles().get(0).topic().names()).containsEntry(Language.FR, "Java");
-        // Le palier d'entrée porte sa progression réelle (120 XP avant Bronze).
-        assertThat(view.titles().get(7).nextTier()).isEqualTo("BRONZE");
-        assertThat(view.titles().get(7).tierRemainingXp())
-                .isEqualTo(MasteryTier.BRONZE.xpThreshold() - 120);
-    }
-
-    @Test
-    void titles_include_a_lower_tier_that_is_still_equipped() {
+    void titles_come_from_dated_unlocks_most_recent_first() {
         when(profileLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(
                 Profile.builder().userId("user-1").equippedTitle("topic-2:BRONZE").build()));
         when(progressionLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(
                 PlayerProgress.empty("user-1").toBuilder()
-                        .xpByTopic(Map.of("topic-2", MasteryTier.PLATINE.xpThreshold()))
-                        .gamesByTopic(Map.of("topic-2", 1))
+                        .xpByTopic(Map.of("topic-1", 120, "topic-2", MasteryTier.BRONZE.xpThreshold()))
                         .build()));
-        when(queryGateway.query(
-                any(TopicQuery.GetTopicsByIdsQuery.class),
-                ArgumentMatchers.<ResponseType<List<Topic>>>any()))
-                .thenReturn(CompletableFuture.completedFuture(List.of(
-                        Topic.builder().topicId("topic-2").names(Map.of(Language.FR, "Java")).build())));
+        stubUnlocks(
+                title("topic-1", MasteryTier.FER, "2026-11-10T10:00:00Z"),
+                title("topic-2", MasteryTier.FER, "2026-11-12T10:00:00Z"),
+                // Même instant : le palier le plus haut d'abord, puis le nom du sujet.
+                title("topic-2", MasteryTier.BRONZE, "2026-11-14T10:00:00Z"),
+                title("topic-3", MasteryTier.FER, "2026-11-14T10:00:00Z"));
+        stubTopics("topic-1", "Histoire", "topic-2", "Java", "topic-3", "DotA");
 
         TitlesView view = service.titles("user-1").join();
 
-        // Le titre porté peut être un palier dépassé : il doit rester résolvable par le client.
         assertThat(view.equippedKey()).isEqualTo("topic-2:BRONZE");
         assertThat(view.titles()).extracting(TitlesView.TitleView::key)
-                .contains("topic-2:BRONZE", "topic-2:PLATINE");
-        assertThat(view.titles()).hasSize(5);
+                .containsExactly("topic-2:BRONZE", "topic-3:FER", "topic-2:FER", "topic-1:FER");
+        assertThat(view.titles().getFirst().unlockedAt())
+                .isEqualTo(Instant.parse("2026-11-14T10:00:00Z"));
+        assertThat(view.titles().getFirst().topic().names()).containsEntry(Language.FR, "Java");
+        // La progression vers le palier suivant reste calculée depuis l'XP du sujet.
+        TitlesView.TitleView iron = view.titles().getLast();
+        assertThat(iron.nextTier()).isEqualTo("BRONZE");
+        assertThat(iron.tierRemainingXp()).isEqualTo(MasteryTier.BRONZE.xpThreshold() - 120);
     }
 
     @Test
-    void titles_include_a_topic_played_against_a_human_even_at_zero_xp() {
+    void titles_skip_the_topic_lookup_when_nothing_is_unlocked() {
         when(profileLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(
                 Profile.builder().userId("user-1").build()));
         when(progressionLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(
                 PlayerProgress.empty("user-1").toBuilder()
-                        // Partie humaine terminée à 0 XP (ex. défaite 0–0) : le titre Fer existe.
-                        .xpByTopic(Map.of("topic-1", 0))
-                        .gamesByTopic(Map.of("topic-1", 1))
-                        .build()));
-        when(queryGateway.query(
-                any(TopicQuery.GetTopicsByIdsQuery.class),
-                ArgumentMatchers.<ResponseType<List<Topic>>>any()))
-                .thenReturn(CompletableFuture.completedFuture(List.of(
-                        Topic.builder().topicId("topic-1").names(Map.of(Language.FR, "Histoire")).build())));
-
-        TitlesView view = service.titles("user-1").join();
-
-        assertThat(view.titles()).extracting(TitlesView.TitleView::key)
-                .containsExactly("topic-1:FER");
-        assertThat(view.titles().getFirst().tier()).isEqualTo("FER");
-    }
-
-    @Test
-    void titles_skip_the_topic_lookup_when_no_topic_is_played() {
-        when(profileLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(
-                Profile.builder().userId("user-1").build()));
-        when(progressionLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(
-                PlayerProgress.empty("user-1").toBuilder()
-                        // Aucune partie humaine terminée (ex. entraînement bot) : aucun titre.
+                        // Entraînement bot seulement : aucun titre débloqué.
                         .xpByTopic(Map.of("topic-1", 0))
                         .build()));
 
@@ -196,6 +143,31 @@ class ProfileViewServiceTest {
 
         assertThat(view.equippedKey()).isNull();
         assertThat(view.titles()).isEmpty();
+    }
+
+    @Test
+    void badges_carry_their_earned_date() {
+        when(progressionLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(
+                PlayerProgress.empty("user-1").toBuilder()
+                        .badges(Set.of(Badge.DUELIST_FER))
+                        .build()));
+        when(progressionLookup.getUnlocks("user-1")).thenReturn(CompletableFuture.completedFuture(
+                new PlayerUnlocks("user-1", List.of(), List.of(new BadgeUnlock(
+                        "user-1", Badge.DUELIST_FER, Instant.parse("2026-11-15T10:00:00Z"))))));
+
+        BadgeCollectionView view = service.badges("user-1").join();
+
+        List<BadgeCollectionView.BadgeItemView> items = view.families().stream()
+                .flatMap(family -> family.badges().stream())
+                .toList();
+        assertThat(items).filteredOn(item -> item.code().equals("DUELIST_FER"))
+                .singleElement()
+                .satisfies(item -> {
+                    assertThat(item.earned()).isTrue();
+                    assertThat(item.earnedAt()).isEqualTo(Instant.parse("2026-11-15T10:00:00Z"));
+                });
+        assertThat(items).filteredOn(item -> !item.earned())
+                .allSatisfy(item -> assertThat(item.earnedAt()).isNull());
     }
 
     @Test
@@ -333,5 +305,26 @@ class ProfileViewServiceTest {
                 .filter(candidate -> candidate.code().equals(badge.name()))
                 .findFirst()
                 .orElseThrow();
+    }
+
+    private void stubUnlocks(TitleUnlock... titles) {
+        when(progressionLookup.getUnlocks("user-1")).thenReturn(CompletableFuture.completedFuture(
+                new PlayerUnlocks("user-1", List.of(titles), List.of())));
+    }
+
+    private static TitleUnlock title(String topicId, MasteryTier tier, String at) {
+        return new TitleUnlock("user-1", topicId, tier, Instant.parse(at));
+    }
+
+    private void stubTopics(String... idAndName) {
+        List<Topic> topics = new java.util.ArrayList<>();
+        for (int index = 0; index < idAndName.length; index += 2) {
+            topics.add(Topic.builder().topicId(idAndName[index])
+                    .names(Map.of(Language.FR, idAndName[index + 1])).build());
+        }
+        when(queryGateway.query(
+                any(TopicQuery.GetTopicsByIdsQuery.class),
+                ArgumentMatchers.<ResponseType<List<Topic>>>any()))
+                .thenReturn(CompletableFuture.completedFuture(topics));
     }
 }

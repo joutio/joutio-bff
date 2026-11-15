@@ -4,12 +4,15 @@ import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.microservice.core.domain.model.i18n.Language;
 import com.joutio.profile.domain.command.ProfileCommand;
 import com.joutio.profile.domain.model.MasteryTier;
-import com.joutio.profile.domain.model.PlayerProgress;
+import com.joutio.profile.domain.model.PlayerUnlocks;
+import com.joutio.profile.domain.model.TitleUnlock;
 import com.joutio.profile.domain.model.PlayerRewards;
 import com.joutio.theme.domain.model.TopicCategory;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -126,7 +129,8 @@ class ProfileUpdateServiceTest {
 
     @Test
     void equippedTitle_sendsTheCommandAndInvalidatesCacheWhenEarned() {
-        stubProgress(Map.of("topic-1", MasteryTier.OR.xpThreshold() + 100));
+        stubUnlocks(title("topic-1", MasteryTier.FER), title("topic-1", MasteryTier.BRONZE),
+                title("topic-1", MasteryTier.ARGENT), title("topic-1", MasteryTier.OR));
         when(commandGateway.send(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         service.updateEquippedTitle("u1", "u1", "topic-1:OR").join();
@@ -137,8 +141,8 @@ class ProfileUpdateServiceTest {
     }
 
     @Test
-    void equippedTitle_isRejectedAndNoCommandIsSentWhenTheTierIsNotReached() {
-        stubProgress(Map.of("topic-1", MasteryTier.OR.xpThreshold() + 100));
+    void equippedTitle_isRejectedAndNoCommandIsSentWhenTheTierIsNotUnlocked() {
+        stubUnlocks(title("topic-1", MasteryTier.FER), title("topic-1", MasteryTier.OR));
 
         assertThatThrownBy(() -> service.updateEquippedTitle("u1", "u1", "topic-1:PLATINE").join())
                 .isInstanceOf(CompletionException.class)
@@ -148,8 +152,8 @@ class ProfileUpdateServiceTest {
     }
 
     @Test
-    void equippedTitle_noviceIsAllowedOnceTheTopicHasBeenPlayed() {
-        stubProgress(Map.of("topic-1", 120));
+    void equippedTitle_ironIsAllowedOnceUnlocked() {
+        stubUnlocks(title("topic-1", MasteryTier.FER));
         when(commandGateway.send(any())).thenReturn(CompletableFuture.completedFuture(null));
 
         service.updateEquippedTitle("u1", "u1", "topic-1:FER").join();
@@ -160,30 +164,8 @@ class ProfileUpdateServiceTest {
     }
 
     @Test
-    void equippedTitle_noviceOnUnplayedTopic_isRejectedAsNotEarned() {
-        stubProgress(Map.of("topic-1", 0), Map.of());
-
-        assertThatThrownBy(() -> service.updateEquippedTitle("u1", "u1", "topic-1:FER").join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(BffProblems.TitleNotEarnedProblem.class);
-        verifyNoInteractions(commandGateway);
-    }
-
-    @Test
-    void equippedTitle_noviceIsAllowedAfterAHumanGameEvenAtZeroXp() {
-        stubProgress(Map.of("topic-1", 0), Map.of("topic-1", 1));
-        when(commandGateway.send(any())).thenReturn(CompletableFuture.completedFuture(null));
-
-        service.updateEquippedTitle("u1", "u1", "topic-1:FER").join();
-
-        verify(commandGateway).send(new ProfileCommand.UpdateEquippedTitleCommand(
-                "u1", "u1", "topic-1:FER"));
-        verify(profileLookup).invalidate("u1");
-    }
-
-    @Test
-    void equippedTitle_noviceOnXpOnlyTopicWithoutHumanGame_isRejected() {
-        stubProgress(Map.of("topic-1", 120), Map.of());
+    void equippedTitle_ironOnUnplayedTopic_isRejectedAsNotEarned() {
+        stubUnlocks();
 
         assertThatThrownBy(() -> service.updateEquippedTitle("u1", "u1", "topic-1:FER").join())
                 .isInstanceOf(CompletionException.class)
@@ -193,7 +175,7 @@ class ProfileUpdateServiceTest {
 
     @Test
     void equippedTitle_withUnknownTopic_isRejectedAsNotEarned() {
-        stubProgress(Map.of("topic-1", MasteryTier.DIAMANT.xpThreshold()));
+        stubUnlocks(title("topic-1", MasteryTier.DIAMANT));
 
         assertThatThrownBy(() -> service.updateEquippedTitle("u1", "u1", "topic-9:DIAMANT").join())
                 .isInstanceOf(CompletionException.class)
@@ -219,18 +201,12 @@ class ProfileUpdateServiceTest {
         verifyNoInteractions(progressionLookup);
     }
 
-    private void stubProgress(Map<String, Integer> xpByTopic) {
-        Map<String, Integer> gamesByTopic = new java.util.HashMap<>();
-        xpByTopic.keySet().forEach(topicId -> gamesByTopic.put(topicId, 1));
-        stubProgress(xpByTopic, gamesByTopic);
+    private void stubUnlocks(TitleUnlock... titles) {
+        when(progressionLookup.getUnlocks("u1")).thenReturn(CompletableFuture.completedFuture(
+                new PlayerUnlocks("u1", List.of(titles), List.of())));
     }
 
-    private void stubProgress(Map<String, Integer> xpByTopic,
-                              Map<String, Integer> gamesByTopic) {
-        when(progressionLookup.get("u1")).thenReturn(CompletableFuture.completedFuture(
-                PlayerProgress.empty("u1").toBuilder()
-                        .xpByTopic(xpByTopic)
-                        .gamesByTopic(gamesByTopic)
-                        .build()));
+    private static TitleUnlock title(String topicId, MasteryTier tier) {
+        return new TitleUnlock("u1", topicId, tier, Instant.parse("2026-11-15T10:00:00Z"));
     }
 }

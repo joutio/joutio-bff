@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.profile.domain.model.PlayerProgress;
+import com.joutio.profile.domain.model.PlayerUnlocks;
 import com.joutio.profile.domain.model.TopicProgress;
 import com.joutio.profile.domain.query.ProgressionQuery;
 import org.axonframework.queryhandling.QueryGateway;
@@ -55,6 +56,17 @@ public class ProgressionLookup {
         return queryGateway.query(
                 new ProgressionQuery.GetTopicProgressionQuery(userId, topicId),
                 QueryResponseTypes.instanceOf(TopicProgress.class));
+    }
+
+    /**
+     * Déblocages datés du joueur (titres thématiques et badges), sans cache : la liste des titres
+     * et le contrôle du titre porté doivent voir un déblocage dès qu'il est projeté.
+     */
+    public CompletableFuture<PlayerUnlocks> getUnlocks(String userId) {
+        return queryGateway
+                .query(new ProgressionQuery.GetUnlocksQuery(userId),
+                        QueryResponseTypes.instanceOf(PlayerUnlocks.class))
+                .thenApply(unlocks -> unlocks == null ? PlayerUnlocks.empty(userId) : unlocks);
     }
 
     /** Purge l'entrée d'un joueur (aucune écriture BFF de progression aujourd'hui : filet). */

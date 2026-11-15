@@ -36,6 +36,8 @@ import com.joutio.profile.domain.model.PlayerPresence;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.PresenceStatus;
 import com.joutio.profile.domain.model.PlayerTitle;
+import com.joutio.profile.domain.model.PlayerUnlocks;
+import com.joutio.profile.domain.model.TitleUnlock;
 import com.joutio.profile.domain.model.Profile;
 import com.joutio.profile.domain.model.TopicProgress;
 import com.joutio.profile.domain.query.ActivityQuery;
@@ -194,44 +196,44 @@ public class ProfileViewService {
     }
 
     /**
-     * Titres thématiques débloqués par un joueur : **tous les paliers atteints** de chaque sujet
-     * avec **au moins une partie humaine terminée** (abandon inclus, entraînement bot exclu) — le
-     * palier d'entrée Fer compris même à 0 XP —, plus la clé de son **titre porté**. Un joueur
-     * peut équiper un palier dépassé (ex. Fer alors qu'il est Bronze) : la vue doit donc
-     * exposer chaque palier atteint, pas seulement le palier courant. Le libellé est composé par le
-     * client (palier traduit + nom du sujet dans sa langue) — le serveur ne fige pas de texte.
+     * Titres thématiques débloqués par un joueur, **datés** par le read model des déblocages de
+     * {@code joutio-profile} : le Fer à la première partie humaine terminée du sujet (abandon
+     * inclus, entraînement bot exclu), les paliers suivants à leur seuil d'XP. Un joueur peut
+     * équiper un palier dépassé (ex. Fer alors qu'il est Bronze) : la vue expose donc chaque
+     * palier atteint. L'XP du sujet ne sert qu'aux champs de progression vers le palier suivant.
+     * Tri : plus récent d'abord, puis palier le plus haut, puis nom du sujet. Le libellé est
+     * composé par le client (palier traduit + nom du sujet dans sa langue).
      */
     public CompletableFuture<TitlesView> titles(String userId) {
         CompletableFuture<Profile> profileFuture = profileLookup.get(userId);
         CompletableFuture<PlayerProgress> progressFuture = progressionLookup.get(userId);
+        CompletableFuture<PlayerUnlocks> unlocksFuture = progressionLookup.getUnlocks(userId);
 
-        return CompletableFuture.allOf(profileFuture, progressFuture).thenCompose(_ -> {
+        return CompletableFuture.allOf(profileFuture, progressFuture, unlocksFuture).thenCompose(_ -> {
             PlayerProgress progress = progressFuture.join();
-            List<String> earnedTopicIds = progress.gamesByTopic().keySet().stream()
+            List<TitleUnlock> unlocks = unlocksFuture.join().titles();
+            List<String> topicIds = unlocks.stream()
+                    .map(TitleUnlock::topicId)
+                    .distinct()
                     .sorted()
                     .toList();
 
-            CompletableFuture<List<Topic>> topicsFuture = earnedTopicIds.isEmpty()
+            CompletableFuture<List<Topic>> topicsFuture = topicIds.isEmpty()
                     ? CompletableFuture.completedFuture(List.of())
                     : queryGateway.query(
-                            new TopicQuery.GetTopicsByIdsQuery(earnedTopicIds),
+                            new TopicQuery.GetTopicsByIdsQuery(topicIds),
                             QueryResponseTypes.multipleInstancesOf(Topic.class));
 
             return topicsFuture.thenApply(topics -> {
                 Map<String, Topic> topicById = topics.stream().collect(Collectors.toMap(
                         Topic::topicId, Function.identity(), (left, right) -> left));
-                List<TitlesView.TitleView> titles = earnedTopicIds.stream()
-                        .flatMap(topicId -> {
-                            int topicXp = progress.xpForTopic(topicId);
-                            MasteryTier current = MasteryTier.tierFor(topicXp);
-                            Topic topic = topicById.get(topicId);
-                            return Arrays.stream(MasteryTier.values())
-                                    .filter(tier -> tier.ordinal() <= current.ordinal())
-                                    .map(tier -> toTitle(topicId, topicXp, tier, topic));
-                        })
+                List<TitlesView.TitleView> titles = unlocks.stream()
+                        .map(unlock -> toTitle(unlock, progress.xpForTopic(unlock.topicId()),
+                                topicById.get(unlock.topicId())))
                         .sorted(Comparator
-                                .comparing((TitlesView.TitleView title) -> MasteryTier.valueOf(title.tier()))
-                                .reversed()
+                                .comparing(TitlesView.TitleView::unlockedAt, Comparator.reverseOrder())
+                                .thenComparing((TitlesView.TitleView title) -> MasteryTier.valueOf(title.tier()),
+                                        Comparator.reverseOrder())
                                 .thenComparing(title -> displayName(title.topic())))
                         .toList();
 
@@ -243,25 +245,34 @@ public class ProfileViewService {
     /**
      * Collection de badges d'un joueur : **tout le catalogue** (paliers verrouillés compris)
      * groupé par famille, avec la progression de chaque compteur — le client affiche « 7/10 » et
-     * l'objectif suivant sans requête supplémentaire.
+     * l'objectif suivant sans requête supplémentaire — et la date d'obtention des badges acquis.
      */
     public CompletableFuture<BadgeCollectionView> badges(String userId) {
-        return progressionLookup.get(userId).thenApply(progress -> {
+        CompletableFuture<PlayerProgress> progressFuture = progressionLookup.get(userId);
+        CompletableFuture<PlayerUnlocks> unlocksFuture = progressionLookup.getUnlocks(userId);
+
+        return CompletableFuture.allOf(progressFuture, unlocksFuture).thenApply(_ -> {
+            PlayerProgress progress = progressFuture.join();
+            Map<Badge, Instant> earnedAt = new java.util.EnumMap<>(Badge.class);
+            unlocksFuture.join().badges().forEach(unlock -> earnedAt.put(unlock.badge(), unlock.earnedAt()));
+            Set<Badge> earned = new java.util.HashSet<>(progress.badges());
+            earned.addAll(earnedAt.keySet());
+
             List<BadgeCollectionView.FamilyView> families = Arrays.stream(BadgeFamily.values())
                     .map(family -> new BadgeCollectionView.FamilyView(
                             family.name(),
                             Badge.ofFamily(family).stream()
-                                    .map(badge -> toBadgeItem(badge, progress))
+                                    .map(badge -> toBadgeItem(badge, progress, earned, earnedAt.get(badge)))
                                     .toList()))
                     .toList();
 
-            return new BadgeCollectionView(
-                    progress.badges().size(), Badge.values().length, families);
+            return new BadgeCollectionView(earned.size(), Badge.values().length, families);
         });
     }
 
-    private BadgeCollectionView.BadgeItemView toBadgeItem(Badge badge, PlayerProgress progress) {
-        boolean earned = progress.badges().contains(badge);
+    private BadgeCollectionView.BadgeItemView toBadgeItem(Badge badge, PlayerProgress progress,
+                                                          Set<Badge> earnedBadges, Instant earnedAt) {
+        boolean earned = earnedBadges.contains(badge);
         int target = badge.target();
         int current = earned && badge.isOneShot()
                 ? target
@@ -274,7 +285,8 @@ public class ProfileViewService {
                 badge.metric().name(),
                 target,
                 earned,
-                Math.min(current, target));
+                Math.min(current, target),
+                earned ? earnedAt : null);
     }
 
     /** Valeur courante du compteur d'un badge, telle que la mesure le read model de progression. */
@@ -315,16 +327,17 @@ public class ProfileViewService {
         return progress.currentDayStreak();
     }
 
-    private static TitlesView.TitleView toTitle(String topicId, int topicXp,
-                                                 MasteryTier tier, Topic topic) {
+    private static TitlesView.TitleView toTitle(TitleUnlock unlock, int topicXp, Topic topic) {
+        MasteryTier tier = unlock.tier();
         return new TitlesView.TitleView(
-                new PlayerTitle(topicId, tier).key(),
-                topicId,
+                new PlayerTitle(unlock.topicId(), tier).key(),
+                unlock.topicId(),
                 tier.name(),
                 tier.progressPercent(topicXp),
                 tier.remainingXp(topicXp),
                 tier.next() == null ? null : tier.next().name(),
-                TopicViews.toRef(topicId, topic));
+                TopicViews.toRef(unlock.topicId(), topic),
+                unlock.unlockedAt());
     }
 
     /** Nom d'affichage d'un sujet pour le tri serveur : FR d'abord (convention de repli du web). */
