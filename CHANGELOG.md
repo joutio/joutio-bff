@@ -1,3 +1,9 @@
+## [3.3.0](https://github.com/joutio/joutio-bff/compare/v3.2.0...v3.3.0) (2026-11-15)
+
+### Features
+
+* **profile:** dated titles and badges from profile unlocks ([49baac5](https://github.com/joutio/joutio-bff/commit/49baac5407c96f37549eecf2d1dd19f6c1d9b858))
+
 ## [3.2.0](https://github.com/joutio/joutio-bff/compare/v3.1.2...v3.2.0) (2026-11-15)
 
 ### Features
