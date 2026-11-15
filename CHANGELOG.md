@@ -1,3 +1,9 @@
+## [3.2.0](https://github.com/joutio/joutio-bff/compare/v3.1.2...v3.2.0) (2026-11-15)
+
+### Features
+
+* official topics, content notices, image rights and terms acceptance ([312462b](https://github.com/joutio/joutio-bff/commit/312462b0bff5374e4d0dad843bdb4250040320cf))
+
 ## [3.1.2](https://github.com/joutio/joutio-bff/compare/v3.1.1...v3.1.2) (2026-11-14)
 
 ### Bug Fixes
