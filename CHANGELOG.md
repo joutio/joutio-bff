@@ -1,3 +1,9 @@
+## [3.3.1](https://github.com/joutio/joutio-bff/compare/v3.3.0...v3.3.1) (2026-11-15)
+
+### Bug Fixes
+
+* **bff:** AccountProperties binds again at startup ([a59768d](https://github.com/joutio/joutio-bff/commit/a59768db53e5b68c7dea2aca3b255e82fc189256))
+
 ## [3.3.0](https://github.com/joutio/joutio-bff/compare/v3.2.0...v3.3.0) (2026-11-15)
 
 ### Features
