@@ -1,3 +1,9 @@
+## [3.4.0](https://github.com/joutio/joutio-bff/compare/v3.3.2...v3.4.0) (2026-11-16)
+
+### Features
+
+* room presence on the personal feed, ranked from the first duel ([d874d2a](https://github.com/joutio/joutio-bff/commit/d874d2a48fb613fb527d8ed10408ae3b0d25bd5f))
+
 ## [3.3.2](https://github.com/joutio/joutio-bff/compare/v3.3.1...v3.3.2) (2026-11-15)
 
 ### Bug Fixes
