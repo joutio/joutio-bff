@@ -91,7 +91,7 @@ class ProfileControllerTest {
         PlayerProfileView view = new PlayerProfileView("user-2", "Bravo", null, "FR", null, null,
                 null,
                 false, false, null,
-                new ProgressionView(List.of(), 200, 200, 0, true),
+                new ProgressionView(List.of(), 200, 200, 0),
                 new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 5, 7, false, false);
         when(profileViewService.profileView(USER_ID, "user-2"))
                 .thenReturn(CompletableFuture.completedFuture(view));

@@ -349,7 +349,6 @@ public class RoomViewService {
                     opponent.avatarOptions(),
                     status != null && status.suspended(Instant.now()),
                     progress == null ? null : progress.rating(),
-                    progress == null ? null : progress.provisional(),
                     opponent.country());
         }
         if (JoutioConstants.SYSTEM_USER_ID.equals(opponentId)) {

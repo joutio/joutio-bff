@@ -35,7 +35,7 @@ class RoomEventNotificationMapperTest {
     void left_mapsToRoomLeftNotification() {
         RoomNotification notification =
                 RoomEventNotificationMapper.toNotification(
-                                new RoomEvent.RoomLeftEvent("room-1", "player-1", AT, null, null))
+                                new RoomEvent.RoomLeftEvent("room-1", "player-1", AT, null, null, java.util.Set.of()))
                         .orElseThrow();
 
         assertThat(notification.type()).isEqualTo(RoomNotification.RoomNotificationType.ROOM_LEFT);

@@ -14,9 +14,8 @@ public record TopicLeaderboardView(
             String pseudonym,
             String avatarOptions,
             String country,
-            /** Elo global courant (bordure d'avatar) et statut provisoire. */
+            /** Elo global courant (bordure d'avatar). */
             int rating,
-            boolean provisional,
             int totalXp,
             int monthlyXp,
             boolean suspended

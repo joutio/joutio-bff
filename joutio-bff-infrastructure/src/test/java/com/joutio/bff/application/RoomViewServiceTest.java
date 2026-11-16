@@ -183,7 +183,6 @@ class RoomViewServiceTest {
         assertThat(view.opponent().userId()).isEqualTo("user-2");
         assertThat(view.opponent().pseudonym()).isEqualTo("Bob");
         assertThat(view.opponent().rating()).isEqualTo(900);
-        assertThat(view.opponent().provisional()).isFalse();
         assertThat(view.opponent().country()).isEqualTo("FR");
     }
 

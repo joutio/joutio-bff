@@ -83,7 +83,7 @@ class MeControllerTest {
     void me_returns_current_player_view() throws Exception {
         MeView view = new MeView(USER_ID, "user@joutio.io", "Alpha", null, "FR", null, null, null,
                 Language.FR,
-                new ProgressionView(List.of(), 200, 200, 0, true),
+                new ProgressionView(List.of(), 200, 200, 0),
                 new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 3, 5, false, List.of(), false,
                 List.of("HISTORY"), true, null, null, null, "1998-03-04", false, "2026-11-15", true);
         when(meService.me(USER_ID)).thenReturn(CompletableFuture.completedFuture(view));
@@ -128,7 +128,7 @@ class MeControllerTest {
     void completeOnboarding_returnsUpdatedMeView() throws Exception {
         MeView view = new MeView(USER_ID, "user@joutio.io", "Alpha", null, "FR", null, null, null,
                 Language.FR,
-                new ProgressionView(List.of(), 200, 200, 0, true),
+                new ProgressionView(List.of(), 200, 200, 0),
                 new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 3, 5, false, List.of(), false,
                 List.of(), true, null, null, null, null, false, "2026-11-15", true);
         when(profileUpdateService.completeOnboarding(USER_ID))

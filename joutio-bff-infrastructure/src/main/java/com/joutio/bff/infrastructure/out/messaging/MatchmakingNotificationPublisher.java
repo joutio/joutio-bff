@@ -90,7 +90,6 @@ public class MatchmakingNotificationPublisher {
                     profile.avatarOptions(),
                     false,
                     progress == null ? null : progress.rating(),
-                    progress == null ? null : progress.provisional(),
                     profile.country());
             return new MatchmakingNotification.MatchedNotification(
                     matched.ticketId(), matched.roomId(), matched.opponentId(), matched.vsBot(), opponent);

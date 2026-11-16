@@ -8,7 +8,6 @@ public record PlayerCardView(
         String pseudonym,
         String avatarOptions,
         int rating,
-        boolean provisional,
         boolean following,
         PresenceView presence,
         boolean suspended

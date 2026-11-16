@@ -522,7 +522,6 @@ public class TopicViewService {
                 entry.avatarOptions(),
                 entry.country(),
                 rating == null ? 200 : rating.rating(),
-                rating == null || rating.provisional(),
                 entry.totalXp(),
                 entry.monthlyXp(),
                 status != null && status.suspended(Instant.now()));

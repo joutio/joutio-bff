@@ -44,8 +44,7 @@ public record GameResultView(
     public record ProgressionResultView(
             int rating,
             int peakRating,
-            int ratedGames,
-            boolean provisional
+            int ratedGames
     ) {
     }
 

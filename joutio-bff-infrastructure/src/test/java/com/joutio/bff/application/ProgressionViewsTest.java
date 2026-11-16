@@ -17,7 +17,6 @@ class ProgressionViewsTest {
                 .rating(842)
                 .peakRating(900)
                 .ratedGames(12)
-                .provisional(false)
                 .build();
 
         var view = ProgressionViews.toView(progress);
@@ -26,6 +25,5 @@ class ProgressionViewsTest {
         assertThat(view.rating()).isEqualTo(842);
         assertThat(view.peakRating()).isEqualTo(900);
         assertThat(view.ratedGames()).isEqualTo(12);
-        assertThat(view.provisional()).isFalse();
     }
 }

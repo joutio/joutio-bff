@@ -279,12 +279,10 @@ public class GameViewService {
                         : playerProgress == null ? EloRules.INITIAL_RATING : playerProgress.rating();
                 int peakRating = playerProgress == null ? rating : playerProgress.peakRating();
                 int ratedGames = playerProgress == null ? 0 : playerProgress.ratedGames();
-                boolean provisional = playerProgress == null || playerProgress.provisional();
                 GameResultView.ProgressionResultView progression = new GameResultView.ProgressionResultView(
                         rating,
                         peakRating,
-                        ratedGames,
-                        provisional);
+                        ratedGames);
 
                 int xpGained = xp == null ? 0 : xp;
                 TopicProgress topicProgress = topicProgressFuture.join();

@@ -26,8 +26,7 @@ public final class ProgressionViews {
                         .toList(),
                 progress.rating(),
                 progress.peakRating(),
-                progress.ratedGames(),
-                progress.provisional());
+                progress.ratedGames());
     }
 
     public static DuelStatsView toStats(PlayerProgress progress) {

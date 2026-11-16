@@ -11,8 +11,7 @@ public record ProgressionView(
         /** Elo global du profil (profil, matchmaking, bordure). */
         int rating,
         int peakRating,
-        int ratedGames,
-        boolean provisional
+        int ratedGames
 ) {
 
     public record BadgeView(String code, String label, String family, String tier) {

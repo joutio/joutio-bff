@@ -139,7 +139,7 @@ class GameControllerTest {
                 7,
                 7,
                 new GameResultView.RewardView(150, 30),
-                new GameResultView.ProgressionResultView(818, 818, 1, true),
+                new GameResultView.ProgressionResultView(818, 818, 1),
                 new GameResultView.TopicMasteryView(250, 150, "FER", "BRONZE", 30, 250),
                 18,
                 true,

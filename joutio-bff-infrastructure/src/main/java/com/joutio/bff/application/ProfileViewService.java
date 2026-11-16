@@ -125,7 +125,7 @@ public class ProfileViewService {
                     new ProgressionView(List.of(),
                             com.joutio.profile.domain.model.EloRules.INITIAL_RATING,
                             com.joutio.profile.domain.model.EloRules.INITIAL_RATING,
-                            0, true),
+                            0),
                     new DuelStatsView(0, 0, 0, 0, 0, 0, 0, 0),
                     0,
                     0,
@@ -371,7 +371,7 @@ public class ProfileViewService {
                         QueryResponseTypes.multipleInstancesOf(PlayerProgress.class))
                 .thenApply(progressions -> progressions.stream()
                         .map(progress -> new com.joutio.bff.infrastructure.in.api.response.PlayerRatingView(
-                                progress.userId(), progress.rating(), progress.provisional()))
+                                progress.userId(), progress.rating()))
                         .toList());
     }
 
@@ -571,7 +571,6 @@ public class ProfileViewService {
                 profile.pseudonym(),
                 profile.avatarOptions(),
                 progression.rating(),
-                progression.provisional(),
                 viewerFollowing.contains(userId),
                 presence == null ? null : toPresence(presence),
                 status != null && status.suspended(Instant.now())));
