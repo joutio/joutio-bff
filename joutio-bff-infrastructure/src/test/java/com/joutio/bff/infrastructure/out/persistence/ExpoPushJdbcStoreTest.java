@@ -9,8 +9,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.transaction.support.TransactionTemplate;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.*;
@@ -30,8 +34,18 @@ class ExpoPushJdbcStoreTest {
         schema="expo_test_"+UUID.randomUUID().toString().replace("-", "");
         new JdbcTemplate(admin).execute("CREATE SCHEMA "+schema);
         var source=new DriverManagerDataSource(url+(url.contains("?")?"&":"?")+"currentSchema="+schema,"postgres","expo-test-only");
-        new ResourceDatabasePopulator(new ClassPathResource("db/migration/bff/V2__expo_push.sql")).execute(source);
+        new ResourceDatabasePopulator(new ByteArrayResource(isolatedSchema().getBytes(StandardCharsets.UTF_8))).execute(source);
         jdbc=new JdbcTemplate(source); store=new ExpoPushJdbcStore(jdbc); tx=new TransactionTemplate(new DataSourceTransactionManager(source));
+    }
+    /** Le V1 (pg_dump) qualifie tout par {@code public} et vide le search_path : on le rejoue dans le schéma de test. */
+    static String isolatedSchema() {
+        try {
+            return new ClassPathResource("db/migration/bff/V1__init_bff.sql").getContentAsString(StandardCharsets.UTF_8)
+                    .replace("SELECT pg_catalog.set_config('search_path', '', false);", "")
+                    .replace("public.", "");
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
     @AfterAll static void cleanup() { if (schema!=null) new JdbcTemplate(admin).execute("DROP SCHEMA "+schema+" CASCADE"); }
     @BeforeEach void reset() { jdbc.execute("TRUNCATE expo_push_subscription,expo_push_delivery"); }

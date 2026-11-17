@@ -127,12 +127,11 @@ public class RoomViewService {
     /**
      * Le joueur <b>apparaît</b> dans la salle : présence temps réel et, pour le second humain,
      * enregistrement comme participant. Appelée par {@code PresenceChannelListener} quand le joueur
-     * s'abonne au canal de présence du salon ({@code presenceId} = session STOMP) ; {@code POST
-     * /join} (anciens clients, déprécié) passe {@code null}.
+     * s'abonne au canal de présence du salon ({@code presenceId} = session STOMP).
      *
      * <p>Le snapshot de profil ({@code RoomPlayer}) est <b>préparé ici</b> (profils + progression,
      * caches Caffeine) et porté par la commande : la salle ne fait aucune I/O pour résoudre les
-     * joueurs (voir {@code best-practices/.backend/command-preparation.md}).
+     * joueurs (voir {@code docs/backend/axon.md}, préparation des commandes).
      */
     public CompletableFuture<Void> join(String roomId, String playerId, String presenceId) {
         return queryGateway
@@ -184,7 +183,7 @@ public class RoomViewService {
 
     /**
      * Le joueur n'est plus présent : constaté par {@code PresenceChannelListener} (session STOMP,
-     * motif) ; {@code POST /leave} (anciens clients, déprécié) passe une session nulle.
+     * motif).
      */
     public CompletableFuture<Void> leave(
             String roomId, String playerId, String presenceId, RoomLeaveReason reason) {

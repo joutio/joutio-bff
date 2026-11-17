@@ -124,7 +124,7 @@ public class ProfileUpdateService {
      * Titre thématique porté. La commande ne porte que la clé : la **légitimité** du titre
      * (palier présent dans les déblocages datés du joueur, la même source que la liste des
      * titres) est vérifiée **ici**, avant l'envoi —
-     * l'agrégat ne connaît pas la progression (`best-practices/.backend/command-preparation.md`).
+     * l'agrégat ne connaît pas la progression (`docs/backend/axon.md`).
      * {@code titleKey} {@code null} efface le titre porté.
      */
     public CompletableFuture<Void> updateEquippedTitle(String userId, String requestedBy, String titleKey) {
