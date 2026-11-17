@@ -13,6 +13,7 @@ import com.joutio.matchmaking.domain.model.Room;
 import com.joutio.matchmaking.domain.model.RoomPlayer;
 import com.joutio.matchmaking.domain.query.RoomQuery;
 import com.joutio.microservice.core.domain.constant.JoutioConstants;
+import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.Profile;
@@ -366,5 +367,11 @@ public class RoomViewService {
             return room.participantId() != null ? room.participantId() : room.opponentId();
         }
         return room.initiatorId();
+    }
+
+    /** Événements de la salle, du plus ancien au plus récent : repli de l'écran à l'ouverture. */
+    public CompletableFuture<List<EventEnvelope>> events(String roomId) {
+        return queryGateway.query(new RoomQuery.GetRoomEventsQuery(roomId),
+                QueryResponseTypes.multipleInstancesOf(EventEnvelope.class));
     }
 }

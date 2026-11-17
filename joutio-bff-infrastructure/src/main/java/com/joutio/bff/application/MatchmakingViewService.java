@@ -7,6 +7,7 @@ import com.joutio.matchmaking.domain.model.MatchmakingStatus;
 import com.joutio.matchmaking.domain.model.TopicLanguageCoverage;
 import com.joutio.matchmaking.domain.query.MatchmakingQuery;
 import com.joutio.microservice.core.domain.model.i18n.Language;
+import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.Profile;
@@ -163,4 +164,10 @@ public class MatchmakingViewService {
             String matchmakingId, String topicId, int rating, Set<Language> languages) {}
 
     private record PreparedCommand(PendingCommand pending, TopicLanguageCoverage topicCoverage) {}
+
+    /** Événements du ticket d'appariement, du plus ancien au plus récent : repli de l'écran à l'ouverture. */
+    public CompletableFuture<List<EventEnvelope>> events(String ticketId) {
+        return queryGateway.query(new MatchmakingQuery.GetMatchmakingEventsQuery(ticketId),
+                QueryResponseTypes.multipleInstancesOf(EventEnvelope.class));
+    }
 }

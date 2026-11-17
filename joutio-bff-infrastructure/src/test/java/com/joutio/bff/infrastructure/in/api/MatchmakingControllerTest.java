@@ -3,7 +3,6 @@ package com.joutio.bff.infrastructure.in.api;
 import com.joutio.bff.application.MatchmakingViewService;
 import com.joutio.bff.infrastructure.in.api.response.MatchmakingTicketView;
 import com.joutio.matchmaking.domain.model.MatchmakingStatus;
-import org.axonframework.queryhandling.QueryGateway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,12 +28,11 @@ class MatchmakingControllerTest {
     private static final String USER_ID = "user-1";
 
     private final MatchmakingViewService matchmakingViewService = mock(MatchmakingViewService.class);
-    private final QueryGateway queryGateway = mock(QueryGateway.class);
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new MatchmakingController(matchmakingViewService, queryGateway)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new MatchmakingController(matchmakingViewService)).build();
         TestSecurity.authenticate(USER_ID);
     }
 

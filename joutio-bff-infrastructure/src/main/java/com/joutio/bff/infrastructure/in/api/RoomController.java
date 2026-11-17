@@ -7,14 +7,11 @@ import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
 import com.joutio.bff.infrastructure.in.api.response.RoomView;
 import com.joutio.bff.infrastructure.out.messaging.mapper.RoomEventNotificationMapper;
 import com.joutio.matchmaking.domain.event.RoomEvent;
-import com.joutio.matchmaking.domain.query.RoomQuery;
 import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
-import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.microservice.core.infrastructure.in.api.ResponseEntityBuilder;
 import com.joutio.microservice.core.infrastructure.in.api.response.IdResponse;
 import com.joutio.microservice.security.SecurityHelper;
 import jakarta.validation.Valid;
-import org.axonframework.queryhandling.QueryGateway;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,11 +36,9 @@ public class RoomController {
     private static final String ENDPOINT = "/api/rooms";
 
     private final RoomViewService roomViewService;
-    private final QueryGateway queryGateway;
 
-    public RoomController(RoomViewService roomViewService, QueryGateway queryGateway) {
+    public RoomController(RoomViewService roomViewService) {
         this.roomViewService = roomViewService;
-        this.queryGateway = queryGateway;
     }
 
     @PostMapping
@@ -88,9 +83,8 @@ public class RoomController {
 
     @GetMapping("/{roomId}/notifications")
     public CompletableFuture<ResponseEntity<List<EventEnvelopeResponse>>> notifications(@PathVariable String roomId) {
-        return queryGateway
-                .query(new RoomQuery.GetRoomEventsQuery(roomId),
-                        QueryResponseTypes.multipleInstancesOf(EventEnvelope.class))
+        return roomViewService
+                .events(roomId)
                 .thenApply(envelopes -> envelopes.stream()
                         .map(RoomController::toResponse)
                         .flatMap(Optional::stream)

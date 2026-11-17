@@ -72,4 +72,4 @@ JOUTIO_EXPO_TEST_DB_URL=jdbc:postgresql://… mvn -pl joutio-bff-infrastructure 
 - Les réponses `401`/`403` de `CurrentUserExistsFilter` doivent porter les en-têtes CORS.
 - Une donnée mutable mise en cache est purgée sur **toutes** les répliques par
   `CacheInvalidationHandler`, sinon le TTL doit rester court.
-- Écarts connus avec les règles : `docs/ROADMAP.md`, Dette.
+- Écarts connus avec les règles : `make backlog REPO=joutio-bff TYPE=dette`.

@@ -7,12 +7,9 @@ import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
 import com.joutio.bff.infrastructure.in.api.response.MatchmakingTicketView;
 import com.joutio.bff.infrastructure.out.messaging.mapper.MatchmakingEventNotificationMapper;
 import com.joutio.matchmaking.domain.event.MatchmakingEvent;
-import com.joutio.matchmaking.domain.query.MatchmakingQuery;
 import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
-import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.microservice.security.SecurityHelper;
 import jakarta.validation.Valid;
-import org.axonframework.queryhandling.QueryGateway;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,11 +33,9 @@ public class MatchmakingController {
     private static final String ENDPOINT = "/api/matchmaking/tickets";
 
     private final MatchmakingViewService matchmakingViewService;
-    private final QueryGateway queryGateway;
 
-    public MatchmakingController(MatchmakingViewService matchmakingViewService, QueryGateway queryGateway) {
+    public MatchmakingController(MatchmakingViewService matchmakingViewService) {
         this.matchmakingViewService = matchmakingViewService;
-        this.queryGateway = queryGateway;
     }
 
     @PostMapping
@@ -70,9 +65,8 @@ public class MatchmakingController {
 
     @GetMapping("/{ticketId}/notifications")
     public CompletableFuture<ResponseEntity<List<EventEnvelopeResponse>>> notifications(@PathVariable String ticketId) {
-        return queryGateway
-                .query(new MatchmakingQuery.GetMatchmakingEventsQuery(ticketId),
-                        QueryResponseTypes.multipleInstancesOf(EventEnvelope.class))
+        return matchmakingViewService
+                .events(ticketId)
                 .thenApply(envelopes -> envelopes.stream()
                         .map(MatchmakingController::toResponse)
                         .flatMap(Optional::stream)

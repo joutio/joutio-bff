@@ -3,7 +3,6 @@ package com.joutio.bff.infrastructure.in.api;
 import com.joutio.bff.application.RoomViewService;
 import com.joutio.bff.infrastructure.in.api.request.CreateBotRoomRequest;
 import com.joutio.bff.infrastructure.in.api.request.CreateRoomRequest;
-import org.axonframework.queryhandling.QueryGateway;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,12 +29,11 @@ class RoomControllerTest {
     private static final String USER_ID = "user-1";
 
     private final RoomViewService roomViewService = mock(RoomViewService.class);
-    private final QueryGateway queryGateway = mock(QueryGateway.class);
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new RoomController(roomViewService, queryGateway)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new RoomController(roomViewService)).build();
         TestSecurity.authenticate(USER_ID);
     }
 
