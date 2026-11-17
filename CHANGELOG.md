@@ -1,3 +1,9 @@
+## [3.4.2](https://github.com/joutio/joutio-bff/compare/v3.4.1...v3.4.2) (2026-11-17)
+
+### Bug Fixes
+
+* **deps:** joutio-parent 1.2.0, segmented processing groups and single-partition Axon topic ([7ec4fe7](https://github.com/joutio/joutio-bff/commit/7ec4fe7e8502d6ed46c6025c01e712418482b7de))
+
 ## [3.4.1](https://github.com/joutio/joutio-bff/compare/v3.4.0...v3.4.1) (2026-11-17)
 
 ### Bug Fixes
