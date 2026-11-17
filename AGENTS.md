@@ -65,9 +65,9 @@ JOUTIO_EXPO_TEST_DB_URL=jdbc:postgresql://… mvn -pl joutio-bff-infrastructure 
 
 ## Pièges
 
-- Pins des `*-domain` : les releases des fournisseurs passent avant le bump ici, et le BFF se
-  déploie **avant** un producteur qui ajoute une valeur d'enum
-  ([contrats](../../docs/backend/contrats-et-build.md#versions-et-releases)).
+- Pins des `*-domain` : les releases des fournisseurs passent avant le bump ici
+  ([contrats](../../docs/backend/contrats-et-build.md#versions-et-releases)) ; une valeur d'enum inconnue arrive en
+  `null`.
 - La recherche paginée d'identity revient du bus en `LinkedHashMap` : la re-matérialiser.
 - Les réponses `401`/`403` de `CurrentUserExistsFilter` doivent porter les en-têtes CORS.
 - Une donnée mutable mise en cache est purgée sur **toutes** les répliques par
