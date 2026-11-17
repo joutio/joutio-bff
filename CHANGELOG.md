@@ -1,3 +1,9 @@
+## [3.4.1](https://github.com/joutio/joutio-bff/compare/v3.4.0...v3.4.1) (2026-11-17)
+
+### Bug Fixes
+
+* **deps:** joutio-parent 1.1.0, unknown enum constants tolerated on the Axon transport ([64b25fe](https://github.com/joutio/joutio-bff/commit/64b25fe4a47b35e9c6e0ad00a010f868fa00c425))
+
 ## [3.4.0](https://github.com/joutio/joutio-bff/compare/v3.3.2...v3.4.0) (2026-11-16)
 
 ### Features
