@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>joutio-bff</artifactId>
-    <version>3.4.1</version>
+    <version>3.4.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <distributionManagement>
