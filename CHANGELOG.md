@@ -1,3 +1,9 @@
+## [3.4.3](https://github.com/joutio/joutio-bff/compare/v3.4.2...v3.4.3) (2026-11-18)
+
+### Bug Fixes
+
+* **deps:** joutio-parent 2.0.0, idle-friendly processors and bytea Axon schema ([d5519c2](https://github.com/joutio/joutio-bff/commit/d5519c20245ec3ac4f4522d1898decc66943f901))
+
 ## [3.4.2](https://github.com/joutio/joutio-bff/compare/v3.4.1...v3.4.2) (2026-11-17)
 
 ### Bug Fixes
