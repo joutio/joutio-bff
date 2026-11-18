@@ -1,3 +1,9 @@
+## [3.4.4](https://github.com/joutio/joutio-bff/compare/v3.4.3...v3.4.4) (2026-11-18)
+
+### Bug Fixes
+
+* **deps:** joutio-parent 2.1.0, consistent command routing across replicas ([fecbb74](https://github.com/joutio/joutio-bff/commit/fecbb74583ae9c906c435b974a65b690f4086de2))
+
 ## [3.4.3](https://github.com/joutio/joutio-bff/compare/v3.4.2...v3.4.3) (2026-11-18)
 
 ### Bug Fixes
