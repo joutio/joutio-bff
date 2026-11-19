@@ -12,6 +12,7 @@ import com.joutio.game.domain.model.Game;
 import com.joutio.game.domain.model.GamePlayerType;
 import com.joutio.game.domain.model.GameQuestionChoice;
 import com.joutio.game.domain.model.GameResult;
+import com.joutio.game.domain.model.GameRoundType;
 import com.joutio.game.domain.query.GameQuery;
 import com.joutio.identity.domain.model.UserAccountStatus;
 import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
@@ -135,9 +136,9 @@ public class GameViewService {
         return userId.equals(game.player1Id()) ? game.player2Id() : game.player1Id();
     }
 
-    public CompletableFuture<Void> answer(String gameId, String playerId, GameQuestionChoice choice) {
+    public CompletableFuture<Void> answer(String gameId, String playerId, GameRoundType round, GameQuestionChoice choice) {
         return commandGateway
-                .send(new GameCommand.AnswerQuestionCommand(gameId, playerId, choice, Instant.now()))
+                .send(new GameCommand.AnswerQuestionCommand(gameId, playerId, round, choice, Instant.now()))
                 .thenAccept(_ -> {
                 });
     }

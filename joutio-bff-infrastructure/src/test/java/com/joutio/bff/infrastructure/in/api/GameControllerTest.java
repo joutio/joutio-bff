@@ -9,6 +9,7 @@ import com.joutio.bff.infrastructure.in.api.response.TopicRefView;
 import com.joutio.bff.infrastructure.in.api.response.UserRefView;
 import com.joutio.game.domain.model.GamePlayerType;
 import com.joutio.game.domain.model.GameQuestionChoice;
+import com.joutio.game.domain.model.GameRoundType;
 import com.joutio.game.domain.model.GameStatus;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,20 +54,30 @@ class GameControllerTest {
     }
 
     @Test
-    void answer_sends_choice_without_player_in_body() throws Exception {
-        when(gameViewService.answer("game-1", USER_ID, GameQuestionChoice.A))
+    void answer_sends_round_and_choice_without_player_in_body() throws Exception {
+        when(gameViewService.answer("game-1", USER_ID, GameRoundType.ROUND_3, GameQuestionChoice.A))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
         MvcResult result = mockMvc.perform(post("/api/games/game-1/answer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"choice":"A"}
+                                {"round":3,"choice":"A"}
                                 """))
                 .andExpect(request().asyncStarted())
                 .andReturn();
 
         mockMvc.perform(asyncDispatch(result)).andExpect(status().isOk());
-        verify(gameViewService).answer("game-1", USER_ID, GameQuestionChoice.A);
+        verify(gameViewService).answer("game-1", USER_ID, GameRoundType.ROUND_3, GameQuestionChoice.A);
+    }
+
+    @Test
+    void answer_without_round_is_rejected() throws Exception {
+        mockMvc.perform(post("/api/games/game-1/answer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"choice":"A"}
+                                """))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
