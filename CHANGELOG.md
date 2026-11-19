@@ -1,3 +1,9 @@
+## [3.5.0](https://github.com/joutio/joutio-bff/compare/v3.4.4...v3.5.0) (2026-11-19)
+
+### Features
+
+* **game:** answer request carries the round ([537bddd](https://github.com/joutio/joutio-bff/commit/537bddd21a62b130b7ec9a3c838d7706b30d5c72))
+
 ## [3.4.4](https://github.com/joutio/joutio-bff/compare/v3.4.3...v3.4.4) (2026-11-18)
 
 ### Bug Fixes
