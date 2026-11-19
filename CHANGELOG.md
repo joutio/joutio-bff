@@ -1,3 +1,13 @@
+## [3.6.0](https://github.com/joutio/joutio-bff/compare/v3.5.0...v3.6.0) (2026-11-19)
+
+### Features
+
+* **onboarding:** up to 3 recommended topics per chosen universe ([af9f346](https://github.com/joutio/joutio-bff/commit/af9f346ec452c89af67859920ed3bc43523da8c1))
+
+### Bug Fixes
+
+* **api:** typed problem for invalid request parameters ([bd66e41](https://github.com/joutio/joutio-bff/commit/bd66e4187d4e3e02022b0112e90d4d3f9894702e))
+
 ## [3.5.0](https://github.com/joutio/joutio-bff/compare/v3.4.4...v3.5.0) (2026-11-19)
 
 ### Features
