@@ -55,19 +55,19 @@ class GameControllerTest {
 
     @Test
     void answer_sends_round_and_choice_without_player_in_body() throws Exception {
-        when(gameViewService.answer("game-1", USER_ID, GameRoundType.ROUND_3, GameQuestionChoice.A))
+        when(gameViewService.answer("game-1", USER_ID, GameRoundType.ROUND_3, GameQuestionChoice.A, 2300L))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
         MvcResult result = mockMvc.perform(post("/api/games/game-1/answer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"round":3,"choice":"A"}
+                                {"round":3,"choice":"A","clientElapsedMs":2300}
                                 """))
                 .andExpect(request().asyncStarted())
                 .andReturn();
 
         mockMvc.perform(asyncDispatch(result)).andExpect(status().isOk());
-        verify(gameViewService).answer("game-1", USER_ID, GameRoundType.ROUND_3, GameQuestionChoice.A);
+        verify(gameViewService).answer("game-1", USER_ID, GameRoundType.ROUND_3, GameQuestionChoice.A, 2300L);
     }
 
     @Test

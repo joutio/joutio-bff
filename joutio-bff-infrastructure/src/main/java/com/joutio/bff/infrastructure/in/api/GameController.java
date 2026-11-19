@@ -57,7 +57,7 @@ public class GameController {
     public CompletableFuture<ResponseEntity<Void>> answer(@PathVariable String gameId,
                                                           @Valid @RequestBody AnswerQuestionRequest request) {
         return gameViewService
-                .answer(gameId, SecurityHelper.getUserId(), request.roundType(), request.choice())
+                .answer(gameId, SecurityHelper.getUserId(), request.roundType(), request.choice(), request.clientElapsedMs())
                 .thenApply(_ -> ResponseEntity.ok().build());
     }
 

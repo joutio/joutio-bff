@@ -3,30 +3,36 @@ package com.joutio.bff.application;
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.bff.infrastructure.in.api.response.GameResultView;
 import com.joutio.bff.infrastructure.in.api.response.ProgressionView;
-import com.joutio.profile.domain.model.Badge;
+import com.joutio.game.domain.command.GameCommand;
 import com.joutio.game.domain.event.GameEvent;
 import com.joutio.game.domain.exception.GameExceptions;
 import com.joutio.game.domain.model.Game;
 import com.joutio.game.domain.model.GamePlayerType;
+import com.joutio.game.domain.model.GameQuestionChoice;
 import com.joutio.game.domain.model.GameResult;
+import com.joutio.game.domain.model.GameRoundType;
 import com.joutio.game.domain.query.GameQuery;
 import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
+import com.joutio.profile.domain.model.Badge;
 import com.joutio.profile.domain.model.GameXp;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.TopicProgress;
 import com.joutio.profile.domain.query.ProgressionQuery;
 import com.joutio.theme.domain.model.Topic;
 import com.joutio.theme.domain.query.TopicQuery;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Instant;
+
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.responsetypes.ResponseType;
 import org.axonframework.queryhandling.QueryGateway;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -47,8 +53,9 @@ class GameViewServiceTest {
     private final ProfileLookup profileLookup = mock(ProfileLookup.class);
     private final ProgressionLookup progressionLookup = mock(ProgressionLookup.class);
     private final IdentityLookup identityLookup = mock(IdentityLookup.class);
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     private final GameViewService service =
-            new GameViewService(commandGateway, queryGateway, profileLookup, progressionLookup, identityLookup);
+            new GameViewService(commandGateway, queryGateway, profileLookup, progressionLookup, identityLookup, meterRegistry);
 
     @Test
     void result_derives_victory_bonus_from_game_xp() {
@@ -62,6 +69,23 @@ class GameViewServiceTest {
         assertThat(view.opponentRating()).isEqualTo(918);
         assertThat(view.topicMastery().xp()).isEqualTo(250);
         assertThat(view.topicMastery().xpGained()).isEqualTo(150);
+    }
+
+    @Test
+    void answer_refused_after_the_deadline_is_counted() {
+        when(commandGateway.send(any(GameCommand.AnswerQuestionCommand.class))).thenAnswer(invocation -> {
+            GameCommand.AnswerQuestionCommand command = invocation.getArgument(0);
+            return "game-late".equals(command.gameId())
+                    ? CompletableFuture.failedFuture(new CommandExecutionException(
+                            "late", null, Map.of("type", "urn:joutio:game:answerAfterDeadline")))
+                    : CompletableFuture.completedFuture(null);
+        });
+
+        assertThatThrownBy(() -> service.answer("game-late", "player-1", GameRoundType.ROUND_1, GameQuestionChoice.A, 9_000L).join())
+                .isInstanceOf(CompletionException.class);
+        service.answer("game-1", "player-1", GameRoundType.ROUND_1, GameQuestionChoice.A, 2_000L).join();
+
+        assertThat(meterRegistry.counter("joutio.duel.answers.late").count()).isEqualTo(1.0);
     }
 
     @Test

@@ -29,6 +29,9 @@ import com.joutio.profile.domain.model.TopicProgress;
 import com.joutio.profile.domain.query.ProgressionQuery;
 import com.joutio.theme.domain.model.Topic;
 import com.joutio.theme.domain.query.TopicQuery;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.axonframework.commandhandling.CommandExecutionException;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.queryhandling.QueryGateway;
 import org.springframework.stereotype.Service;
@@ -51,6 +54,9 @@ import java.util.stream.Collectors;
 @Service
 public class GameViewService {
 
+    private static final String ANSWER_AFTER_DEADLINE = "urn:joutio:game:answerAfterDeadline";
+
+    private final Counter lateAnswers;
     private final CommandGateway commandGateway;
     private final QueryGateway queryGateway;
     private final ProfileLookup profileLookup;
@@ -61,7 +67,11 @@ public class GameViewService {
                            QueryGateway queryGateway,
                            ProfileLookup profileLookup,
                            ProgressionLookup progressionLookup,
-                           IdentityLookup identityLookup) {
+                           IdentityLookup identityLookup,
+                           MeterRegistry meterRegistry) {
+        this.lateAnswers = Counter.builder("joutio.duel.answers.late")
+                .description("Réponses refusées par game après l'échéance et sa grâce (urn:joutio:game:answerAfterDeadline)")
+                .register(meterRegistry);
         this.commandGateway = commandGateway;
         this.queryGateway = queryGateway;
         this.profileLookup = profileLookup;
@@ -140,11 +150,35 @@ public class GameViewService {
         return userId.equals(game.player1Id()) ? game.player2Id() : game.player1Id();
     }
 
-    public CompletableFuture<Void> answer(String gameId, String playerId, GameRoundType round, GameQuestionChoice choice) {
+    /**
+     * Réponse horodatée à réception ; game retient le temps du client borné par ce temps serveur. Une réponse refusée
+     * après l'échéance est comptée ({@code joutio.duel.answers.late}).
+     */
+    public CompletableFuture<Void> answer(String gameId, String playerId, GameRoundType round, GameQuestionChoice choice,
+                                          Long clientElapsedMs) {
         return commandGateway
-                .send(new GameCommand.AnswerQuestionCommand(gameId, playerId, round, choice, Instant.now()))
+                .send(new GameCommand.AnswerQuestionCommand(gameId, playerId, round, choice, Instant.now(), clientElapsedMs))
+                .whenComplete((_, error) -> {
+                    if (ANSWER_AFTER_DEADLINE.equals(problemType(error))) {
+                        lateAnswers.increment();
+                    }
+                })
                 .thenAccept(_ -> {
                 });
+    }
+
+    /** Type RFC 7807 d'un refus de commande distant ({@code CommandExecutionException.details.type}), sinon {@code null}. */
+    private static String problemType(Throwable error) {
+        for (Throwable cause = error; cause != null; cause = cause.getCause()) {
+            if (cause instanceof CommandExecutionException execution) {
+                return execution.getDetails()
+                        .filter(Map.class::isInstance)
+                        .map(details -> ((Map<?, ?>) details).get("type"))
+                        .map(String::valueOf)
+                        .orElse(null);
+            }
+        }
+        return null;
     }
 
     public CompletableFuture<Void> abandon(String gameId, String playerId) {

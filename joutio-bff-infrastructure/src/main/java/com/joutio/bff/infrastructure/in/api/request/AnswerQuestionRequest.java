@@ -12,7 +12,12 @@ import jakarta.validation.constraints.NotNull;
  */
 public record AnswerQuestionRequest(
         @NotNull @Min(1) @Max(7) Integer round,
-        @NotNull GameQuestionChoice choice
+        @NotNull GameQuestionChoice choice,
+        /**
+         * Temps de réflexion mesuré par le client depuis l'affichage des réponses (ms) ; le service game le borne
+         * par le temps serveur. Absent : le temps serveur fait foi.
+         */
+        @Min(0) Long clientElapsedMs
 ) {
 
     public GameRoundType roundType() {
