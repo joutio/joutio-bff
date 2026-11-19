@@ -1,3 +1,9 @@
+## [3.7.1](https://github.com/joutio/joutio-bff/compare/v3.7.0...v3.7.1) (2026-11-19)
+
+### Bug Fixes
+
+* **ws:** STOMP heartbeats at 4 s ([98c60a0](https://github.com/joutio/joutio-bff/commit/98c60a09be89d742811344c8b37e8fec5fd0c1b3))
+
 ## [3.7.0](https://github.com/joutio/joutio-bff/compare/v3.6.0...v3.7.0) (2026-11-19)
 
 ### Features
