@@ -1,5 +1,7 @@
 package com.joutio.bff.infrastructure.in.api.request;
 
+import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,8 +23,8 @@ class LeaderboardMonthTest {
 
     @Test
     void invalid_month_isRejected() {
-        assertThrows(IllegalArgumentException.class, () -> LeaderboardMonth.validate("2026-13"));
-        assertThrows(IllegalArgumentException.class, () -> LeaderboardMonth.validate("2026-8"));
-        assertThrows(IllegalArgumentException.class, () -> LeaderboardMonth.validate("août"));
+        assertThrows(BffProblems.InvalidRequestParameterProblem.class, () -> LeaderboardMonth.validate("2026-13"));
+        assertThrows(BffProblems.InvalidRequestParameterProblem.class, () -> LeaderboardMonth.validate("2026-8"));
+        assertThrows(BffProblems.InvalidRequestParameterProblem.class, () -> LeaderboardMonth.validate("août"));
     }
 }

@@ -1,5 +1,7 @@
 package com.joutio.bff.infrastructure.in.api.request;
 
+import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
+
 import java.util.regex.Pattern;
 
 /**
@@ -14,7 +16,7 @@ public final class LeaderboardMonth {
 
     /**
      * @return le mois normalisé, ou {@code null} si absent (le service retombe sur le mois courant).
-     * @throws IllegalArgumentException si le format n'est pas {@code YYYY-MM}.
+     * @throws BffProblems.InvalidRequestParameterProblem si le format n'est pas {@code YYYY-MM}.
      */
     public static String validate(String month) {
         if (month == null || month.isBlank()) {
@@ -22,7 +24,7 @@ public final class LeaderboardMonth {
         }
         String normalized = month.trim();
         if (!FORMAT.matcher(normalized).matches()) {
-            throw new IllegalArgumentException("month doit être au format YYYY-MM");
+            throw new BffProblems.InvalidRequestParameterProblem("month", "month must use the YYYY-MM format");
         }
         return normalized;
     }

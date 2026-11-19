@@ -1,6 +1,7 @@
 package com.joutio.bff.infrastructure.in.api;
 
 import com.joutio.bff.application.SuggestionService;
+import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.bff.infrastructure.in.api.response.SuggestionView;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,7 +33,8 @@ public class SuggestionController {
             @RequestParam("q") String query,
             @RequestParam(defaultValue = "8") int limit) {
         if (limit < MIN_LIMIT || limit > MAX_LIMIT) {
-            throw new IllegalArgumentException("limit doit être compris entre " + MIN_LIMIT + " et " + MAX_LIMIT);
+            throw new BffProblems.InvalidRequestParameterProblem(
+                    "limit", "limit must be between " + MIN_LIMIT + " and " + MAX_LIMIT);
         }
         return suggestionService.suggest(query, limit).thenApply(ResponseEntity::ok);
     }

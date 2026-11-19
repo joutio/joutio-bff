@@ -1,5 +1,7 @@
 package com.joutio.bff.infrastructure.in.api.request;
 
+import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
+
 /**
  * Validation des paramètres de pagination de la surface web.
  */
@@ -10,10 +12,10 @@ public final class PageParams {
 
     public static void validate(int page, int size, int maxSize) {
         if (page < 0) {
-            throw new IllegalArgumentException("page doit être supérieur ou égal à 0");
+            throw new BffProblems.InvalidRequestParameterProblem("page", "page must be greater than or equal to 0");
         }
         if (size < 1 || size > maxSize) {
-            throw new IllegalArgumentException("size doit être compris entre 1 et " + maxSize);
+            throw new BffProblems.InvalidRequestParameterProblem("size", "size must be between 1 and " + maxSize);
         }
     }
 }

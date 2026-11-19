@@ -108,6 +108,17 @@ public final class BffProblems {
         }
     }
 
+    /** Paramètre de requête hors bornes ou mal formé (pagination, limite, mois). */
+    public static class InvalidRequestParameterProblem extends BaseProblem {
+        public InvalidRequestParameterProblem(String parameter, String detail) {
+            super("urn:joutio:bff:request:invalidParameter",
+                    ProblemCategory.VALIDATION,
+                    "Invalid request parameter",
+                    detail,
+                    Map.of("parameter", parameter));
+        }
+    }
+
     public static class InvalidTopicListRequestProblem extends BaseProblem {
         public InvalidTopicListRequestProblem(String detail) {
             super("urn:joutio:bff:topic:invalidListRequest",
