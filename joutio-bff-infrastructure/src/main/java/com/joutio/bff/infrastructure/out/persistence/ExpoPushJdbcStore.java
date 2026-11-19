@@ -15,18 +15,17 @@ public class ExpoPushJdbcStore implements ExpoPushStore {
     public ExpoPushJdbcStore(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
     @Override @Transactional
-    public void register(String user, String installation, String token, Platform platform, boolean rematches) {
+    public void register(String user, String installation, String token, Platform platform) {
         // Sérialise rotation/réaffectation, y compris deux requêtes concurrentes pour le même token.
         jdbc.execute("SELECT pg_advisory_xact_lock(785314206)");
         jdbc.update("DELETE FROM expo_push_subscription WHERE token = ? AND installation_id <> ?", token, installation);
         jdbc.update("""
-            INSERT INTO expo_push_subscription(installation_id,user_id,token,platform,rematches)
-            VALUES (?,?,?,?,?) ON CONFLICT (installation_id) DO UPDATE SET
+            INSERT INTO expo_push_subscription(installation_id,user_id,token,platform)
+            VALUES (?,?,?,?) ON CONFLICT (installation_id) DO UPDATE SET
             registered_at = CASE WHEN expo_push_subscription.user_id <> EXCLUDED.user_id
                 OR expo_push_subscription.token <> EXCLUDED.token THEN now() ELSE expo_push_subscription.registered_at END,
-            user_id=EXCLUDED.user_id, token=EXCLUDED.token, platform=EXCLUDED.platform,
-            rematches=EXCLUDED.rematches, updated_at=now()
-            """, installation, user, token, platform.name(), rematches);
+            user_id=EXCLUDED.user_id, token=EXCLUDED.token, platform=EXCLUDED.platform, updated_at=now()
+            """, installation, user, token, platform.name());
     }
     @Override public void unregister(String user, String installation) {
         jdbc.update("DELETE FROM expo_push_subscription WHERE installation_id=? AND user_id=?", installation, user);
@@ -41,9 +40,9 @@ public class ExpoPushJdbcStore implements ExpoPushStore {
             INSERT INTO expo_push_delivery(id,notification_id,installation_id,user_id,token,type,source_id,game_id,expires_at)
             SELECT md5(? || ':' || s.installation_id), ?, s.installation_id, s.user_id, s.token, ?, ?, ?, ?
             FROM expo_push_subscription s WHERE s.user_id=? AND s.registered_at <= ?
-            AND (CAST(? AS varchar) IS NULL OR s.rematches) ON CONFLICT (notification_id,installation_id) DO NOTHING
+            ON CONFLICT (notification_id,installation_id) DO NOTHING
             """, e.notificationId(), e.notificationId(), e.type().name(), e.sourceId(), e.gameId(),
-                Timestamp.from(expires), e.userId(), Timestamp.from(e.createdAt()), e.gameId());
+                Timestamp.from(expires), e.userId(), Timestamp.from(e.createdAt()));
     }
     @Override public Optional<Delivery> claim(Instant now) {
         return jdbc.query("""
@@ -60,9 +59,8 @@ public class ExpoPushJdbcStore implements ExpoPushStore {
     @Override public boolean eligible(Delivery d) {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
             SELECT EXISTS(SELECT 1 FROM expo_push_subscription WHERE installation_id=? AND user_id=? AND token=?
-                AND (CAST(? AS varchar) IS NULL OR rematches)
                 AND registered_at <= (SELECT created_at FROM expo_push_delivery WHERE id=?))
-            """, Boolean.class, d.installationId(), d.notice().userId(), d.token(), d.notice().gameId(), d.id()));
+            """, Boolean.class, d.installationId(), d.notice().userId(), d.token(), d.id()));
     }
     @Override public void finish(String id) { jdbc.update("UPDATE expo_push_delivery SET done=true WHERE id=?", id); }
     @Override public void retry(String id, Instant next) {

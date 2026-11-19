@@ -27,8 +27,8 @@ public class ExpoPushService {
         this.enabled = enabled;
     }
 
-    public void register(String userId, String installationId, String token, ExpoPushStore.Platform platform, boolean rematches) {
-        store.register(userId, installationId, token, platform, rematches);
+    public void register(String userId, String installationId, String token, ExpoPushStore.Platform platform) {
+        store.register(userId, installationId, token, platform);
     }
     public void unregister(String userId, String installationId) { store.unregister(userId, installationId); }
 
@@ -61,9 +61,12 @@ public class ExpoPushService {
                     store.finish(delivery.id());
                     return;
                 }
-                boolean roomsEnabled = notifications.preferences(delivery.notice().userId()).get(2, TimeUnit.SECONDS)
-                        .stream().noneMatch(p -> p.category() == NotificationCategory.ROOM && !p.enabled());
-                if (!roomsEnabled) {
+                // Préférence relue à l'envoi : coupée après la création de la notification, elle l'emporte encore.
+                NotificationCategory category = NotificationType.valueOf(delivery.notice().type())
+                        .category(delivery.notice().gameId());
+                boolean enabled = notifications.preferences(delivery.notice().userId()).get(2, TimeUnit.SECONDS)
+                        .stream().noneMatch(p -> p.category() == category && !p.enabled());
+                if (!enabled) {
                     store.finish(delivery.id());
                     return;
                 }

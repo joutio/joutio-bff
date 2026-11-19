@@ -62,6 +62,19 @@ class ExpoPushServiceTest {
         when(notifications.preferences("u")).thenReturn(CompletableFuture.completedFuture(List.of(new NotificationPreferenceView(NotificationCategory.ROOM,false))));
         service.drain(); verifyNoInteractions(gateway); verify(store).finish("d");
     }
+    @Test void rematch_preference_only_stops_rematches() {
+        var rematch=new ExpoPushStore.Delivery("d","i","token",new ExpoPushStore.Notice("n","u","CHALLENGE_RECEIVED","s","game-1",Instant.now().plusSeconds(60)),null,1);
+        queued(rematch);
+        when(notifications.preferences("u")).thenReturn(CompletableFuture.completedFuture(List.of(new NotificationPreferenceView(NotificationCategory.REMATCH,false))));
+        service.drain(); verifyNoInteractions(gateway); verify(store).finish("d");
+    }
+    @Test void rematch_preference_does_not_stop_a_plain_challenge() {
+        var challenge=new ExpoPushStore.Delivery("d","i","token",new ExpoPushStore.Notice("n","u","CHALLENGE_RECEIVED","s",null,Instant.now().plusSeconds(60)),null,1);
+        queued(challenge);
+        when(notifications.preferences("u")).thenReturn(CompletableFuture.completedFuture(List.of(new NotificationPreferenceView(NotificationCategory.REMATCH,false))));
+        when(gateway.send(challenge)).thenReturn(new ExpoPushGateway.Result(ExpoPushGateway.Status.ACCEPTED,"ticket"));
+        service.drain(); verify(gateway).send(challenge);
+    }
     @Test void invalid_token_in_receipt_is_removed_even_after_expiration() {
         var d=delivery("ticket",1,Instant.now().minusSeconds(60)); queued(d);
         when(gateway.receipt("ticket")).thenReturn(new ExpoPushGateway.Result(ExpoPushGateway.Status.INVALID_TOKEN,null));

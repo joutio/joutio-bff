@@ -17,13 +17,13 @@ class ExpoPushControllerTest {
     @AfterEach void clear() { TestSecurity.clear(); }
     @Test void subscription_owner_is_always_the_jwt_actor() throws Exception {
         mvc.perform(put("/api/push/expo/subscriptions").contentType(MediaType.APPLICATION_JSON).content("""
-            {"installationId":"12345678-1234-1234-1234-123456789012","token":"ExpoPushToken[abc]","platform":"ANDROID","rematches":false,"userId":"attacker"}
+            {"installationId":"12345678-1234-1234-1234-123456789012","token":"ExpoPushToken[abc]","platform":"ANDROID","userId":"attacker"}
             """)).andExpect(status().isNoContent());
-        verify(service).register("owner","12345678-1234-1234-1234-123456789012","ExpoPushToken[abc]",Platform.ANDROID,false);
+        verify(service).register("owner","12345678-1234-1234-1234-123456789012","ExpoPushToken[abc]",Platform.ANDROID);
     }
     @Test void invalid_token_is_rejected() throws Exception {
         mvc.perform(put("/api/push/expo/subscriptions").contentType(MediaType.APPLICATION_JSON).content("""
-            {"installationId":"12345678-1234-1234-1234-123456789012","token":"https://attacker","platform":"ANDROID","rematches":true}
+            {"installationId":"12345678-1234-1234-1234-123456789012","token":"https://attacker","platform":"ANDROID"}
             """)).andExpect(status().isBadRequest()); verifyNoInteractions(service);
     }
     @Test void deletion_is_scoped_to_current_owner() throws Exception {

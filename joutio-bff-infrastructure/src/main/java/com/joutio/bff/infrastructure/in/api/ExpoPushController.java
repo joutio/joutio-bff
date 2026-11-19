@@ -13,7 +13,7 @@ public class ExpoPushController {
     private final ExpoPushService service;
     public ExpoPushController(ExpoPushService service) { this.service=service; }
     @PutMapping public ResponseEntity<Void> subscribe(@Valid @RequestBody ExpoPushSubscriptionRequest request) {
-        service.register(SecurityHelper.getUserId(), request.installationId(), request.token(), request.platform(), request.rematches());
+        service.register(SecurityHelper.getUserId(), request.installationId(), request.token(), request.platform());
         return ResponseEntity.noContent().build();
     }
     @DeleteMapping public ResponseEntity<Void> unsubscribe(@RequestParam String installationId) {

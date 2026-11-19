@@ -12,7 +12,7 @@ public interface ExpoPushStore {
                   String gameId, Instant expiresAt) {}
     record Delivery(String id, String installationId, String token, Notice notice,
                     String ticket, int attempts) {}
-    void register(String userId, String installationId, String token, Platform platform, boolean rematches);
+    void register(String userId, String installationId, String token, Platform platform);
     void unregister(String userId, String installationId);
     void deleteUser(String userId);
     void enqueue(NotificationCreatedEvent event);
