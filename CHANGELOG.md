@@ -1,3 +1,9 @@
+## [3.9.0](https://github.com/joutio/joutio-bff/compare/v3.8.0...v3.9.0) (2026-11-19)
+
+### Features
+
+* **push:** rematch preference as a server category ([348093a](https://github.com/joutio/joutio-bff/commit/348093a5eca7ce448737b852fc5a27100c011337))
+
 ## [3.8.0](https://github.com/joutio/joutio-bff/compare/v3.7.1...v3.8.0) (2026-11-19)
 
 ### Features
