@@ -26,6 +26,10 @@ microservice:
     description: Joutio BFF - facade unique REST + WebSocket (services headless)
   websocket:
     enabled: true
+    # Battements STOMP à 4 s (clients web et mobile, `duel-horloge-ntp`) : une socket morte se voit en moins d'une
+    # manche au lieu de passer une manche entière inaperçue. Le client négocie le plus grand des deux délais.
+    heartbeat-outgoing: 4s
+    heartbeat-incoming: 4s
 
 # Fan-out temps réel multi-réplique : chaque pod BFF ne connaît que ses propres clients STOMP et
 # doit consommer TOUS les événements de ces groupes (processors suffixés par instance via le SDK,
