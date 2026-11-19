@@ -1,3 +1,9 @@
+## [3.7.0](https://github.com/joutio/joutio-bff/compare/v3.6.0...v3.7.0) (2026-11-19)
+
+### Features
+
+* **result:** game badges in the result and localized image descriptions ([202915b](https://github.com/joutio/joutio-bff/commit/202915bc796dd05683e88607ba0312488335ecf4))
+
 ## [3.6.0](https://github.com/joutio/joutio-bff/compare/v3.5.0...v3.6.0) (2026-11-19)
 
 ### Features
