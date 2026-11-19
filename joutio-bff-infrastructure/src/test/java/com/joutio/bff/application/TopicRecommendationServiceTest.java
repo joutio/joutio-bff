@@ -85,6 +85,47 @@ class TopicRecommendationServiceTest {
                 .isEmpty();
     }
 
+    @Test
+    void perCategoryKeepsUpToNTopicsPerUniverseInInterestOrder() {
+        stubPages(TopicPage.builder().topics(List.of(
+                topic("h1", TopicCategory.HISTORY, 7),
+                topic("h2", TopicCategory.HISTORY, 6),
+                topic("h3", TopicCategory.HISTORY, 7),
+                topic("h4", TopicCategory.HISTORY, 7),
+                topic("h5", TopicCategory.HISTORY, 7))).build(),
+                TopicPage.builder().topics(List.of(
+                        topic("s1", TopicCategory.SCIENCE, 7))).build(),
+                TopicPage.builder().topics(List.of()).build());
+
+        List<TopicCardView> cards = service.recommendPerCategory(
+                List.of(TopicCategory.HISTORY, TopicCategory.SCIENCE,
+                        TopicCategory.FOOD_AND_DRINK), 3).join();
+
+        // Un univers pauvre n'est pas complété par un autre ; un univers vide n'apporte rien.
+        assertThat(cards).extracting(TopicCardView::topicId)
+                .containsExactly("h1", "h3", "h4", "s1");
+    }
+
+    @Test
+    void perCategoryReturnsAtMostNineTopicsForThreeUniverses() {
+        List<Topic> many = java.util.stream.IntStream.range(0, 10)
+                .mapToObj(i -> topic("t" + i, TopicCategory.HISTORY, 7)).toList();
+        stubPages(TopicPage.builder().topics(many).build(),
+                TopicPage.builder().topics(many).build(),
+                TopicPage.builder().topics(many).build());
+
+        assertThat(service.recommendPerCategory(
+                List.of(TopicCategory.HISTORY, TopicCategory.SCIENCE, TopicCategory.MOVIES,
+                        TopicCategory.FOOD_AND_DRINK), 3).join())
+                .hasSize(9);
+    }
+
+    @Test
+    void perCategoryWithoutInterestSkipsQueries() {
+        assertThat(service.recommendPerCategory(List.of(), 3).join()).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(queryGateway);
+    }
+
     private void stubPages(TopicPage... pages) {
         AtomicInteger index = new AtomicInteger();
         when(queryGateway.query(

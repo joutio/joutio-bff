@@ -21,12 +21,18 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Recommandation de sujets à partir des centres d'intérêt : un sujet populaire **jouable** par
- * univers en priorité (diversité), puis complément dans l'ordre des intérêts. Les sujets suivis
- * sont exclus pour ne pas dupliquer le rail « Tes sujets suivis ».
+ * Recommandation de sujets populaires **jouables** à partir des centres d'intérêt.
  *
- * <p>Service partagé par l'onboarding (intérêts en cours de saisie) et l'accueil (intérêts
- * persistés), afin que le premier thème proposé et le rail « Pour toi » restent cohérents.</p>
+ * <ul>
+ *   <li>{@link #recommend} (rail « Pour toi » de l'accueil) : un sujet par univers en priorité
+ *   (diversité), puis complément dans l'ordre des intérêts ; les sujets suivis sont exclus pour ne
+ *   pas dupliquer le rail « Tes sujets suivis ».</li>
+ *   <li>{@link #recommendPerCategory} (premier thème de l'onboarding) : jusqu'à N sujets par
+ *   univers, univers après univers, sans compléter un univers par un autre.</li>
+ * </ul>
+ *
+ * <p>Les deux lisent les mêmes pages populaires, afin que le premier thème proposé et le rail
+ * « Pour toi » restent cohérents.</p>
  */
 @Service
 public class TopicRecommendationService {
@@ -50,18 +56,39 @@ public class TopicRecommendationService {
             return CompletableFuture.completedFuture(List.of());
         }
         int cappedLimit = Math.min(limit, MAX_LIMIT);
-        int pageSize = Math.min(50, Math.max(cappedLimit, QUERY_FLOOR));
+        return popularPages(categories, cappedLimit)
+                .thenApply(pages -> pick(pages, excludedTopicIds, cappedLimit));
+    }
 
+    /**
+     * Jusqu'à {@code perCategory} sujets jouables par univers, groupés dans l'ordre des intérêts
+     * (soit {@code perCategory × 3} au plus). Un univers sans sujet jouable n'est pas complété.
+     */
+    public CompletableFuture<List<TopicCardView>> recommendPerCategory(
+            List<TopicCategory> interests,
+            int perCategory) {
+        List<TopicCategory> categories = normalize(interests);
+        if (categories.isEmpty() || perCategory <= 0) {
+            return CompletableFuture.completedFuture(List.of());
+        }
+        return popularPages(categories, perCategory)
+                .thenApply(pages -> pages.stream()
+                        .flatMap(page -> playable(page).stream().limit(perCategory))
+                        .map(topic -> TopicViews.toCard(topic, false))
+                        .toList());
+    }
+
+    /** Une page populaire par univers, dans l'ordre des intérêts. */
+    private CompletableFuture<List<TopicPage>> popularPages(List<TopicCategory> categories, int wanted) {
+        int pageSize = Math.min(50, Math.max(wanted, QUERY_FLOOR));
         List<CompletableFuture<TopicPage>> pages = categories.stream()
                 .map(category -> queryGateway.query(
                         new TopicQuery.GetTopicPageQuery(
                                 null, category, TopicSort.POPULAR, 0, pageSize),
                         QueryResponseTypes.instanceOf(TopicPage.class)))
                 .toList();
-
         return CompletableFuture.allOf(pages.toArray(CompletableFuture[]::new))
-                .thenApply(_ -> pick(pages.stream().map(CompletableFuture::join).toList(),
-                        excludedTopicIds, cappedLimit));
+                .thenApply(_ -> pages.stream().map(CompletableFuture::join).toList());
     }
 
     private static List<TopicCategory> normalize(List<TopicCategory> interests) {

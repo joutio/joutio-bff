@@ -172,7 +172,7 @@ class MeControllerTest {
                 "t1", Map.of(Language.FR, "Révolution"), null, java.util.Map.of(),
                 TopicCategory.HISTORY, "Histoire",
                 null, null, null, 3, 7, false, TopicStatus.PUBLISHED);
-        when(topicRecommendationService.recommend(any(), any(), eq(3)))
+        when(topicRecommendationService.recommendPerCategory(any(), eq(3)))
                 .thenReturn(CompletableFuture.completedFuture(List.of(card)));
 
         MvcResult result = mockMvc.perform(get("/api/me/onboarding/recommendations")

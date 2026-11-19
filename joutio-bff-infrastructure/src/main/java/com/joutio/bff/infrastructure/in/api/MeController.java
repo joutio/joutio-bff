@@ -29,7 +29,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -38,6 +37,9 @@ import java.util.concurrent.CompletableFuture;
 @RestController
 @RequestMapping("/api/me")
 public class MeController {
+
+    /** Premier thème de l'onboarding : 3 sujets par univers choisi (spec onboarding). */
+    private static final int ONBOARDING_TOPICS_PER_CATEGORY = 3;
 
     private final MeService meService;
     private final AccountDeletionService accountDeletionService;
@@ -85,7 +87,8 @@ public class MeController {
 
     /**
      * Recommandations pour l'onboarding : intérêts en cours de saisie, avant persistance.
-     * Retourne jusqu'à 3 sujets jouables, ordonnés selon les intérêts (premier = principal).
+     * Retourne jusqu'à 3 sujets jouables par univers, groupés dans l'ordre des intérêts
+     * (9 au plus ; premier = principal).
      */
     @GetMapping("/onboarding/recommendations")
     public CompletableFuture<ResponseEntity<List<TopicCardView>>> onboardingRecommendations(
@@ -94,7 +97,7 @@ public class MeController {
             throw new BffProblems.InvalidInterestsProblem("At least one interest is required");
         }
         ProfileUpdateService.validateInterests(interests);
-        return topicRecommendationService.recommend(interests, Set.of(), 3)
+        return topicRecommendationService.recommendPerCategory(interests, ONBOARDING_TOPICS_PER_CATEGORY)
                 .thenApply(ResponseEntity::ok);
     }
 
