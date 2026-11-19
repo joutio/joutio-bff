@@ -11,6 +11,7 @@ import com.joutio.bff.infrastructure.in.api.request.RestoreQuestionRequest;
 import com.joutio.bff.infrastructure.in.api.request.SuspendQuestionRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionAnswersRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionCorrectAnswerRequest;
+import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionImageAltRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionImageUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionTextRequest;
 import com.joutio.bff.infrastructure.in.api.response.AdminQuestionDetailView;
@@ -161,6 +162,15 @@ public class QuestionAdminController {
             @Valid @RequestBody UpdateQuestionCorrectAnswerRequest request) {
         return questionAdminService
                 .updateCorrectAnswer(questionId, SecurityHelper.getUserId(), request)
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
+    @PutMapping("/questions/{questionId}/image-alt")
+    public CompletableFuture<ResponseEntity<Void>> updateImageAlt(
+            @PathVariable String questionId,
+            @Valid @RequestBody UpdateQuestionImageAltRequest request) {
+        return questionAdminService
+                .updateImageAlt(questionId, SecurityHelper.getUserId(), request)
                 .thenApply(_ -> ResponseEntity.noContent().build());
     }
 

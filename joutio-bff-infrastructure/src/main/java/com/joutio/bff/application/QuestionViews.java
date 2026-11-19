@@ -29,7 +29,7 @@ final class QuestionViews {
                                 .sorted(Map.Entry.comparingByKey())
                                 .map(answer -> new QuestionEditorView.AnswerView(
                                         answer.getKey(), answer.getValue()))
-                                .toList()))
+                                .toList(), entry.getValue().imageAlt()))
                 .toList();
     }
 

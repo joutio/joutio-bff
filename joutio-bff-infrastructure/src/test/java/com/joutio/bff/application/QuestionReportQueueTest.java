@@ -82,7 +82,7 @@ class QuestionReportQueueTest {
                                 new QuestionContent(
                                         Language.FR,
                                         "En quelle année meurt Louis XIV ?",
-                                        Map.of(QuestionChoice.A, "1715", QuestionChoice.B, "1714", QuestionChoice.C, "1789", QuestionChoice.D, "1815"))))
+                                        Map.of(QuestionChoice.A, "1715", QuestionChoice.B, "1714", QuestionChoice.C, "1789", QuestionChoice.D, "1815"), null)))
                 .correctAnswer(QuestionChoice.A)
                 .status(QuestionStatus.APPROVED)
                 .creatorId("creator-1")

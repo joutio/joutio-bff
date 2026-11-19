@@ -40,6 +40,7 @@ public class AchievementPublisher {
                 event.badge().tier().name(),
                 event.badge().metric().name(),
                 event.badge().target(),
+                event.gameId(),
                 event.earnedAt()));
     }
 

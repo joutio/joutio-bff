@@ -37,7 +37,8 @@ public record QuestionEditorView(
         String creatorId,
         String rejectionReason) {
 
-    public record ContentView(Language language, String text, List<AnswerView> answers) {}
+    /** {@code imageAlt} : description de l'image dans cette langue, {@code null} si absente. */
+    public record ContentView(Language language, String text, List<AnswerView> answers, String imageAlt) {}
 
     public record AnswerView(QuestionChoice choice, String text) {}
 }

@@ -12,13 +12,14 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 /**
- * Contenu localisé d'une question : texte + 4 réponses (choix A-D). Le choix correct est porté
- * par la question, pas par le contenu.
+ * Contenu localisé d'une question : texte, 4 réponses (choix A-D) et description facultative de
+ * l'image (lecteurs d'écran). Le choix correct est porté par la question, pas par le contenu.
  */
 public record QuestionContentRequest(
         @NotNull Language language,
         @NotBlank @Size(max = QuestionRules.MAX_TEXT_LENGTH) String text,
-        @NotEmpty @Size(min = 4, max = 4) @Valid List<AnswerRequest> answers
+        @NotEmpty @Size(min = 4, max = 4) @Valid List<AnswerRequest> answers,
+        @Size(max = QuestionRules.MAX_IMAGE_ALT_LENGTH) String imageAlt
 ) {
 
     public record AnswerRequest(

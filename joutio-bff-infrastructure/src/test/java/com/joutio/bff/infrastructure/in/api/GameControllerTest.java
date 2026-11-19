@@ -161,7 +161,8 @@ class GameControllerTest {
                 new UserRefView("opponent-1", "Bob", null),
                 "opponent-1",
                 null,
-                false);
+                false,
+                java.util.List.of(new com.joutio.bff.infrastructure.in.api.response.ProgressionView.BadgeView("FIRST_WIN", "Première victoire", "VICTORY", "FER")));
         when(gameViewService.result("game-1", USER_ID)).thenReturn(CompletableFuture.completedFuture(view));
 
         MvcResult mvcResult = mockMvc.perform(get("/api/games/game-1/result"))

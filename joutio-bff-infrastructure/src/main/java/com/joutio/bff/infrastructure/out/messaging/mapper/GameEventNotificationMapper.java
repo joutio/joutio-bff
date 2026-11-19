@@ -62,7 +62,8 @@ public final class GameEventNotificationMapper {
                         translations.put(translation.getKey().code(),
                                 new GameNotification.RoundQuestionContent(
                                         translation.getValue().text(),
-                                        toAnswerMap(translation.getValue().answers())));
+                                        toAnswerMap(translation.getValue().answers()),
+                                        translation.getValue().imageAlt()));
                     }
                 }
                 yield Optional.of(
@@ -72,6 +73,7 @@ public final class GameEventNotificationMapper {
                                 question.questionId(),
                                 question.text(),
                                 question.imageUrl(),
+                                question.content(Language.FR).imageAlt(),
                                 question.difficulty(),
                                 answers,
                                 translations,

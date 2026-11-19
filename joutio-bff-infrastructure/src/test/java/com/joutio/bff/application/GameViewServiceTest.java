@@ -2,6 +2,8 @@ package com.joutio.bff.application;
 
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.bff.infrastructure.in.api.response.GameResultView;
+import com.joutio.bff.infrastructure.in.api.response.ProgressionView;
+import com.joutio.profile.domain.model.Badge;
 import com.joutio.game.domain.event.GameEvent;
 import com.joutio.game.domain.exception.GameExceptions;
 import com.joutio.game.domain.model.Game;
@@ -60,6 +62,16 @@ class GameViewServiceTest {
         assertThat(view.opponentRating()).isEqualTo(918);
         assertThat(view.topicMastery().xp()).isEqualTo(250);
         assertThat(view.topicMastery().xpGained()).isEqualTo(150);
+    }
+
+    @Test
+    void result_lists_the_badges_of_this_game_in_unlock_order() {
+        stubResult(gameResult(120, 90), List.of(new GameXp("game-1", 150, 18, true)));
+
+        GameResultView view = service.result("game-1", "player-1").join();
+
+        assertThat(view.badges()).extracting(ProgressionView.BadgeView::code)
+                .containsExactly("FIRST_WIN", "PERFECT");
     }
 
     @Test
@@ -187,6 +199,17 @@ class GameViewServiceTest {
                 CompletableFuture.completedFuture(PlayerProgress.empty(invocation.getArgument(0))));
         when(progressionLookup.getTopic(any(), any())).thenReturn(
                 CompletableFuture.completedFuture(TopicProgress.of("topic-1", 250, 1)));
+        Instant earned = Instant.parse("2026-11-19T10:00:00Z");
+        when(progressionLookup.getUnlocks(any())).thenAnswer(invocation -> CompletableFuture.completedFuture(
+                new com.joutio.profile.domain.model.PlayerUnlocks(invocation.getArgument(0), List.of(), List.of(
+                        new com.joutio.profile.domain.model.BadgeUnlock(
+                                invocation.getArgument(0), Badge.PERFECT, earned.plusSeconds(1), "game-1"),
+                        new com.joutio.profile.domain.model.BadgeUnlock(
+                                invocation.getArgument(0), Badge.FIRST_WIN, earned, "game-1"),
+                        new com.joutio.profile.domain.model.BadgeUnlock(
+                                invocation.getArgument(0), Badge.LIGHTNING, earned, "game-0"),
+                        new com.joutio.profile.domain.model.BadgeUnlock(
+                                invocation.getArgument(0), Badge.SOCIAL_BRONZE, earned, null)))));
         when(identityLookup.status(any())).thenReturn(CompletableFuture.completedFuture(
                 new com.joutio.identity.domain.model.UserAccountStatus(
                         "player-2", com.joutio.identity.domain.model.AccountStatus.ACTIVE, null)));

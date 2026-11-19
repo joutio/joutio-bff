@@ -8,6 +8,7 @@ import com.joutio.bff.infrastructure.in.api.request.QuestionContentRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionAnswersRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionCorrectAnswerRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionImageUrlRequest;
+import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionImageAltRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionTextRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicBannerUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateTopicCategoryRequest;
@@ -267,7 +268,8 @@ public class TopicAuthoringService {
                                                 userId,
                                                 request.language(),
                                                 request.text(),
-                                                toAnswers(request.answers()))))
+                                                toAnswers(request.answers()),
+                                                blankToNull(request.imageAlt()))))
                 .thenAccept(_ -> {});
     }
 
@@ -283,6 +285,21 @@ public class TopicAuthoringService {
                                                 userId,
                                                 request.language(),
                                                 request.text())))
+                .thenAccept(_ -> {});
+    }
+
+    public CompletableFuture<Void> updateQuestionImageAlt(
+            String questionId, String userId, UpdateQuestionImageAltRequest request) {
+        return requireQuestionOwner(questionId, userId)
+                .thenCompose(q -> limits.ensureEditable(q.topicId()))
+                .thenCompose(
+                        _ ->
+                                commandGateway.send(
+                                        new QuestionCommand.UpdateQuestionImageAltCommand(
+                                                questionId,
+                                                userId,
+                                                request.language(),
+                                                blankToNull(request.imageAlt()))))
                 .thenAccept(_ -> {});
     }
 
@@ -367,13 +384,19 @@ public class TopicAuthoringService {
                                 access.requireEditor(question, userId).thenApply(_ -> question));
     }
 
+    /** Une description vide efface celle de la langue. */
+    private static String blankToNull(String imageAlt) {
+        return imageAlt == null || imageAlt.isBlank() ? null : imageAlt.trim();
+    }
+
     private static Map<Language, QuestionContent> toContents(
             List<QuestionContentRequest> contents) {
         Map<Language, QuestionContent> result = new EnumMap<>(Language.class);
         for (QuestionContentRequest content : contents) {
             QuestionContent mapped =
                     new QuestionContent(
-                            content.language(), content.text(), toAnswers(content.answers()));
+                            content.language(), content.text(), toAnswers(content.answers()),
+                            blankToNull(content.imageAlt()));
             if (result.putIfAbsent(content.language(), mapped) != null) {
                 throw new BffProblems.InvalidQuestionRequestProblem(
                         "Duplicate content for language " + content.language());
@@ -412,7 +435,7 @@ public class TopicAuthoringService {
                                                                                 .AnswerView(
                                                                                 answer.getKey(),
                                                                                 answer.getValue()))
-                                                        .toList()))
+                                                        .toList(), entry.getValue().imageAlt()))
                         .toList();
 
         return new QuestionEditorView(

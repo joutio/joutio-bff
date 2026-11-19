@@ -5,6 +5,7 @@ import com.joutio.bff.infrastructure.in.api.request.AddQuestionTranslationReques
 import com.joutio.bff.infrastructure.in.api.request.RejectQuestionRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionAnswersRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionCorrectAnswerRequest;
+import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionImageAltRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionImageUrlRequest;
 import com.joutio.bff.infrastructure.in.api.request.UpdateQuestionTextRequest;
 import com.joutio.microservice.security.SecurityHelper;
@@ -68,6 +69,15 @@ public class QuestionController {
             @Valid @RequestBody UpdateQuestionCorrectAnswerRequest request) {
         return topicAuthoringService
                 .updateQuestionCorrectAnswer(questionId, SecurityHelper.getUserId(), request)
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
+    @PutMapping("/{questionId}/image-alt")
+    public CompletableFuture<ResponseEntity<Void>> updateImageAlt(
+            @PathVariable String questionId,
+            @Valid @RequestBody UpdateQuestionImageAltRequest request) {
+        return topicAuthoringService
+                .updateQuestionImageAlt(questionId, SecurityHelper.getUserId(), request)
                 .thenApply(_ -> ResponseEntity.noContent().build());
     }
 

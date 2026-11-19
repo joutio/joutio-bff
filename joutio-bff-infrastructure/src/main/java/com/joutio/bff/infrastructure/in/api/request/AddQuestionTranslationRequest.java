@@ -14,6 +14,7 @@ import java.util.List;
 public record AddQuestionTranslationRequest(
         @NotNull Language language,
         @NotBlank @Size(max = QuestionRules.MAX_TEXT_LENGTH) String text,
-        @NotEmpty @Size(min = 4, max = 4) @Valid List<QuestionContentRequest.AnswerRequest> answers
+        @NotEmpty @Size(min = 4, max = 4) @Valid List<QuestionContentRequest.AnswerRequest> answers,
+        @Size(max = QuestionRules.MAX_IMAGE_ALT_LENGTH) String imageAlt
 ) {
 }

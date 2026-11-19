@@ -30,11 +30,11 @@ class AchievementPublisherTest {
     @Test
     void badgeEarned_publishesBadgeAchievement() {
         publisher.onBadgeEarned(new ProgressionEvent.BadgeEarnedEvent(
-                USER_ID, Badge.DUELIST_DIAMANT, AT));
+                USER_ID, Badge.DUELIST_DIAMANT, AT, "game-1"));
 
         verify(messagingTemplate).convertAndSend(eq(DESTINATION), eq(AchievementView.badge(
                 "DUELIST_DIAMANT", "Mythe vivant", "VOLUME", "DIAMANT",
-                Badge.DUELIST_DIAMANT.metric().name(), Badge.DUELIST_DIAMANT.target(), AT)));
+                Badge.DUELIST_DIAMANT.metric().name(), Badge.DUELIST_DIAMANT.target(), "game-1", AT)));
     }
 
     @Test
@@ -49,7 +49,7 @@ class AchievementPublisherTest {
     @Test
     void publishesNothingWithoutUserId() {
         publisher.onBadgeEarned(new ProgressionEvent.BadgeEarnedEvent(
-                null, Badge.FIRST_WIN, AT));
+                null, Badge.FIRST_WIN, AT, "game-1"));
 
         verifyNoInteractions(messagingTemplate);
     }

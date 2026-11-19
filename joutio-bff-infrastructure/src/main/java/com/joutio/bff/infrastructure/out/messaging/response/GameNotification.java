@@ -77,9 +77,11 @@ public interface GameNotification {
     }
 
     /** Contenu d'une question dans une langue (clé = code ISO 639-1 : fr, en). */
+    /** Contenu d'une langue ; {@code imageAlt} : description de l'image, {@code null} si absente. */
     record RoundQuestionContent(
             String text,
-            Map<String, String> answers
+            Map<String, String> answers,
+            String imageAlt
     ) {
     }
 
@@ -89,6 +91,8 @@ public interface GameNotification {
             String questionId,
             String questionText,
             String imageUrl,
+            /** Description de l'image (repli FR, comme {@code questionText}) ; {@code null} si absente. */
+            String imageAlt,
             String difficulty,
             Map<String, String> answers,
             Map<String, RoundQuestionContent> translations,

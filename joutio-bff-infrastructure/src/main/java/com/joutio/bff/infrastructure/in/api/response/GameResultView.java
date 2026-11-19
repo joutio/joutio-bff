@@ -2,6 +2,8 @@ package com.joutio.bff.infrastructure.in.api.response;
 
 import com.joutio.game.domain.model.BotDifficulty;
 
+import java.util.List;
+
 /**
  * Écran de résultat d'un duel terminé : score, détail de la performance, récompense XP de la
  * partie ({@code null} si la progression n'est pas encore projetée), Elo et maîtrise du sujet.
@@ -33,7 +35,13 @@ public record GameResultView(
         String opponentId,
         BotDifficulty botDifficulty,
         /** L'adversaire a supprimé son compte : pseudo anonymisé et revanche interdite. */
-        boolean opponentDeleted
+        boolean opponentDeleted,
+        /**
+         * Badges débloqués par cette partie, dans l'ordre d'obtention (séquence du résultat, après
+         * les titres). Vide tant que la projection ne les a pas écrits : l'achievement STOMP
+         * ({@code gameId}) fait relire le résultat.
+         */
+        List<ProgressionView.BadgeView> badges
 ) {
 
     /** Récompense de la partie : XP gagnée dans le sujet et bonus de victoire dérivé du score. */

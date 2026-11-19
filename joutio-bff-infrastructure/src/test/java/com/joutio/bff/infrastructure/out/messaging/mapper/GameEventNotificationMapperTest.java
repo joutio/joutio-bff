@@ -55,7 +55,7 @@ class GameEventNotificationMapperTest {
                 questionId,
                 Map.of(Language.FR, new GameQuestionContent(
                         "Question " + questionId,
-                        Map.of(GameQuestionChoice.A, "Réponse A")
+                        Map.of(GameQuestionChoice.A, "Réponse A"), null
                 )),
                 imageUrl,
                 null,

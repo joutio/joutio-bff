@@ -153,7 +153,7 @@ class ProfileViewServiceTest {
                         .build()));
         when(progressionLookup.getUnlocks("user-1")).thenReturn(CompletableFuture.completedFuture(
                 new PlayerUnlocks("user-1", List.of(), List.of(new BadgeUnlock(
-                        "user-1", Badge.DUELIST_FER, Instant.parse("2026-11-15T10:00:00Z"))))));
+                        "user-1", Badge.DUELIST_FER, Instant.parse("2026-11-15T10:00:00Z"), null)))));
 
         BadgeCollectionView view = service.badges("user-1").join();
 

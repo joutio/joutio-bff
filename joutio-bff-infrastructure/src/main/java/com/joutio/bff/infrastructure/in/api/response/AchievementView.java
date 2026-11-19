@@ -22,6 +22,8 @@ public record AchievementView(
         String metric,
         Integer target,
         String topicId,
+        /** Partie qui a débloqué le badge ; {@code null} hors duel et pour un titre. */
+        String gameId,
         Instant at
 ) {
 
@@ -32,14 +34,14 @@ public record AchievementView(
 
     /** Badge du catalogue gagné par le joueur (métrique et cible = objectif atteint). */
     public static AchievementView badge(String code, String label, String family, String tier,
-                                        String metric, int target, Instant at) {
+                                        String metric, int target, String gameId, Instant at) {
         return new AchievementView(Kind.BADGE, code, label, family, tier, metric, target,
-                null, at);
+                null, gameId, at);
     }
 
     /** Titre thématique débloqué : palier de maîtrise franchi dans le sujet. */
     public static AchievementView title(String topicId, String tier, Instant at) {
         return new AchievementView(Kind.TITLE, null, null, null, tier, null, null,
-                topicId, at);
+                topicId, null, at);
     }
 }

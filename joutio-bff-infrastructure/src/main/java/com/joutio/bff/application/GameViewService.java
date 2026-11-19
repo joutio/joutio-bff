@@ -3,6 +3,7 @@ package com.joutio.bff.application;
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.bff.infrastructure.in.api.response.ActiveGameView;
 import com.joutio.bff.infrastructure.in.api.response.GameResultView;
+import com.joutio.bff.infrastructure.in.api.response.ProgressionView;
 import com.joutio.bff.infrastructure.in.api.response.TopicRefView;
 import com.joutio.bff.infrastructure.in.api.response.UserRefView;
 import com.joutio.game.domain.command.GameCommand;
@@ -17,10 +18,12 @@ import com.joutio.game.domain.query.GameQuery;
 import com.joutio.identity.domain.model.UserAccountStatus;
 import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
+import com.joutio.profile.domain.model.BadgeUnlock;
 import com.joutio.profile.domain.model.EloRules;
 import com.joutio.profile.domain.model.GameXp;
 import com.joutio.profile.domain.model.MasteryTier;
 import com.joutio.profile.domain.model.PlayerProgress;
+import com.joutio.profile.domain.model.PlayerUnlocks;
 import com.joutio.profile.domain.model.Profile;
 import com.joutio.profile.domain.model.TopicProgress;
 import com.joutio.profile.domain.query.ProgressionQuery;
@@ -31,6 +34,7 @@ import org.axonframework.queryhandling.QueryGateway;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -202,6 +206,15 @@ public class GameViewService {
                 });
     }
 
+    /** Badges débloqués par la partie, du plus ancien au plus récent (ordre de la séquence). */
+    private static List<ProgressionView.BadgeView> gameBadges(PlayerUnlocks unlocks, String gameId) {
+        return unlocks.badges().stream()
+                .filter(unlock -> gameId.equals(unlock.gameId()))
+                .sorted(Comparator.comparing(BadgeUnlock::earnedAt).thenComparing(BadgeUnlock::badge))
+                .map(unlock -> ProgressionViews.toBadgeView(unlock.badge()))
+                .toList();
+    }
+
     /**
      * Vérifie que le lecteur est l'un des deux joueurs. La partie inexistante remonte le
      * {@code GameNotFoundProblem} du service game (404) ; un tiers reçoit un 403 BFF explicite.
@@ -242,6 +255,8 @@ public class GameViewService {
                             : identityLookup.status(gameResult.opponentId()).exceptionally(_ -> null);
             CompletableFuture<PlayerProgress> playerProgressFuture = progressionLookup.get(playerId)
                     .exceptionally(_ -> null);
+            CompletableFuture<PlayerUnlocks> unlocksFuture = progressionLookup.getUnlocks(playerId)
+                    .exceptionally(_ -> PlayerUnlocks.empty(playerId));
             CompletableFuture<TopicProgress> topicProgressFuture = progressionLookup
                     .getTopic(playerId, gameResult.topicId())
                     .exceptionally(_ -> null);
@@ -258,7 +273,7 @@ public class GameViewService {
 
             return CompletableFuture.allOf(topicsFuture, opponentFuture, xpFuture, opponentXpFuture,
                             opponentStatusFuture, playerProgressFuture, topicProgressFuture,
-                            opponentProgressFuture).thenApply(_ -> {
+                            opponentProgressFuture, unlocksFuture).thenApply(_ -> {
                 GameXp gameXp = xpFuture.join().stream().findFirst().orElse(null);
                 Integer xp = gameXp == null ? null : gameXp.xp();
                 int eloDelta = gameXp == null ? 0 : gameXp.ratingDelta();
@@ -340,7 +355,8 @@ public class GameViewService {
                         opponentRef,
                         gameResult.opponentId(),
                         gameResult.botDifficulty(),
-                        opponentDeleted);
+                        opponentDeleted,
+                        gameBadges(unlocksFuture.join(), gameId));
             });
         });
     }
