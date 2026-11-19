@@ -1,3 +1,9 @@
+## [3.8.0](https://github.com/joutio/joutio-bff/compare/v3.7.1...v3.8.0) (2026-11-19)
+
+### Features
+
+* **duel:** forward the client answer time, count late answers ([ca70978](https://github.com/joutio/joutio-bff/commit/ca7097806623f2f881ba3a9da4fc26d80c3a48d5))
+
 ## [3.7.1](https://github.com/joutio/joutio-bff/compare/v3.7.0...v3.7.1) (2026-11-19)
 
 ### Bug Fixes
