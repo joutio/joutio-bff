@@ -1,3 +1,9 @@
+## [3.13.0](https://github.com/joutio/joutio-bff/compare/v3.12.0...v3.13.0) (2026-11-20)
+
+### Features
+
+* **block:** block and unblock players ([022e787](https://github.com/joutio/joutio-bff/commit/022e78729601a017003adb65a7b2411ced7fae5c))
+
 ## [3.12.0](https://github.com/joutio/joutio-bff/compare/v3.11.0...v3.12.0) (2026-11-20)
 
 ### Features
