@@ -1,3 +1,9 @@
+## [3.11.0](https://github.com/joutio/joutio-bff/compare/v3.10.0...v3.11.0) (2026-11-20)
+
+### Features
+
+* **challenge:** remind a pending challenge ([4e96c02](https://github.com/joutio/joutio-bff/commit/4e96c023c21f447080c368062f8584a2a68a6bdf))
+
 ## [3.10.0](https://github.com/joutio/joutio-bff/compare/v3.9.7...v3.10.0) (2026-11-20)
 
 ### Features
