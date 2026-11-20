@@ -1,3 +1,9 @@
+## [3.9.3](https://github.com/joutio/joutio-bff/compare/v3.9.2...v3.9.3) (2026-11-20)
+
+### Bug Fixes
+
+* **deps:** joutio-parent 2.3.0, readiness waits for instance-scoped processors ([2fd602c](https://github.com/joutio/joutio-bff/commit/2fd602c8f2a3987ab83291a4b0c17580f62034c6))
+
 ## [3.9.2](https://github.com/joutio/joutio-bff/compare/v3.9.1...v3.9.2) (2026-11-20)
 
 ### Bug Fixes
