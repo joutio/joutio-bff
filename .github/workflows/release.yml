@@ -1,5 +1,7 @@
 name: Release
 on:
+  # Manuel : republier sur une image de base corrigée (commits en attente de release).
+  workflow_dispatch:
   push:
     branches: [main]
     paths-ignore:
