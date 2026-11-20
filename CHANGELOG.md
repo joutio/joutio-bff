@@ -1,3 +1,9 @@
+## [3.9.5](https://github.com/joutio/joutio-bff/compare/v3.9.4...v3.9.5) (2026-11-20)
+
+### Bug Fixes
+
+* **docker:** rebuild on patched base images ([6e4d625](https://github.com/joutio/joutio-bff/commit/6e4d625c14c1f452e4d952c2464c408418bab043))
+
 ## [3.9.4](https://github.com/joutio/joutio-bff/compare/v3.9.3...v3.9.4) (2026-11-20)
 
 ### Bug Fixes
