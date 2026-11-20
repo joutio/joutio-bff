@@ -1,3 +1,9 @@
+## [3.12.0](https://github.com/joutio/joutio-bff/compare/v3.11.0...v3.12.0) (2026-11-20)
+
+### Features
+
+* **room:** room origin on RoomView ([d4e95d4](https://github.com/joutio/joutio-bff/commit/d4e95d4eb3f630b8b750c9af2b30fa8516b56127))
+
 ## [3.11.0](https://github.com/joutio/joutio-bff/compare/v3.10.0...v3.11.0) (2026-11-20)
 
 ### Features
