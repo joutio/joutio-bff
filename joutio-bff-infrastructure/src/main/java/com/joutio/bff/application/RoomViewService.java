@@ -1,5 +1,7 @@
 package com.joutio.bff.application;
 
+import com.joutio.matchmaking.domain.model.RoomOrigin;
+
 import com.joutio.bff.infrastructure.in.api.request.CreateBotRoomRequest;
 import com.joutio.bff.infrastructure.in.api.request.CreateRoomRequest;
 import com.joutio.bff.infrastructure.in.api.response.RoomOpponentView;
@@ -81,7 +83,8 @@ public class RoomViewService {
                                                 playerId,
                                                 null,
                                                 false,
-                                                null)))
+                                                null,
+                                                RoomOrigin.SHARED)))
                 .thenApply(_ -> roomId);
     }
 
@@ -104,7 +107,8 @@ public class RoomViewService {
                                                 playerId,
                                                 JoutioConstants.SYSTEM_USER_ID,
                                                 true,
-                                                difficulty.name())))
+                                                difficulty.name(),
+                                                RoomOrigin.BOT)))
                 .thenApply(_ -> roomId);
     }
 
@@ -326,6 +330,7 @@ public class RoomViewService {
                 topic,
                 room.status(),
                 room.vsBot(),
+                room.origin(),
                 viewerId.equals(room.initiatorId()),
                 opponentRef(opponentId, opponent, status, progress),
                 room.initiatorPresent(),

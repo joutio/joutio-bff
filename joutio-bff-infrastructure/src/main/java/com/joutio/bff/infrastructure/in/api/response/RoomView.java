@@ -1,5 +1,7 @@
 package com.joutio.bff.infrastructure.in.api.response;
 
+import com.joutio.matchmaking.domain.model.RoomOrigin;
+
 import com.joutio.matchmaking.domain.model.RoomStatus;
 
 import java.time.Instant;
@@ -13,6 +15,8 @@ public record RoomView(
         TopicRefView topic,
         RoomStatus status,
         boolean vsBot,
+        /** Origine : salon privé (`SHARED`), défi accepté (`CHALLENGE`), revanche (`REMATCH`), appariement, bot. */
+        RoomOrigin origin,
         /** Vrai si le viewer est l'initiateur (seul habilité à annuler la salle). */
         boolean canCancel,
         RoomOpponentView opponent,
