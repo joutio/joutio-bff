@@ -30,7 +30,7 @@ y est documentée dans le même commit.
 
 | Groupe | Portée |
 |---|---|
-| `game-notification`, `room-notification`, `matchmaking-notification`, `presence-notification`, `follow-presence-notification`, `achievement-notification`, `notification-ws`, `cache-invalidation` | **instance-scopés** : chaque pod consomme tout |
+| `game-notification`, `room-notification`, `matchmaking-notification`, `presence-notification`, `follow-presence-notification`, `achievement-notification`, `notification-ws`, `cache-invalidation` | **instance-scopés** : chaque pod reçoit tout, en direct, par un seul consumer Kafka sans token (SDK) ; handlers non bloquants |
 | `notification-push` | global : un seul envoi Web Push / Expo par événement, hors thread du processor |
 | `account-deletion-bff` | global : purge des données du BFF à la suppression d'un compte |
 
