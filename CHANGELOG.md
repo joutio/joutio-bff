@@ -1,3 +1,9 @@
+## [3.9.6](https://github.com/joutio/joutio-bff/compare/v3.9.5...v3.9.6) (2026-11-20)
+
+### Performance Improvements
+
+* **docker:** JDK 25 AOT cache at startup ([e2a150d](https://github.com/joutio/joutio-bff/commit/e2a150d405830df4d2889981fda09dd710cc08f1))
+
 ## [3.9.5](https://github.com/joutio/joutio-bff/compare/v3.9.4...v3.9.5) (2026-11-20)
 
 ### Bug Fixes
