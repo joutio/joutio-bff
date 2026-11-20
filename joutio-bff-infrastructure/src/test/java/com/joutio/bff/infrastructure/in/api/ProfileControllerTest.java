@@ -1,5 +1,7 @@
 package com.joutio.bff.infrastructure.in.api;
 
+import com.joutio.bff.application.TestUserBlocks;
+
 import com.joutio.bff.application.FollowLookup;
 import com.joutio.bff.application.ProfileUpdateService;
 import com.joutio.bff.application.ProfileViewService;
@@ -59,7 +61,7 @@ class ProfileControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new ProfileController(profileViewService, profileUpdateService, followLookup, commandGateway))
+                        new ProfileController(profileViewService, profileUpdateService, followLookup, commandGateway, TestUserBlocks.none()))
                 .setControllerAdvice(new BffProblemExceptionHandler())
                 .build();
         TestSecurity.authenticate(USER_ID);
@@ -92,7 +94,7 @@ class ProfileControllerTest {
                 null,
                 false, false, null,
                 new ProgressionView(List.of(), 200, 200, 0),
-                new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 5, 7, false, true, false);
+                new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 5, 7, false, true, false, false);
         when(profileViewService.profileView(USER_ID, "user-2"))
                 .thenReturn(CompletableFuture.completedFuture(view));
 

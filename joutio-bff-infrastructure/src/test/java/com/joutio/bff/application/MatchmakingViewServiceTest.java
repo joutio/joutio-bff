@@ -1,5 +1,7 @@
 package com.joutio.bff.application;
 
+import com.joutio.bff.application.TestUserBlocks;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -36,9 +38,11 @@ class MatchmakingViewServiceTest {
     private final ProfileLookup profileLookup = mock(ProfileLookup.class);
     private final ProgressionLookup progressionLookup = mock(ProgressionLookup.class);
 
+    private final UserBlockService userBlockService = TestUserBlocks.none();
+
     private final MatchmakingViewService service =
             new MatchmakingViewService(
-                    queryGateway, commandGateway, profileLookup, progressionLookup);
+                    queryGateway, commandGateway, profileLookup, progressionLookup, userBlockService);
 
     @Test
     void enqueue_carriesTopicLanguageCoverageFromTheme() {
@@ -58,6 +62,8 @@ class MatchmakingViewServiceTest {
         when(commandGateway.send(any(MatchmakingCommand.CreateMatchmakingCommand.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
+        when(userBlockService.relations("user-1")).thenReturn(CompletableFuture.completedFuture(Set.of("blocked-1")));
+
         service.enqueue("user-1", "topic-1").join();
 
         ArgumentCaptor<MatchmakingCommand.CreateMatchmakingCommand> captor =
@@ -72,6 +78,7 @@ class MatchmakingViewServiceTest {
         assertThat(command.topicCoverage().approvedCountFor(Set.of(Language.EN))).isEqualTo(8);
         assertThat(command.topicCoverage().approvedCountFor(Set.of(Language.FR, Language.EN)))
                 .isEqualTo(7);
+        assertThat(command.excludedPlayerIds()).containsExactly("blocked-1");
     }
 
     private static Profile profile() {

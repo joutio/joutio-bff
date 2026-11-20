@@ -258,6 +258,20 @@ public final class BffProblems {
     }
 
     /** Défi refusé : l'adversaire est suspendu (`409`). */
+    /**
+     * Blocage entre les deux joueurs, dans un sens ou dans l'autre : refus générique (défi, abonnement, salon), sans
+     * dire qui a bloqué qui.
+     */
+    public static class PlayerUnavailableProblem extends BaseProblem {
+        public PlayerUnavailableProblem(String userId) {
+            super("urn:joutio:bff:player:unavailable",
+                    ProblemCategory.PERMISSION,
+                    "Player unavailable",
+                    "This action is not available with player " + userId,
+                    Map.of("userId", userId));
+        }
+    }
+
     public static class ChallengeOpponentSuspendedProblem extends BaseProblem {
         public ChallengeOpponentSuspendedProblem(String opponentId) {
             super("urn:joutio:bff:challenge:opponentSuspended",

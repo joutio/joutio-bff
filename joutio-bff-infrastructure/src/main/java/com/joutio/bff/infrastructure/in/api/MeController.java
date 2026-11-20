@@ -1,5 +1,9 @@
 package com.joutio.bff.infrastructure.in.api;
 
+import com.joutio.bff.infrastructure.in.api.response.UserRefView;
+
+import com.joutio.bff.application.UserBlockService;
+
 import com.joutio.bff.application.AccountDeletionService;
 import com.joutio.bff.application.AccountService;
 import com.joutio.bff.application.MeService;
@@ -42,6 +46,7 @@ public class MeController {
     private static final int ONBOARDING_TOPICS_PER_CATEGORY = 3;
 
     private final MeService meService;
+    private final UserBlockService userBlockService;
     private final AccountDeletionService accountDeletionService;
     private final ProfileUpdateService profileUpdateService;
     private final RewardService rewardService;
@@ -53,7 +58,9 @@ public class MeController {
                         ProfileUpdateService profileUpdateService,
                         RewardService rewardService,
                         TopicRecommendationService topicRecommendationService,
-                        AccountService accountService) {
+                        AccountService accountService,
+            UserBlockService userBlockService) {
+        this.userBlockService = userBlockService;
         this.accountService = accountService;
         this.meService = meService;
         this.accountDeletionService = accountDeletionService;
@@ -68,6 +75,12 @@ public class MeController {
     }
 
     /** Catalogue des récompenses du joueur courant, verrouillées comprises. */
+    /** Joueurs bloqués par le joueur courant, plus récents d'abord (Réglages › Confidentialité). */
+    @GetMapping("/blocked")
+    public CompletableFuture<List<UserRefView>> blocked() {
+        return userBlockService.blockedPlayers(SecurityHelper.getUserId());
+    }
+
     @GetMapping("/rewards")
     public CompletableFuture<ResponseEntity<RewardsView>> rewards() {
         return rewardService.rewards(SecurityHelper.getUserId()).thenApply(ResponseEntity::ok);

@@ -1,5 +1,7 @@
 package com.joutio.bff.infrastructure.in.api;
 
+import com.joutio.bff.application.TestUserBlocks;
+
 import com.joutio.bff.application.AccountDeletionService;
 import com.joutio.bff.application.MeService;
 import com.joutio.bff.application.PremiumAccessPolicy;
@@ -59,7 +61,7 @@ class MeControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new MeController(
                 meService, accountDeletionService, profileUpdateService, rewardService,
-                topicRecommendationService, accountService)).build();
+                topicRecommendationService, accountService, TestUserBlocks.none())).build();
         JoutioPrincipal principal = new JoutioPrincipal() {
             @Override
             public String getUserId() {

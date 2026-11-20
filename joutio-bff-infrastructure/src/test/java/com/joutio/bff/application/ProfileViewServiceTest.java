@@ -1,5 +1,7 @@
 package com.joutio.bff.application;
 
+import com.joutio.bff.application.TestUserBlocks;
+
 import com.joutio.bff.infrastructure.in.api.response.ActivityViewResponse;
 import com.joutio.bff.infrastructure.in.api.response.BadgeCollectionView;
 import com.joutio.bff.infrastructure.in.api.response.PlayerProfileView;
@@ -50,7 +52,7 @@ class ProfileViewServiceTest {
     private final FollowLookup followLookup = mock(FollowLookup.class);
     private final IdentityLookup identityLookup = mock(IdentityLookup.class);
     private final ProfileViewService service =
-            new ProfileViewService(queryGateway, profileLookup, progressionLookup, followLookup, identityLookup);
+            new ProfileViewService(queryGateway, profileLookup, progressionLookup, followLookup, identityLookup, TestUserBlocks.none());
 
     {
         // Par défaut, aucun déblocage daté (les tests de titres le surchargent).

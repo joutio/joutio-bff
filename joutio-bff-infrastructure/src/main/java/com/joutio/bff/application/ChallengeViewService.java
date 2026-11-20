@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 public class ChallengeViewService {
 
     private final QueryGateway queryGateway;
+    private final UserBlockService userBlockService;
     private final CommandGateway commandGateway;
     private final ProfileLookup profileLookup;
     private final IdentityLookup identityLookup;
@@ -48,7 +49,9 @@ public class ChallengeViewService {
             CommandGateway commandGateway,
             ProfileLookup profileLookup,
             IdentityLookup identityLookup,
-            DuelCreationGuard duelCreationGuard) {
+            DuelCreationGuard duelCreationGuard,
+            UserBlockService userBlockService) {
+        this.userBlockService = userBlockService;
         this.queryGateway = queryGateway;
         this.commandGateway = commandGateway;
         this.profileLookup = profileLookup;
@@ -79,6 +82,7 @@ public class ChallengeViewService {
                         })
                 .thenCompose(
                         _ -> TopicAccessService.requirePlayable(queryGateway, request.topicId()))
+                .thenCompose(_ -> userBlockService.requireNotBlocked(challengerId, request.opponentId()))
                 .thenCompose(_ -> validateRematch(challengerId, request))
                 .thenCompose(
                         _ ->

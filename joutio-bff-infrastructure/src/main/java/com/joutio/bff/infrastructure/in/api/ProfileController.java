@@ -1,5 +1,7 @@
 package com.joutio.bff.infrastructure.in.api;
 
+import com.joutio.bff.application.UserBlockService;
+
 import com.joutio.bff.application.FollowLookup;
 import com.joutio.bff.application.ProfileUpdateService;
 import com.joutio.bff.application.ProfileViewService;
@@ -59,6 +61,7 @@ public class ProfileController {
     private static final int MAX_PAGE_SIZE = 100;
 
     private final ProfileViewService profileViewService;
+    private final UserBlockService userBlockService;
     private final ProfileUpdateService profileUpdateService;
     private final FollowLookup followLookup;
     private final CommandGateway commandGateway;
@@ -66,7 +69,9 @@ public class ProfileController {
     public ProfileController(ProfileViewService profileViewService,
                              ProfileUpdateService profileUpdateService,
                              FollowLookup followLookup,
-                             CommandGateway commandGateway) {
+                             CommandGateway commandGateway,
+            UserBlockService userBlockService) {
+        this.userBlockService = userBlockService;
         this.profileViewService = profileViewService;
         this.profileUpdateService = profileUpdateService;
         this.followLookup = followLookup;
@@ -238,14 +243,28 @@ public class ProfileController {
     @PutMapping("/{userId}/follow")
     public CompletableFuture<ResponseEntity<Void>> follow(@PathVariable String userId) {
         String viewerId = SecurityHelper.getUserId();
-        return commandGateway
-                .send(new UserFollowerCommand.FollowUserCommand(FollowerIds.user(viewerId, userId), viewerId, userId))
+        return userBlockService.requireNotBlocked(viewerId, userId)
+                .thenCompose(_ -> commandGateway
+                        .send(new UserFollowerCommand.FollowUserCommand(FollowerIds.user(viewerId, userId), viewerId, userId)))
                 .thenApply(_ -> {
                     // Compteurs en cache (30 s) : on purge les deux côtés après l'écriture.
                     followLookup.invalidateCounts(viewerId);
                     followLookup.invalidateCounts(userId);
                     return ResponseEntity.noContent().build();
                 });
+    }
+
+    /** Bloque le joueur : effet symétrique (défis, abonnements, salons, appariement), abonnements retirés. */
+    @PutMapping("/{userId}/block")
+    public CompletableFuture<ResponseEntity<Void>> block(@PathVariable String userId) {
+        return userBlockService.block(SecurityHelper.getUserId(), userId)
+                .thenApply(_ -> ResponseEntity.noContent().build());
+    }
+
+    @DeleteMapping("/{userId}/block")
+    public CompletableFuture<ResponseEntity<Void>> unblock(@PathVariable String userId) {
+        return userBlockService.unblock(SecurityHelper.getUserId(), userId)
+                .thenApply(_ -> ResponseEntity.noContent().build());
     }
 
     @DeleteMapping("/{userId}/follow")

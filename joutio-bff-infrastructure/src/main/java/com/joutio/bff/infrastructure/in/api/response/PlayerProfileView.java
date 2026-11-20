@@ -22,6 +22,8 @@ public record PlayerProfileView(
         boolean suspended,
         /** Premium accordé (badge à droite du pseudonyme). */
         boolean premium,
+        /** Le joueur courant a bloqué ce joueur : « Débloquer » à la place de Défier et Suivre. */
+        boolean blocked,
         /** Compte système bot : la fiche web se limite à l'avatar et au nom. */
         boolean bot
 ) {

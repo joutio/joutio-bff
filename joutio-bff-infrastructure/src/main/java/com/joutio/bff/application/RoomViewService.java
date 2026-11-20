@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 public class RoomViewService {
 
     private final QueryGateway queryGateway;
+    private final UserBlockService userBlockService;
     private final CommandGateway commandGateway;
     private final ProfileLookup profileLookup;
     private final ProgressionLookup progressionLookup;
@@ -57,7 +58,9 @@ public class RoomViewService {
             ProfileLookup profileLookup,
             ProgressionLookup progressionLookup,
             IdentityLookup identityLookup,
-            DuelCreationGuard duelCreationGuard) {
+            DuelCreationGuard duelCreationGuard,
+            UserBlockService userBlockService) {
+        this.userBlockService = userBlockService;
         this.queryGateway = queryGateway;
         this.commandGateway = commandGateway;
         this.profileLookup = profileLookup;
@@ -147,6 +150,10 @@ public class RoomViewService {
                                                 ? TopicAccessService.requirePlayable(
                                                         queryGateway, room.topicId())
                                                 : CompletableFuture.<Void>completedFuture(null))
+                                        // Salon d'un joueur en relation de blocage : refusé, sans dire pourquoi.
+                                        .thenCompose(_ -> playerId.equals(room.initiatorId())
+                                                ? CompletableFuture.<Void>completedFuture(null)
+                                                : userBlockService.requireNotBlocked(playerId, room.initiatorId()))
                                         .thenCompose(_ -> roomPlayer(playerId, room.topicId())))
                 .thenCompose(
                         player ->

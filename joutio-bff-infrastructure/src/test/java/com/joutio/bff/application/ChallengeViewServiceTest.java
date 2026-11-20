@@ -1,5 +1,7 @@
 package com.joutio.bff.application;
 
+import com.joutio.bff.application.TestUserBlocks;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,7 +43,7 @@ class ChallengeViewServiceTest {
     private final DuelCreationGuard duelCreationGuard = mock(DuelCreationGuard.class);
     private final ChallengeViewService service =
             new ChallengeViewService(
-                    queryGateway, commandGateway, profileLookup, identityLookup, duelCreationGuard);
+                    queryGateway, commandGateway, profileLookup, identityLookup, duelCreationGuard, TestUserBlocks.none());
 
     @BeforeEach
     void setUp() {

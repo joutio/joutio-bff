@@ -90,6 +90,7 @@ public class ProfileViewService {
     }
 
     private final QueryGateway queryGateway;
+    private final UserBlockService userBlockService;
     private final ProfileLookup profileLookup;
     private final ProgressionLookup progressionLookup;
     private final FollowLookup followLookup;
@@ -99,7 +100,9 @@ public class ProfileViewService {
                               ProfileLookup profileLookup,
                               ProgressionLookup progressionLookup,
                               FollowLookup followLookup,
-                              IdentityLookup identityLookup) {
+                              IdentityLookup identityLookup,
+            UserBlockService userBlockService) {
+        this.userBlockService = userBlockService;
         this.queryGateway = queryGateway;
         this.profileLookup = profileLookup;
         this.progressionLookup = progressionLookup;
@@ -131,6 +134,7 @@ public class ProfileViewService {
                     0,
                     false,
                     false,
+                    false,
                     true));
         }
         CompletableFuture<Profile> profileFuture = profileLookup.get(userId);
@@ -144,9 +148,12 @@ public class ProfileViewService {
                 : followLookup.userFollowed(viewerId, userId);
         CompletableFuture<UserAccountStatus> statusFuture = identityLookup.status(userId)
                 .exceptionally(_ -> null);
+        CompletableFuture<Boolean> blockedFuture = userId.equals(viewerId)
+                ? CompletableFuture.completedFuture(false)
+                : userBlockService.hasBlocked(viewerId, userId);
 
         return CompletableFuture.allOf(profileFuture, progressFuture, countsFuture, presenceFuture, followingFuture,
-                        statusFuture)
+                        statusFuture, blockedFuture)
                 .thenApply(_ -> {
                     Profile profile = profileFuture.join();
                     PlayerProgress progress = progressFuture.join();
@@ -170,6 +177,7 @@ public class ProfileViewService {
                             counts.following(),
                             status != null && status.suspended(Instant.now()),
                             IdentityLookup.premium(status, Instant.now()),
+                            blockedFuture.join(),
                             false);
                 });
     }

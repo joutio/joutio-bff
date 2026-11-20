@@ -1,5 +1,7 @@
 package com.joutio.bff.application;
 
+import com.joutio.bff.application.TestUserBlocks;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,7 +57,8 @@ class RoomViewServiceTest {
                     profileLookup,
                     progressionLookup,
                     identityLookup,
-                    duelCreationGuard);
+                    duelCreationGuard,
+                    TestUserBlocks.none());
 
     @Test
     void create_refusedBeforeCommandWhenDuelGuardRejects() {

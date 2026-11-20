@@ -29,6 +29,7 @@ import java.util.concurrent.CompletableFuture;
 public class MatchmakingViewService {
 
     private final QueryGateway queryGateway;
+    private final UserBlockService userBlockService;
     private final CommandGateway commandGateway;
     private final ProfileLookup profileLookup;
     private final ProgressionLookup progressionLookup;
@@ -37,7 +38,9 @@ public class MatchmakingViewService {
             QueryGateway queryGateway,
             CommandGateway commandGateway,
             ProfileLookup profileLookup,
-            ProgressionLookup progressionLookup) {
+            ProgressionLookup progressionLookup,
+            UserBlockService userBlockService) {
+        this.userBlockService = userBlockService;
         this.queryGateway = queryGateway;
         this.commandGateway = commandGateway;
         this.profileLookup = profileLookup;
@@ -77,7 +80,12 @@ public class MatchmakingViewService {
                 .thenCombine(
                         coverageFuture,
                         (pending, coverage) ->
-                                new PreparedCommand(pending, toTopicCoverage(coverage)))
+                                new PreparedCommand(pending, toTopicCoverage(coverage), Set.of()))
+                // Jamais apparié à un joueur en relation de blocage, dans un sens ou dans l'autre.
+                .thenCombine(
+                        userBlockService.relations(playerId),
+                        (prepared, blocked) ->
+                                new PreparedCommand(prepared.pending(), prepared.topicCoverage(), blocked))
                 .thenCompose(
                         prepared ->
                                 commandGateway
@@ -88,7 +96,8 @@ public class MatchmakingViewService {
                                                         prepared.pending().topicId(),
                                                         prepared.pending().rating(),
                                                         prepared.pending().languages(),
-                                                        prepared.topicCoverage()))
+                                                        prepared.topicCoverage(),
+                                                        prepared.excludedPlayerIds()))
                                         .thenApply(
                                                 _ ->
                                                         new MatchmakingTicketView(
@@ -163,7 +172,7 @@ public class MatchmakingViewService {
     private record PendingCommand(
             String matchmakingId, String topicId, int rating, Set<Language> languages) {}
 
-    private record PreparedCommand(PendingCommand pending, TopicLanguageCoverage topicCoverage) {}
+    private record PreparedCommand(PendingCommand pending, TopicLanguageCoverage topicCoverage, Set<String> excludedPlayerIds) {}
 
     /** Événements du ticket d'appariement, du plus ancien au plus récent : repli de l'écran à l'ouverture. */
     public CompletableFuture<List<EventEnvelope>> events(String ticketId) {
