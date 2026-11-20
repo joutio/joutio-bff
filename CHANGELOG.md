@@ -1,3 +1,9 @@
+## [3.10.0](https://github.com/joutio/joutio-bff/compare/v3.9.7...v3.10.0) (2026-11-20)
+
+### Features
+
+* **bff:** premium badge on player views, admin role no longer premium ([42c066a](https://github.com/joutio/joutio-bff/commit/42c066a32a94e8e2703d857c93828c17e46bd178))
+
 ## [3.9.7](https://github.com/joutio/joutio-bff/compare/v3.9.6...v3.9.7) (2026-11-20)
 
 ### Bug Fixes
