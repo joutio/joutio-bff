@@ -10,12 +10,14 @@ public record RoomOpponentView(
         String pseudonym,
         String avatarOptions,
         boolean suspended,
+        /** Premium accordé (badge à droite du pseudonyme). */
+        boolean premium,
         Integer rating,
         String country
 ) {
 
     /** Référence minimale (bot ou repli) : aucune donnée de progression. */
     public RoomOpponentView(String userId, String pseudonym, String avatarOptions, boolean suspended) {
-        this(userId, pseudonym, avatarOptions, suspended, null, null);
+        this(userId, pseudonym, avatarOptions, suspended, false, null, null);
     }
 }

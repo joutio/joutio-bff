@@ -1,6 +1,6 @@
 package com.joutio.bff.infrastructure.in.api;
 
-import com.joutio.bff.application.PremiumAccessPolicy;
+import com.joutio.bff.application.AdminRole;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.joutio.bff.application.TopicAuthoringService;
 import com.joutio.bff.application.TopicViewService;
@@ -148,7 +148,7 @@ public class TopicController {
     @PostMapping
     public CompletableFuture<ResponseEntity<IdResponse>> create(
             @Valid @RequestBody CreateTopicRequest request) {
-        boolean official = PremiumAccessPolicy.isAdmin(SecurityContextHolder.getContext().getAuthentication());
+        boolean official = AdminRole.isAdmin(SecurityContextHolder.getContext().getAuthentication());
         return topicAuthoringService
                 .create(SecurityHelper.getUserId(), request, official)
                 .thenApply(topicId -> ResponseEntityBuilder.creation(ENDPOINT, topicId));

@@ -348,6 +348,7 @@ public class RoomViewService {
                     opponent.pseudonym(),
                     opponent.avatarOptions(),
                     status != null && status.suspended(Instant.now()),
+                    IdentityLookup.premium(status, Instant.now()),
                     progress == null ? null : progress.rating(),
                     opponent.country());
         }

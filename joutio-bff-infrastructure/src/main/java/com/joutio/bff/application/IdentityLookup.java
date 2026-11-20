@@ -138,6 +138,11 @@ public class IdentityLookup {
                 });
     }
 
+    /** Premium accordé et effectif (badge des vues joueur) ; {@code ROLE_ADMIN} n'y compte pas. */
+    public static boolean premium(UserAccountStatus status, Instant now) {
+        return status != null && status.premiumActive(now);
+    }
+
     /** Statut effectif : une suspension temporaire échue est active. */
     public static boolean suspended(UserAccountStatus status, Instant now) {
         return status != null && status.suspended(now);

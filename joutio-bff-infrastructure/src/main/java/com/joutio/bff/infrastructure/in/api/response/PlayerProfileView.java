@@ -20,6 +20,8 @@ public record PlayerProfileView(
         long followersCount,
         long followingCount,
         boolean suspended,
+        /** Premium accordé (badge à droite du pseudonyme). */
+        boolean premium,
         /** Compte système bot : la fiche web se limite à l'avatar et au nom. */
         boolean bot
 ) {

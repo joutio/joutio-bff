@@ -7,11 +7,13 @@ public record UserRefView(
         String userId,
         String pseudonym,
         String avatarOptions,
-        boolean suspended
+        boolean suspended,
+        /** Premium accordé (badge à droite du pseudonyme). */
+        boolean premium
 ) {
 
-    /** Référence d'un joueur non suspendu. */
+    /** Référence d'un joueur non suspendu, sans Premium. */
     public UserRefView(String userId, String pseudonym, String avatarOptions) {
-        this(userId, pseudonym, avatarOptions, false);
+        this(userId, pseudonym, avatarOptions, false, false);
     }
 }

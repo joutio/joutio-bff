@@ -130,6 +130,7 @@ public class ProfileViewService {
                     0,
                     0,
                     false,
+                    false,
                     true));
         }
         CompletableFuture<Profile> profileFuture = profileLookup.get(userId);
@@ -168,6 +169,7 @@ public class ProfileViewService {
                             counts.followers(),
                             counts.following(),
                             status != null && status.suspended(Instant.now()),
+                            IdentityLookup.premium(status, Instant.now()),
                             false);
                 });
     }
@@ -573,7 +575,8 @@ public class ProfileViewService {
                 progression.rating(),
                 viewerFollowing.contains(userId),
                 presence == null ? null : toPresence(presence),
-                status != null && status.suspended(Instant.now())));
+                status != null && status.suspended(Instant.now()),
+                IdentityLookup.premium(status, Instant.now())));
     }
 
     private static Comparator<PlayerCardView> peopleComparator(PeopleSort sort) {
@@ -614,7 +617,8 @@ public class ProfileViewService {
                         opponent.userId(),
                         opponent.pseudonym(),
                         opponent.avatarOptions(),
-                        status != null && status.suspended(Instant.now())),
+                        status != null && status.suspended(Instant.now()),
+                        IdentityLookup.premium(status, Instant.now())),
                 game.opponent() == null ? null : game.opponent().name(),
                 outcomeOf(game, userId),
                 isPlayer1 ? game.player1Score() : game.player2Score(),

@@ -37,10 +37,10 @@ class PremiumAccessPolicyTest {
     }
 
     @Test
-    void adminIsPremiumWithoutGrant() {
+    void adminWithoutGrantIsNotPremium() {
         authenticate("admin", "ROLE_ADMIN");
         stub("admin", status(AccountStatus.ACTIVE, null, null));
-        assertTrue(policy.isPremium());
+        assertFalse(policy.isPremium());
     }
 
     @Test

@@ -282,6 +282,7 @@ public class ChallengeViewService {
                 profile.userId(),
                 profile.pseudonym(),
                 profile.avatarOptions(),
-                status != null && status.suspended(Instant.now()));
+                status != null && status.suspended(Instant.now()),
+                IdentityLookup.premium(status, Instant.now()));
     }
 }

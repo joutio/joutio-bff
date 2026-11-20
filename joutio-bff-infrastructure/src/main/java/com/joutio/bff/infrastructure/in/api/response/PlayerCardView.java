@@ -10,6 +10,8 @@ public record PlayerCardView(
         int rating,
         boolean following,
         PresenceView presence,
-        boolean suspended
+        boolean suspended,
+        /** Premium accordé (badge à droite du pseudonyme). */
+        boolean premium
 ) {
 }

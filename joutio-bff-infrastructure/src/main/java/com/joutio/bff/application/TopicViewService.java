@@ -524,7 +524,8 @@ public class TopicViewService {
                 rating == null ? 200 : rating.rating(),
                 entry.totalXp(),
                 entry.monthlyXp(),
-                status != null && status.suspended(Instant.now()));
+                status != null && status.suspended(Instant.now()),
+                IdentityLookup.premium(status, Instant.now()));
     }
 
     private static Comparator<Topic> topicComparator(TopicSort sort) {

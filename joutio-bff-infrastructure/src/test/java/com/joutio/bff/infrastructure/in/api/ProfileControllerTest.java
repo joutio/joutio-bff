@@ -92,7 +92,7 @@ class ProfileControllerTest {
                 null,
                 false, false, null,
                 new ProgressionView(List.of(), 200, 200, 0),
-                new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 5, 7, false, false);
+                new DuelStatsView(4, 3, 1, 0, 75, 160, 2, 3), 5, 7, false, true, false);
         when(profileViewService.profileView(USER_ID, "user-2"))
                 .thenReturn(CompletableFuture.completedFuture(view));
 
@@ -104,7 +104,8 @@ class ProfileControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value("user-2"))
                 .andExpect(jsonPath("$.stats.wins").value(3))
-                .andExpect(jsonPath("$.followersCount").value(5));
+                .andExpect(jsonPath("$.followersCount").value(5))
+                .andExpect(jsonPath("$.premium").value(true));
     }
 
     @Test

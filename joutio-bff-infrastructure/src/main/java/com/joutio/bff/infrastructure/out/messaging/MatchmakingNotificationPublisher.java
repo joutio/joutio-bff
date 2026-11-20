@@ -89,6 +89,7 @@ public class MatchmakingNotificationPublisher {
                     profile.pseudonym(),
                     profile.avatarOptions(),
                     false,
+                    false,
                     progress == null ? null : progress.rating(),
                     profile.country());
             return new MatchmakingNotification.MatchedNotification(

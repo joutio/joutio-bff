@@ -138,7 +138,8 @@ public class GameViewService {
                         opponent.userId(),
                         opponent.pseudonym(),
                         opponent.avatarOptions(),
-                        status != null && status.suspended(Instant.now()));
+                        status != null && status.suspended(Instant.now()),
+                        IdentityLookup.premium(status, Instant.now()));
         return new ActiveGameView(
                 game.gameId(), topic, opponentRef, game.opponent(), game.status(), game.createdAt());
     }
@@ -364,7 +365,8 @@ public class GameViewService {
                                 opponent.userId(),
                                 opponent.pseudonym(),
                                 opponent.avatarOptions(),
-                                opponentStatus != null && opponentStatus.suspended(Instant.now()));
+                                opponentStatus != null && opponentStatus.suspended(Instant.now()),
+                                IdentityLookup.premium(opponentStatus, Instant.now()));
 
                 return new GameResultView(
                         gameResult.myScore(),

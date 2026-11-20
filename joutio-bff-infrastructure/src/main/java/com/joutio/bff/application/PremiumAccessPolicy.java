@@ -11,7 +11,6 @@ import com.joutio.microservice.security.SecurityHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
@@ -25,8 +24,7 @@ import java.util.concurrent.TimeoutException;
 /**
  * Droit Premium de la requête courante.
  *
- * <p>L'admin ({@code ROLE_ADMIN} du JWT) est Premium par défaut. Pour les autres, le droit est
- * porté par {@code UserAggregate} (identity) et lu via {@link IdentityLookup} : déjà interrogé à
+ * <p>Le droit est porté par {@code UserAggregate} (identity) et lu via {@link IdentityLookup} : déjà interrogé à
  * chaque requête par {@code CurrentUserExistsFilter}, son cache est purgé sur les événements
  * {@code UserPremiumGranted/RevokedEvent}. Un achat ou un retrait est donc visible sans attendre
  * le renouvellement du jeton (premium/specs/entitlements.md § 3).</p>
@@ -39,7 +37,6 @@ public class PremiumAccessPolicy {
 
     private static final Logger logger = LoggerFactory.getLogger(PremiumAccessPolicy.class);
 
-    static final String ROLE_ADMIN = "ROLE_ADMIN";
     private static final long LOOKUP_TIMEOUT_MS = 2_000;
 
     /** Droit Premium résolu : {@code premiumUntil}/{@code source} nuls si aucun droit accordé. */
@@ -63,7 +60,7 @@ public class PremiumAccessPolicy {
     }
 
     /**
-     * Droit Premium d'un joueur quelconque (admin compris), relu dans identity sans cache :
+     * Droit Premium d'un joueur quelconque, relu dans identity sans cache :
      * utilisable hors du thread HTTP et pour un tiers (créateur d'un sujet, invité d'une équipe).
      */
     public CompletableFuture<Boolean> premium(String userId) {
@@ -84,18 +81,9 @@ public class PremiumAccessPolicy {
         if (authentication == null || !authentication.isAuthenticated()) {
             return PremiumStatus.NONE;
         }
-        boolean admin = isAdmin(authentication);
-        PremiumStatus granted = SecurityHelper.findUserId()
+        return SecurityHelper.findUserId()
                 .map(this::lookup)
                 .orElse(PremiumStatus.NONE);
-        return admin ? new PremiumStatus(true, granted.premiumUntil(), granted.source()) : granted;
-    }
-
-    public static boolean isAdmin(Authentication authentication) {
-        return authentication != null && authentication.isAuthenticated()
-                && authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(ROLE_ADMIN::equals);
     }
 
     PremiumStatus lookup(String userId) {

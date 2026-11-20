@@ -18,7 +18,9 @@ public record TopicLeaderboardView(
             int rating,
             int totalXp,
             int monthlyXp,
-            boolean suspended
+            boolean suspended,
+            /** Premium accordé (badge à droite du pseudonyme). */
+            boolean premium
     ) {
     }
 }

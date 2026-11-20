@@ -73,6 +73,7 @@ public class SuggestionService {
                         null,
                         topic.names(),
                         false,
+                        false,
                         topic.official())));
                 players.forEach(profile -> suggestions.add(new SuggestionView(
                         SuggestionView.Type.PLAYER,
@@ -85,8 +86,9 @@ public class SuggestionService {
                         null,
                         profile.avatarOptions(),
                         null,
-                        statusById.get(profile.userId()) != null
-                                && statusById.get(profile.userId()).suspended(java.time.Instant.now()))));
+                        IdentityLookup.suspended(statusById.get(profile.userId()), java.time.Instant.now()),
+                        IdentityLookup.premium(statusById.get(profile.userId()), java.time.Instant.now()),
+                        false)));
                 return List.copyOf(suggestions);
             });
         });
