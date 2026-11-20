@@ -1,3 +1,9 @@
+## [3.9.7](https://github.com/joutio/joutio-bff/compare/v3.9.6...v3.9.7) (2026-11-20)
+
+### Bug Fixes
+
+* **deps:** joutio-parent 2.4.1 with patched dependencies ([e22dd70](https://github.com/joutio/joutio-bff/commit/e22dd7012a7270e54e39c03019ac412050902baf))
+
 ## [3.9.6](https://github.com/joutio/joutio-bff/compare/v3.9.5...v3.9.6) (2026-11-20)
 
 ### Performance Improvements
