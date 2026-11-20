@@ -81,7 +81,8 @@ class ChallengeControllerTest {
                 null,
                 null,
                 Instant.parse("2026-10-05T10:00:00Z"),
-                Instant.parse("2026-10-05T11:00:00Z"));
+                Instant.parse("2026-10-05T11:00:00Z"),
+                Instant.parse("2026-10-05T10:10:00Z"));
         when(challengeViewService.get("challenge-1")).thenReturn(CompletableFuture.completedFuture(view));
 
         MvcResult result = mockMvc.perform(get("/api/challenges/challenge-1"))
@@ -89,6 +90,18 @@ class ChallengeControllerTest {
                 .andReturn();
 
         mockMvc.perform(asyncDispatch(result)).andExpect(status().isOk());
+    }
+
+    @Test
+    void remind_delegates_to_service() throws Exception {
+        when(challengeViewService.remind("challenge-1", USER_ID)).thenReturn(CompletableFuture.completedFuture(null));
+
+        MvcResult remind = mockMvc.perform(post("/api/challenges/challenge-1/remind"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+        mockMvc.perform(asyncDispatch(remind)).andExpect(status().isOk());
+
+        verify(challengeViewService).remind("challenge-1", USER_ID);
     }
 
     @Test

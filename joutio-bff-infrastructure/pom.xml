@@ -20,7 +20,7 @@
         <joutio.social-domain.version>1.1.0</joutio.social-domain.version>
         <joutio.game-domain.version>1.4.0</joutio.game-domain.version>
         <joutio.profile-domain.version>4.1.0</joutio.profile-domain.version>
-        <joutio.matchmaking-domain.version>2.0.1</joutio.matchmaking-domain.version>
+        <joutio.matchmaking-domain.version>2.3.0</joutio.matchmaking-domain.version>
         <joutio.leaderboard-domain.version>1.1.0</joutio.leaderboard-domain.version>
         <joutio.notification-domain.version>1.1.0</joutio.notification-domain.version>
         <!-- Web Push : JWT VAPID Nimbus + chiffrement BouncyCastle + HttpClient JDK. -->

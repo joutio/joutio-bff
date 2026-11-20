@@ -67,6 +67,14 @@ public class ChallengeController {
                 .thenApply(_ -> ResponseEntity.ok().build());
     }
 
+    /** Le lanceur relance un défi resté sans réponse : l'invitation revient en tête chez l'adversaire. */
+    @PostMapping("/{challengeId}/remind")
+    public CompletableFuture<ResponseEntity<Void>> remind(@PathVariable String challengeId) {
+        return challengeViewService
+                .remind(challengeId, SecurityHelper.getUserId())
+                .thenApply(_ -> ResponseEntity.ok().build());
+    }
+
     /** Le lanceur annule un défi resté sans réponse. */
     @PostMapping("/{challengeId}/cancel")
     public CompletableFuture<ResponseEntity<Void>> cancel(@PathVariable String challengeId) {

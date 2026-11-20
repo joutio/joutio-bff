@@ -189,6 +189,18 @@ public class ChallengeViewService {
                                         .thenAccept(_ -> {}));
     }
 
+    /** Le lanceur relance son défi en attente (au plus toutes les 10 min, refus porté par matchmaking). */
+    public CompletableFuture<Void> remind(String challengeId, String playerId) {
+        return requireChallenge(challengeId)
+                .thenCompose(
+                        _ ->
+                                commandGateway
+                                        .send(
+                                                new ChallengeCommand.RemindChallengeCommand(
+                                                        challengeId, playerId))
+                                        .thenAccept(_ -> {}));
+    }
+
     private CompletableFuture<Challenge> requireChallenge(String challengeId) {
         return queryGateway.query(
                 new ChallengeQuery.GetChallengeById(challengeId),
@@ -270,7 +282,8 @@ public class ChallengeViewService {
                 challenge.roomId(),
                 challenge.gameId(),
                 challenge.createdAt(),
-                challenge.expiresAt());
+                challenge.expiresAt(),
+                challenge.remindableAt());
     }
 
     private static UserRefView toRef(Profile profile, Map<String, UserAccountStatus> statusById) {

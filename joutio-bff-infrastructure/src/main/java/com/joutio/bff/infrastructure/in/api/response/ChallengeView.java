@@ -18,6 +18,8 @@ public record ChallengeView(
         String roomId,
         String gameId,
         Instant createdAt,
-        Instant expiresAt
+        Instant expiresAt,
+        /** Prochaine relance possible par le lanceur (10 min après l'envoi, puis après chaque relance). */
+        Instant remindableAt
 ) {
 }
