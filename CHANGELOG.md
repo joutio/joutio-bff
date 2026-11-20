@@ -1,3 +1,9 @@
+## [3.9.1](https://github.com/joutio/joutio-bff/compare/v3.9.0...v3.9.1) (2026-11-20)
+
+### Bug Fixes
+
+* **deps:** joutio-parent 2.2.0, kafka consumer, segment and rebalancer metrics ([cb321f7](https://github.com/joutio/joutio-bff/commit/cb321f76c61a7fac7188aea17b9388f0e24e5334))
+
 ## [3.9.0](https://github.com/joutio/joutio-bff/compare/v3.8.0...v3.9.0) (2026-11-19)
 
 ### Features
