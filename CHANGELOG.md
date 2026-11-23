@@ -1,3 +1,9 @@
+## [3.14.0](https://github.com/joutio/joutio-bff/compare/v3.13.0...v3.14.0) (2026-11-23)
+
+### Features
+
+* **result:** expose round review and bump game-domain to 1.6.0 ([03e9622](https://github.com/joutio/joutio-bff/commit/03e9622cad5fb3f675a767ba3bf0cb25d63fcd1d))
+
 ## [3.13.0](https://github.com/joutio/joutio-bff/compare/v3.12.0...v3.13.0) (2026-11-20)
 
 ### Features
