@@ -79,12 +79,12 @@ joutio:
     default-image: ${JOUTIO_SHARE_DEFAULT_IMAGE:https://joutio.com/og.png}
   axon:
     instance-scoped-groups:
-      - game-notification
-      - room-notification
-      - matchmaking-notification
-      - presence-notification
-      - follow-presence-notification
-      - achievement-notification
+      - game-events
+      - room-events
+      - matchmaking-events
+      - presence-events
+      - follow-presence-events
+      - achievement-events
       - notification-ws
       # Purge des caches de lecture sur chaque réplique (follows, profil) : Éditions/follows sont
       # traités par un pod, tous les autres doivent invalider leur Caffeine local.

@@ -1,6 +1,6 @@
 package com.joutio.bff.infrastructure.out.messaging.mapper;
 
-import com.joutio.bff.infrastructure.out.messaging.response.GameNotification;
+import com.joutio.bff.infrastructure.out.messaging.response.GameEventResponse;
 import com.joutio.game.domain.event.GameEvent;
 import com.joutio.game.domain.model.GamePlayerType;
 import com.joutio.game.domain.model.GameQuestion;
@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Le client web précharge les images dès la création de la partie : le mapping
  * {@code GAME_CREATED} doit exposer toutes les images non nulles, dans l'ordre des rounds.
  */
-class GameEventNotificationMapperTest {
+class GameEventResponseMapperTest {
 
     @Test
     void game_created_exposes_non_null_question_images_in_round_order() {
@@ -42,10 +42,10 @@ class GameEventNotificationMapperTest {
                 Instant.parse("2026-09-18T10:00:00Z")
         );
 
-        GameNotification notification = GameEventNotificationMapper.toNotification(event).orElseThrow();
+        GameEventResponse response = GameEventResponseMapper.toResponse(event).orElseThrow();
 
-        assertThat(notification).isInstanceOf(GameNotification.GameCreatedNotification.class);
-        GameNotification.GameCreatedNotification created = (GameNotification.GameCreatedNotification) notification;
+        assertThat(response).isInstanceOf(GameEventResponse.GameCreatedEventResponse.class);
+        GameEventResponse.GameCreatedEventResponse created = (GameEventResponse.GameCreatedEventResponse) response;
         assertThat(created.questionImageUrls())
                 .containsExactly("https://images.example/q1.png", "https://images.example/q3.png");
     }

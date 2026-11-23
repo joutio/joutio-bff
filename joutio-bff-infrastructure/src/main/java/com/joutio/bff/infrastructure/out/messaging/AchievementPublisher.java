@@ -14,12 +14,12 @@ import org.springframework.stereotype.Service;
  * thématique débloqué → poussés sur {@code /topic/achievements/{userId}} pour que le client
  * célèbre (popup + jingle) où qu'il soit — hors écran immersif, où la célébration est reportée.
  *
- * <p>Comme la présence éphémère ({@code follow-presence-notification}) : aucune persistance, pas
+ * <p>Comme la présence éphémère ({@code follow-presence-events}) : aucune persistance, pas
  * d'inbox, pas d'`EventEnvelopeResponse` — le client n'a rien à replier, seulement à fêter.
  * Le groupe est <b>instance-scopé</b> : chaque pod sert ses propres clients STOMP.</p>
  */
 @Service
-@ProcessingGroup("achievement-notification")
+@ProcessingGroup("achievement-events")
 public class AchievementPublisher {
 
     private static final Logger logger = LoggerFactory.getLogger(AchievementPublisher.class);

@@ -29,8 +29,8 @@ class RoomPresencePublisherTest {
 
         EventEnvelopeResponse expected = EventEnvelopeResponse.of("room-1", 0, AT, RoomPresencePublisher.EVENT_TYPE,
                 new RoomPresenceView("room-1", "opponent", true, AT));
-        verify(messagingTemplate).convertAndSend("/topic/notifications/initiator", expected);
-        verify(messagingTemplate).convertAndSend("/topic/notifications/opponent", expected);
+        verify(messagingTemplate).convertAndSend("/topic/room-presence/initiator", expected);
+        verify(messagingTemplate).convertAndSend("/topic/room-presence/opponent", expected);
     }
 
     @Test
@@ -39,7 +39,7 @@ class RoomPresencePublisherTest {
                 "room-1", "initiator", AT, "session", RoomLeaveReason.LEFT, Set.of("initiator", "opponent")));
 
         verify(messagingTemplate).convertAndSend(
-                "/topic/notifications/opponent",
+                "/topic/room-presence/opponent",
                 EventEnvelopeResponse.of("room-1", 0, AT, RoomPresencePublisher.EVENT_TYPE,
                         new RoomPresenceView("room-1", "initiator", false, AT)));
     }

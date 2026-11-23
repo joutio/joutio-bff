@@ -15,7 +15,7 @@ import com.joutio.matchmaking.domain.model.Room;
 import com.joutio.matchmaking.domain.model.RoomPlayer;
 import com.joutio.matchmaking.domain.query.RoomQuery;
 import com.joutio.microservice.core.domain.constant.JoutioConstants;
-import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.Profile;

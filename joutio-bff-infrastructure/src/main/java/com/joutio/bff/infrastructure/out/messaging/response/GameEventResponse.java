@@ -10,29 +10,29 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Notifications de partie — contrat web du BFF (annotations Jackson ; {@code type} discriminant).
+ * Événements de partie — contrat web du BFF (annotations Jackson ; {@code type} discriminant).
  * Le payload du bus est un {@code GameEvent} typé ; le BFF le mappe vers ces DTOs.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = GameNotification.GameCreatedNotification.class, name = "GAME_CREATED"),
-        @JsonSubTypes.Type(value = GameNotification.GameStartedNotification.class, name = "GAME_STARTED"),
-        @JsonSubTypes.Type(value = GameNotification.RoundStartedNotification.class, name = "ROUND_STARTED"),
-        @JsonSubTypes.Type(value = GameNotification.QuestionRevealedNotification.class, name = "QUESTION_REVEALED"),
-        @JsonSubTypes.Type(value = GameNotification.PlayerAnsweredNotification.class, name = "PLAYER_ANSWERED"),
-        @JsonSubTypes.Type(value = GameNotification.RoundClosedNotification.class, name = "ROUND_CLOSED"),
-        @JsonSubTypes.Type(value = GameNotification.GameForfeitedNotification.class, name = "GAME_FORFEITED"),
-        @JsonSubTypes.Type(value = GameNotification.GameEndedNotification.class, name = "GAME_ENDED"),
-        @JsonSubTypes.Type(value = GameNotification.GameCancelledNotification.class, name = "GAME_CANCELLED")
+        @JsonSubTypes.Type(value = GameEventResponse.GameCreatedEventResponse.class, name = "GAME_CREATED"),
+        @JsonSubTypes.Type(value = GameEventResponse.GameStartedEventResponse.class, name = "GAME_STARTED"),
+        @JsonSubTypes.Type(value = GameEventResponse.RoundStartedEventResponse.class, name = "ROUND_STARTED"),
+        @JsonSubTypes.Type(value = GameEventResponse.QuestionRevealedEventResponse.class, name = "QUESTION_REVEALED"),
+        @JsonSubTypes.Type(value = GameEventResponse.PlayerAnsweredEventResponse.class, name = "PLAYER_ANSWERED"),
+        @JsonSubTypes.Type(value = GameEventResponse.RoundClosedEventResponse.class, name = "ROUND_CLOSED"),
+        @JsonSubTypes.Type(value = GameEventResponse.GameForfeitedEventResponse.class, name = "GAME_FORFEITED"),
+        @JsonSubTypes.Type(value = GameEventResponse.GameEndedEventResponse.class, name = "GAME_ENDED"),
+        @JsonSubTypes.Type(value = GameEventResponse.GameCancelledEventResponse.class, name = "GAME_CANCELLED")
 })
-public interface GameNotification {
+public interface GameEventResponse {
 
     @JsonProperty("type")
-    GameNotificationType type();
+    GameEventResponseType type();
 
     String gameId();
 
-    enum GameNotificationType {
+    enum GameEventResponseType {
         GAME_CREATED,
         GAME_STARTED,
         ROUND_STARTED,
@@ -49,7 +49,7 @@ public interface GameNotification {
      * rounds) : le client les précharge dès la création pour ne pas être pénalisé sur une
      * connexion faible. Questions sans image exclues.
      */
-    record GameCreatedNotification(
+    record GameCreatedEventResponse(
             String gameId,
             String topicId,
             String player1Id,
@@ -59,20 +59,20 @@ public interface GameNotification {
             String player2Type,
             String botDifficulty,
             List<String> questionImageUrls
-    ) implements GameNotification {
+    ) implements GameEventResponse {
         @Override
-        public GameNotificationType type() {
-            return GameNotificationType.GAME_CREATED;
+        public GameEventResponseType type() {
+            return GameEventResponseType.GAME_CREATED;
         }
     }
 
-    record GameStartedNotification(
+    record GameStartedEventResponse(
             String gameId,
             Instant firstRoundAt
-    ) implements GameNotification {
+    ) implements GameEventResponse {
         @Override
-        public GameNotificationType type() {
-            return GameNotificationType.GAME_STARTED;
+        public GameEventResponseType type() {
+            return GameEventResponseType.GAME_STARTED;
         }
     }
 
@@ -85,7 +85,7 @@ public interface GameNotification {
     ) {
     }
 
-    record RoundStartedNotification(
+    record RoundStartedEventResponse(
             String gameId,
             String round,
             String questionId,
@@ -99,26 +99,26 @@ public interface GameNotification {
             boolean bonus,
             Instant shownAt,
             Instant revealAt
-    ) implements GameNotification {
+    ) implements GameEventResponse {
         @Override
-        public GameNotificationType type() {
-            return GameNotificationType.ROUND_STARTED;
+        public GameEventResponseType type() {
+            return GameEventResponseType.ROUND_STARTED;
         }
     }
 
-    record QuestionRevealedNotification(
+    record QuestionRevealedEventResponse(
             String gameId,
             String round,
             Instant revealedAt,
             Instant answerDeadlineAt
-    ) implements GameNotification {
+    ) implements GameEventResponse {
         @Override
-        public GameNotificationType type() {
-            return GameNotificationType.QUESTION_REVEALED;
+        public GameEventResponseType type() {
+            return GameEventResponseType.QUESTION_REVEALED;
         }
     }
 
-    record PlayerAnsweredNotification(
+    record PlayerAnsweredEventResponse(
             String gameId,
             String round,
             String playerId,
@@ -127,56 +127,56 @@ public interface GameNotification {
             int pointsEarned,
             Instant answeredAt,
             long timeMs
-    ) implements GameNotification {
+    ) implements GameEventResponse {
         @Override
-        public GameNotificationType type() {
-            return GameNotificationType.PLAYER_ANSWERED;
+        public GameEventResponseType type() {
+            return GameEventResponseType.PLAYER_ANSWERED;
         }
     }
 
-    record RoundClosedNotification(
+    record RoundClosedEventResponse(
             String gameId,
             String closedRound,
             String nextRound,
             GameQuestionChoice correctAnswer,
             Instant closedAt,
             Instant nextRoundAt
-    ) implements GameNotification {
+    ) implements GameEventResponse {
         @Override
-        public GameNotificationType type() {
-            return GameNotificationType.ROUND_CLOSED;
+        public GameEventResponseType type() {
+            return GameEventResponseType.ROUND_CLOSED;
         }
     }
 
-    record GameForfeitedNotification(
+    record GameForfeitedEventResponse(
             String gameId,
             String forfeiterId
-    ) implements GameNotification {
+    ) implements GameEventResponse {
         @Override
-        public GameNotificationType type() {
-            return GameNotificationType.GAME_FORFEITED;
+        public GameEventResponseType type() {
+            return GameEventResponseType.GAME_FORFEITED;
         }
     }
 
-    record GameEndedNotification(
+    record GameEndedEventResponse(
             String gameId,
             String winnerId,
             int player1FinalScore,
             int player2FinalScore
-    ) implements GameNotification {
+    ) implements GameEventResponse {
         @Override
-        public GameNotificationType type() {
-            return GameNotificationType.GAME_ENDED;
+        public GameEventResponseType type() {
+            return GameEventResponseType.GAME_ENDED;
         }
     }
 
-    record GameCancelledNotification(
+    record GameCancelledEventResponse(
             String gameId,
             String reason
-    ) implements GameNotification {
+    ) implements GameEventResponse {
         @Override
-        public GameNotificationType type() {
-            return GameNotificationType.GAME_CANCELLED;
+        public GameEventResponseType type() {
+            return GameEventResponseType.GAME_CANCELLED;
         }
     }
 }

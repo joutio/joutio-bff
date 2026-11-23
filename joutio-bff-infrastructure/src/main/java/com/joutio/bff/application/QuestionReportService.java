@@ -13,15 +13,15 @@ import com.joutio.theme.domain.model.QuestionReportCount;
 import com.joutio.theme.domain.model.QuestionReportSort;
 import com.joutio.theme.domain.model.QuestionReportSummaryFilter;
 import com.joutio.theme.domain.model.QuestionReportSummaryPage;
-import com.joutio.bff.infrastructure.out.messaging.mapper.GameEventNotificationMapper;
-import com.joutio.bff.infrastructure.out.messaging.response.GameNotification;
+import com.joutio.bff.infrastructure.out.messaging.mapper.GameEventResponseMapper;
+import com.joutio.bff.infrastructure.out.messaging.response.GameEventResponse;
 import com.joutio.game.domain.event.GameEvent;
 import com.joutio.game.domain.model.Game;
 import com.joutio.game.domain.model.GameRound;
 import com.joutio.game.domain.model.GameStatus;
 import com.joutio.game.domain.query.GameQuery;
 import com.joutio.microservice.core.domain.model.i18n.Language;
-import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.profile.domain.model.Profile;
 import com.joutio.theme.domain.command.QuestionReportCommand;
@@ -339,15 +339,15 @@ public class QuestionReportService {
 
     private static QuestionReportSnapshot snapshotOf(
             List<EventEnvelope> envelopes, Game game, Question question, Language language) {
-        GameNotification.RoundStartedNotification round =
+        GameEventResponse.RoundStartedEventResponse round =
                 envelopes.stream()
                         .map(EventEnvelope::payload)
                         .filter(GameEvent.class::isInstance)
                         .map(GameEvent.class::cast)
-                        .map(GameEventNotificationMapper::toNotification)
+                        .map(GameEventResponseMapper::toResponse)
                         .flatMap(java.util.Optional::stream)
-                        .filter(GameNotification.RoundStartedNotification.class::isInstance)
-                        .map(GameNotification.RoundStartedNotification.class::cast)
+                        .filter(GameEventResponse.RoundStartedEventResponse.class::isInstance)
+                        .map(GameEventResponse.RoundStartedEventResponse.class::cast)
                         .filter(
                                 candidate ->
                                         Objects.equals(

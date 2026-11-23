@@ -4,25 +4,24 @@ import com.joutio.bff.application.ProfileLookup;
 import com.joutio.bff.application.ProgressionLookup;
 import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
 import com.joutio.bff.infrastructure.in.api.response.RoomOpponentView;
-import com.joutio.bff.infrastructure.out.messaging.mapper.MatchmakingEventNotificationMapper;
-import com.joutio.bff.infrastructure.out.messaging.response.MatchmakingNotification;
+import com.joutio.bff.infrastructure.out.messaging.mapper.MatchmakingEventResponseMapper;
+import com.joutio.bff.infrastructure.out.messaging.response.MatchmakingEventResponse;
 import com.joutio.matchmaking.domain.event.MatchmakingEvent;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.Profile;
 import org.axonframework.config.ProcessingGroup;
-import org.axonframework.eventhandling.DomainEventMessage;
 import org.axonframework.eventhandling.EventHandler;
-import org.axonframework.eventhandling.EventMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.axonframework.eventhandling.SequenceNumber;
+import org.axonframework.eventhandling.Timestamp;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Diffuse les notifications d'appariement public sur
+ * Diffuse les événements d'appariement public sur
  * {@code /topic/matchmaking/tickets/{ticketId}}.
  *
  * <p>{@code MATCHED} est enrichi du profil de l'adversaire (pseudo, avatar, Elo, pays) pour que
@@ -30,17 +29,16 @@ import java.util.concurrent.CompletableFuture;
  * La salle reste la source de repli si le profil est momentanément indisponible.</p>
  */
 @Service
-@ProcessingGroup("matchmaking-notification")
-public class MatchmakingNotificationPublisher {
+@ProcessingGroup("matchmaking-events")
+public class MatchmakingEventPublisher {
 
-    private static final Logger logger = LoggerFactory.getLogger(MatchmakingNotificationPublisher.class);
     private static final String DESTINATION_PREFIX = "/topic/matchmaking/tickets/";
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ProfileLookup profileLookup;
     private final ProgressionLookup progressionLookup;
 
-    public MatchmakingNotificationPublisher(SimpMessagingTemplate messagingTemplate,
+    public MatchmakingEventPublisher(SimpMessagingTemplate messagingTemplate,
                                             ProfileLookup profileLookup,
                                             ProgressionLookup progressionLookup) {
         this.messagingTemplate = messagingTemplate;
@@ -49,32 +47,24 @@ public class MatchmakingNotificationPublisher {
     }
 
     @EventHandler
-    public void onMatchmakingEvent(EventMessage<?> eventMessage) {
-        if (!(eventMessage.getPayload() instanceof MatchmakingEvent event)) {
-            return;
-        }
-        if (!(eventMessage instanceof DomainEventMessage<?> domainMessage)) {
-            logger.warn("Notification ignorée (sans métadonnées d'agrégat): {}", event.getClass().getSimpleName());
-            return;
-        }
-
-        Optional<MatchmakingNotification> mapped = MatchmakingEventNotificationMapper.toNotification(event);
+    public void onMatchmakingEvent(MatchmakingEvent event, @SequenceNumber long sequenceNumber, @Timestamp Instant timestamp) {
+        Optional<MatchmakingEventResponse> mapped = MatchmakingEventResponseMapper.toResponse(event);
         if (mapped.isEmpty()) {
             return;
         }
-        MatchmakingNotification notification = mapped.get();
-        if (notification instanceof MatchmakingNotification.MatchedNotification matched
+        MatchmakingEventResponse response = mapped.get();
+        if (response instanceof MatchmakingEventResponse.MatchedEventResponse matched
                 && matched.opponentId() != null
                 && !matched.vsBot()) {
-            enrich(matched).thenAccept(enriched -> publish(event, domainMessage, enriched));
+            enrich(matched).thenAccept(enriched -> publish(event.matchmakingId(), sequenceNumber, timestamp, enriched));
             return;
         }
-        publish(event, domainMessage, notification);
+        publish(event.matchmakingId(), sequenceNumber, timestamp, response);
     }
 
-    /** Enrichit la notification d'appariement du profil et de la progression de l'adversaire. */
-    private CompletableFuture<MatchmakingNotification.MatchedNotification> enrich(
-            MatchmakingNotification.MatchedNotification matched) {
+    /** Enrichit l’événement d’appariement du profil et de la progression de l'adversaire. */
+    private CompletableFuture<MatchmakingEventResponse.MatchedEventResponse> enrich(
+            MatchmakingEventResponse.MatchedEventResponse matched) {
         String opponentId = matched.opponentId();
         CompletableFuture<Profile> profileFuture = profileLookup.get(opponentId).exceptionally(_ -> null);
         CompletableFuture<PlayerProgress> progressFuture = progressionLookup.get(opponentId).exceptionally(_ -> null);
@@ -92,20 +82,18 @@ public class MatchmakingNotificationPublisher {
                     false,
                     progress == null ? null : progress.rating(),
                     profile.country());
-            return new MatchmakingNotification.MatchedNotification(
+            return new MatchmakingEventResponse.MatchedEventResponse(
                     matched.ticketId(), matched.roomId(), matched.opponentId(), matched.vsBot(), opponent);
         });
     }
 
-    private void publish(MatchmakingEvent event,
-                         DomainEventMessage<?> domainMessage,
-                         MatchmakingNotification notification) {
+    private void publish(String ticketId, long sequenceNumber, Instant timestamp, MatchmakingEventResponse response) {
         EventEnvelopeResponse envelope = EventEnvelopeResponse.of(
-                event.matchmakingId(),
-                domainMessage.getSequenceNumber(),
-                domainMessage.getTimestamp(),
-                notification.type().name(),
-                notification);
-        messagingTemplate.convertAndSend(DESTINATION_PREFIX + event.matchmakingId(), envelope);
+                ticketId,
+                sequenceNumber,
+                timestamp,
+                response.type().name(),
+                response);
+        messagingTemplate.convertAndSend(DESTINATION_PREFIX + ticketId, envelope);
     }
 }

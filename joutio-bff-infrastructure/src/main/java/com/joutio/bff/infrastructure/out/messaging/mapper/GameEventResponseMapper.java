@@ -1,6 +1,6 @@
 package com.joutio.bff.infrastructure.out.messaging.mapper;
 
-import com.joutio.bff.infrastructure.out.messaging.response.GameNotification;
+import com.joutio.bff.infrastructure.out.messaging.response.GameEventResponse;
 import com.joutio.game.domain.event.GameEvent;
 import com.joutio.game.domain.model.GameQuestion;
 import com.joutio.game.domain.model.GameQuestionChoice;
@@ -16,21 +16,21 @@ import static java.util.Objects.isNull;
 
 /**
  * Mappe les événements du domaine Game (reçus typés via le codec du bus ou via Kafka) vers le
- * contrat web {@link GameNotification}. Unique point de mapping pour l'historique REST et le WS.
+ * contrat web {@link GameEventResponse}. Unique point de mapping pour l'historique REST et le WS.
  */
-public final class GameEventNotificationMapper {
+public final class GameEventResponseMapper {
 
-    private GameEventNotificationMapper() {
+    private GameEventResponseMapper() {
     }
 
-    public static Optional<GameNotification> toNotification(GameEvent event) {
+    public static Optional<GameEventResponse> toResponse(GameEvent event) {
         if (isNull(event)) {
             return Optional.empty();
         }
 
         return switch (event) {
             case GameEvent.GameCreatedEvent gameCreatedEvent -> Optional.of(
-                    new GameNotification.GameCreatedNotification(
+                    new GameEventResponse.GameCreatedEventResponse(
                             gameCreatedEvent.gameId(),
                             gameCreatedEvent.topicId(),
                             gameCreatedEvent.player1Id(),
@@ -47,7 +47,7 @@ public final class GameEventNotificationMapper {
             );
 
             case GameEvent.GameStartedEvent gameStartedEvent -> Optional.of(
-                    new GameNotification.GameStartedNotification(
+                    new GameEventResponse.GameStartedEventResponse(
                             gameStartedEvent.gameId(),
                             gameStartedEvent.firstRoundAt()
                     )
@@ -56,18 +56,18 @@ public final class GameEventNotificationMapper {
             case GameEvent.RoundStartedEvent roundStartedEvent -> {
                 var question = roundStartedEvent.question();
                 Map<String, String> answers = toAnswerMap(question.answers());
-                Map<String, GameNotification.RoundQuestionContent> translations = new LinkedHashMap<>();
+                Map<String, GameEventResponse.RoundQuestionContent> translations = new LinkedHashMap<>();
                 if (question.translations() != null) {
                     for (Map.Entry<Language, GameQuestionContent> translation : question.translations().entrySet()) {
                         translations.put(translation.getKey().code(),
-                                new GameNotification.RoundQuestionContent(
+                                new GameEventResponse.RoundQuestionContent(
                                         translation.getValue().text(),
                                         toAnswerMap(translation.getValue().answers()),
                                         translation.getValue().imageAlt()));
                     }
                 }
                 yield Optional.of(
-                        new GameNotification.RoundStartedNotification(
+                        new GameEventResponse.RoundStartedEventResponse(
                                 roundStartedEvent.gameId(),
                                 roundStartedEvent.round().name(),
                                 question.questionId(),
@@ -84,7 +84,7 @@ public final class GameEventNotificationMapper {
             }
 
             case GameEvent.QuestionRevealedEvent questionRevealedEvent -> Optional.of(
-                    new GameNotification.QuestionRevealedNotification(
+                    new GameEventResponse.QuestionRevealedEventResponse(
                             questionRevealedEvent.gameId(),
                             questionRevealedEvent.round().name(),
                             questionRevealedEvent.revealedAt(),
@@ -93,7 +93,7 @@ public final class GameEventNotificationMapper {
             );
 
             case GameEvent.QuestionAnsweredEvent questionAnsweredEvent -> Optional.of(
-                    new GameNotification.PlayerAnsweredNotification(
+                    new GameEventResponse.PlayerAnsweredEventResponse(
                             questionAnsweredEvent.gameId(),
                             questionAnsweredEvent.round().name(),
                             questionAnsweredEvent.playerId(),
@@ -106,7 +106,7 @@ public final class GameEventNotificationMapper {
             );
 
             case GameEvent.RoundClosedEvent roundClosedEvent -> Optional.of(
-                    new GameNotification.RoundClosedNotification(
+                    new GameEventResponse.RoundClosedEventResponse(
                             roundClosedEvent.gameId(),
                             roundClosedEvent.closedRound().name(),
                             roundClosedEvent.nextRound() != null ? roundClosedEvent.nextRound().name() : null,
@@ -117,7 +117,7 @@ public final class GameEventNotificationMapper {
             );
 
             case GameEvent.GameEndedEvent gameEndedEvent -> Optional.of(
-                    new GameNotification.GameEndedNotification(
+                    new GameEventResponse.GameEndedEventResponse(
                             gameEndedEvent.gameId(),
                             gameEndedEvent.winnerId(),
                             gameEndedEvent.player1FinalScore(),
@@ -126,14 +126,14 @@ public final class GameEventNotificationMapper {
             );
 
             case GameEvent.GameCancelledEvent gameCancelledEvent -> Optional.of(
-                    new GameNotification.GameCancelledNotification(
+                    new GameEventResponse.GameCancelledEventResponse(
                             gameCancelledEvent.gameId(),
                             gameCancelledEvent.reason()
                     )
             );
 
             case GameEvent.GameForfeitedEvent gameForfeitedEvent -> Optional.of(
-                    new GameNotification.GameForfeitedNotification(
+                    new GameEventResponse.GameForfeitedEventResponse(
                             gameForfeitedEvent.gameId(),
                             gameForfeitedEvent.forfeiterId()
                     )

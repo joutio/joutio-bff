@@ -3,6 +3,7 @@ package com.joutio.bff.infrastructure.in.api.response;
 import com.joutio.game.domain.model.BotDifficulty;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Écran de résultat d'un duel terminé : score, détail de la performance, récompense XP de la
@@ -41,8 +42,42 @@ public record GameResultView(
          * les titres). Vide tant que la projection ne les a pas écrits : l'achievement STOMP
          * ({@code gameId}) fait relire le résultat.
          */
-        List<ProgressionView.BadgeView> badges
+        List<ProgressionView.BadgeView> badges,
+        /** Manches closes dans l'ordre, avec le snapshot de question (revue des manches). */
+        List<RoundView> rounds
 ) {
+
+    /** Manche rejouable de la revue : question telle qu'elle a été jouée, réponses des deux joueurs. */
+    public record RoundView(
+            String round,
+            String questionText,
+            Map<String, String> answers,
+            Map<String, TranslationView> translations,
+            String imageUrl,
+            String imageAlt,
+            boolean bonus,
+            String correctAnswer,
+            AnswerView myAnswer,
+            AnswerView opponentAnswer
+    ) {
+    }
+
+    /** Contenu localisé d'une manche (clé = code de langue). */
+    public record TranslationView(
+            String text,
+            Map<String, String> answers,
+            String imageAlt
+    ) {
+    }
+
+    /** Réponse d'un joueur à une manche (choix, correction, points, temps). */
+    public record AnswerView(
+            String choice,
+            boolean correct,
+            int points,
+            long timeMs
+    ) {
+    }
 
     /** Récompense de la partie : XP gagnée dans le sujet et bonus de victoire dérivé du score. */
     public record RewardView(int xp, int victoryBonus) {

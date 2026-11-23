@@ -18,9 +18,9 @@ y est documentée dans le même commit.
   `AvatarEntitlementPolicy`, `TopicAccessService`) ; médias, push, partage, administration.
 - `infrastructure/in/api` : contrôleurs minces, `*Request`, `*View`.
 - `infrastructure/in/websocket` : `PresenceChannelListener` (canaux de présence → commandes de
-  salle et de ticket), sessions de présence joueur.
+  salle et de ticket), sessions de présence joueur et contrôle d’abonnement au canal personnel des salles.
 - `infrastructure/in/share` : pages `go.joutio.com`.
-- `infrastructure/out/messaging` : publishers temps réel, mappers événement → notification.
+- `infrastructure/out/messaging` : publishers temps réel, mappers événement → réponse BFF. Les handlers d’agrégat reçoivent le payload typé et les métadonnées utiles via les résolveurs Axon.
 - `infrastructure/out/{media,push,persistence}` : MinIO, Web Push, Expo, tables propres.
 - `infrastructure/config` : chaînes de sécurité (`ShareSecurityConfiguration` @Order 1,
   `PublicApiSecurityConfiguration` @Order 2, `AdminSecurityConfiguration`), quotas, push, médias.
@@ -30,7 +30,7 @@ y est documentée dans le même commit.
 
 | Groupe | Portée |
 |---|---|
-| `game-notification`, `room-notification`, `matchmaking-notification`, `presence-notification`, `follow-presence-notification`, `achievement-notification`, `notification-ws`, `cache-invalidation` | **instance-scopés** : chaque pod reçoit tout, en direct, par un seul consumer Kafka sans token (SDK) ; handlers non bloquants |
+| `game-events`, `room-events`, `matchmaking-events`, `presence-events`, `follow-presence-events`, `achievement-events`, `notification-ws`, `cache-invalidation` | **instance-scopés** : chaque pod reçoit tout, en direct, par un seul consumer Kafka sans token (SDK) ; handlers non bloquants |
 | `notification-push` | global : un seul envoi Web Push / Expo par événement, hors thread du processor |
 | `account-deletion-bff` | global : purge des données du BFF à la suppression d'un compte |
 

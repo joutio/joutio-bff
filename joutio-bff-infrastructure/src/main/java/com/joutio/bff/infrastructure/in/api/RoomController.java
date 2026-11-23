@@ -5,9 +5,9 @@ import com.joutio.bff.infrastructure.in.api.request.CreateBotRoomRequest;
 import com.joutio.bff.infrastructure.in.api.request.CreateRoomRequest;
 import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
 import com.joutio.bff.infrastructure.in.api.response.RoomView;
-import com.joutio.bff.infrastructure.out.messaging.mapper.RoomEventNotificationMapper;
+import com.joutio.bff.infrastructure.out.messaging.mapper.RoomEventResponseMapper;
 import com.joutio.matchmaking.domain.event.RoomEvent;
-import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 import com.joutio.microservice.core.infrastructure.in.api.ResponseEntityBuilder;
 import com.joutio.microservice.core.infrastructure.in.api.response.IdResponse;
 import com.joutio.microservice.security.SecurityHelper;
@@ -81,8 +81,8 @@ public class RoomController {
                 .thenApply(_ -> ResponseEntity.ok().build());
     }
 
-    @GetMapping("/{roomId}/notifications")
-    public CompletableFuture<ResponseEntity<List<EventEnvelopeResponse>>> notifications(@PathVariable String roomId) {
+    @GetMapping("/{roomId}/events")
+    public CompletableFuture<ResponseEntity<List<EventEnvelopeResponse>>> events(@PathVariable String roomId) {
         return roomViewService
                 .events(roomId)
                 .thenApply(envelopes -> envelopes.stream()
@@ -96,12 +96,12 @@ public class RoomController {
         if (!(envelope.payload() instanceof RoomEvent event)) {
             return Optional.empty();
         }
-        return RoomEventNotificationMapper.toNotification(event)
-                .map(notification -> EventEnvelopeResponse.of(
+        return RoomEventResponseMapper.toResponse(event)
+                .map(response -> EventEnvelopeResponse.of(
                         envelope.aggregateId(),
                         envelope.sequenceNumber(),
                         envelope.timestamp(),
-                        notification.type().name(),
-                        notification));
+                        response.type().name(),
+                        response));
     }
 }

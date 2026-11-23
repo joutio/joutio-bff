@@ -6,9 +6,9 @@ import com.joutio.bff.infrastructure.in.api.request.AnswerQuestionRequest;
 import com.joutio.bff.infrastructure.in.api.response.ActiveGameView;
 import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
 import com.joutio.bff.infrastructure.in.api.response.GameResultView;
-import com.joutio.bff.infrastructure.out.messaging.mapper.GameEventNotificationMapper;
+import com.joutio.bff.infrastructure.out.messaging.mapper.GameEventResponseMapper;
 import com.joutio.game.domain.event.GameEvent;
-import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 import com.joutio.microservice.security.SecurityHelper;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +25,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * {@code /api/games} — arène : réponse, abandon, historique de notifications. La création d'une
+ * {@code /api/games} — arène : réponse, abandon, historique des événements. La création d'une
  * partie passe par la salle ({@code POST /api/rooms} ou {@code POST /api/rooms/bot}).
  */
 @RestController
@@ -84,13 +84,13 @@ public class GameController {
     }
 
     /**
-     * Historique des notifications d'une partie (même contrat que le push WebSocket) : le client
+     * Historique des événements d'une partie (même contrat que le push WebSocket) : le client
      * bootstrap son read model puis déduplique par {@code sequenceNumber}. Le service game mappe
      * son event store en {@code EventEnvelope} typés ; le BFF produit le contrat web
      * ({@link EventEnvelopeResponse}).
      */
-    @GetMapping("/{gameId}/notifications")
-    public CompletableFuture<ResponseEntity<List<EventEnvelopeResponse>>> notifications(
+    @GetMapping("/{gameId}/events")
+    public CompletableFuture<ResponseEntity<List<EventEnvelopeResponse>>> events(
             @PathVariable String gameId) {
         return gameViewService
                 .events(gameId, SecurityHelper.getUserId())
@@ -105,12 +105,12 @@ public class GameController {
         if (!(envelope.payload() instanceof GameEvent event)) {
             return Optional.empty();
         }
-        return GameEventNotificationMapper.toNotification(event)
-                .map(notification -> EventEnvelopeResponse.of(
+        return GameEventResponseMapper.toResponse(event)
+                .map(response -> EventEnvelopeResponse.of(
                         envelope.aggregateId(),
                         envelope.sequenceNumber(),
                         envelope.timestamp(),
-                        notification.type().name(),
-                        notification));
+                        response.type().name(),
+                        response));
     }
 }

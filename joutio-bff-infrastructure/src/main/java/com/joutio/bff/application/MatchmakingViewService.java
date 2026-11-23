@@ -7,7 +7,7 @@ import com.joutio.matchmaking.domain.model.MatchmakingStatus;
 import com.joutio.matchmaking.domain.model.TopicLanguageCoverage;
 import com.joutio.matchmaking.domain.query.MatchmakingQuery;
 import com.joutio.microservice.core.domain.model.i18n.Language;
-import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.profile.domain.model.PlayerProgress;
 import com.joutio.profile.domain.model.Profile;

@@ -15,15 +15,15 @@ import org.springframework.stereotype.Service;
  * seule surface STOMP, il consomme les événements de présence de {@code joutio-profile}.
  */
 @Service
-@ProcessingGroup("presence-notification")
-public class PresenceNotificationPublisher {
+@ProcessingGroup("presence-events")
+public class PresenceEventPublisher {
 
-    private static final Logger logger = LoggerFactory.getLogger(PresenceNotificationPublisher.class);
+    private static final Logger logger = LoggerFactory.getLogger(PresenceEventPublisher.class);
     private static final String DESTINATION_PREFIX = "/topic/presence/";
 
     private final SimpMessagingTemplate messagingTemplate;
 
-    public PresenceNotificationPublisher(SimpMessagingTemplate messagingTemplate) {
+    public PresenceEventPublisher(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
 

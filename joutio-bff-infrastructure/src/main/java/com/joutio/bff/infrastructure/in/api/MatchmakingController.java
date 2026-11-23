@@ -5,9 +5,9 @@ import com.joutio.bff.application.MatchmakingViewService;
 import com.joutio.bff.infrastructure.in.api.request.CreateMatchmakingRequest;
 import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
 import com.joutio.bff.infrastructure.in.api.response.MatchmakingTicketView;
-import com.joutio.bff.infrastructure.out.messaging.mapper.MatchmakingEventNotificationMapper;
+import com.joutio.bff.infrastructure.out.messaging.mapper.MatchmakingEventResponseMapper;
 import com.joutio.matchmaking.domain.event.MatchmakingEvent;
-import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 import com.joutio.microservice.security.SecurityHelper;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -63,8 +63,8 @@ public class MatchmakingController {
                 .thenApply(_ -> ResponseEntity.ok().build());
     }
 
-    @GetMapping("/{ticketId}/notifications")
-    public CompletableFuture<ResponseEntity<List<EventEnvelopeResponse>>> notifications(@PathVariable String ticketId) {
+    @GetMapping("/{ticketId}/events")
+    public CompletableFuture<ResponseEntity<List<EventEnvelopeResponse>>> events(@PathVariable String ticketId) {
         return matchmakingViewService
                 .events(ticketId)
                 .thenApply(envelopes -> envelopes.stream()
@@ -78,12 +78,12 @@ public class MatchmakingController {
         if (!(envelope.payload() instanceof MatchmakingEvent event)) {
             return Optional.empty();
         }
-        return MatchmakingEventNotificationMapper.toNotification(event)
-                .map(notification -> EventEnvelopeResponse.of(
+        return MatchmakingEventResponseMapper.toResponse(event)
+                .map(response -> EventEnvelopeResponse.of(
                         envelope.aggregateId(),
                         envelope.sequenceNumber(),
                         envelope.timestamp(),
-                        notification.type().name(),
-                        notification));
+                        response.type().name(),
+                        response));
     }
 }

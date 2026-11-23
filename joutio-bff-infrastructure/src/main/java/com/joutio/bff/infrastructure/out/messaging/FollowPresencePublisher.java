@@ -19,10 +19,10 @@ import java.util.concurrent.CompletableFuture;
  * reçoit un message sur {@code /topic/follow-presence/{followerId}} (« X est en ligne »).
  * Aucune persistance, aucun passage par l'inbox de {@code joutio-notification}.
  * Groupe dédié pour ne pas bloquer la diffusion de présence standard
- * ({@code presence-notification}) si la composition sociale/profil échoue.
+ * ({@code presence-events}) si la composition sociale/profil échoue.
  */
 @Service
-@ProcessingGroup("follow-presence-notification")
+@ProcessingGroup("follow-presence-events")
 public class FollowPresencePublisher {
 
     private static final Logger logger = LoggerFactory.getLogger(FollowPresencePublisher.class);

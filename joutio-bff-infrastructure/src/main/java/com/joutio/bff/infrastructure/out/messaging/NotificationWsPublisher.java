@@ -6,11 +6,9 @@ import com.joutio.bff.infrastructure.in.api.response.NotificationDeletedView;
 import com.joutio.bff.infrastructure.in.api.response.NotificationView;
 import com.joutio.notification.domain.event.NotificationEvent;
 import org.axonframework.config.ProcessingGroup;
-import org.axonframework.eventhandling.DomainEventMessage;
 import org.axonframework.eventhandling.EventHandler;
-import org.axonframework.eventhandling.EventMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.axonframework.eventhandling.SequenceNumber;
+import org.axonframework.eventhandling.Timestamp;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -34,7 +32,6 @@ import java.time.Instant;
 @ProcessingGroup("notification-ws")
 public class NotificationWsPublisher {
 
-    private static final Logger logger = LoggerFactory.getLogger(NotificationWsPublisher.class);
     private static final String DESTINATION_PREFIX = "/topic/notifications/";
     private static final String DELETED_EVENT_TYPE = "NOTIFICATION_DELETED";
 
@@ -48,50 +45,40 @@ public class NotificationWsPublisher {
     }
 
     @EventHandler
-    public void onNotificationEvent(EventMessage<?> eventMessage) {
-        Object payload = eventMessage.getPayload();
-        boolean created = payload instanceof NotificationEvent.NotificationCreatedEvent;
-        boolean deleted = payload instanceof NotificationEvent.NotificationDeletedEvent;
-        if (!created && !deleted) {
+    public void onCreated(NotificationEvent.NotificationCreatedEvent event,
+                          @SequenceNumber long sequenceNumber,
+                          @Timestamp Instant timestamp) {
+        if (event.actorId() == null) {
+            publishCreated(event, sequenceNumber, timestamp, false);
             return;
         }
-        if (!(eventMessage instanceof DomainEventMessage<?> domainMessage)) {
-            logger.warn("Notification ignorée (sans métadonnées d'agrégat): {}",
-                    payload.getClass().getSimpleName());
-            return;
-        }
+        identityLookup.status(event.actorId())
+                .exceptionally(_ -> null)
+                .thenAccept(status -> publishCreated(
+                        event, sequenceNumber, timestamp, status != null && status.suspended(Instant.now())));
+    }
 
-        if (payload instanceof NotificationEvent.NotificationCreatedEvent event) {
-            if (event.actorId() == null) {
-                publishCreated(event, domainMessage, false);
-                return;
-            }
-            identityLookup.status(event.actorId())
-                    .exceptionally(_ -> null)
-                    .thenAccept(status -> publishCreated(
-                            event,
-                            domainMessage,
-                            status != null && status.suspended(Instant.now())));
-            return;
-        }
-        NotificationEvent.NotificationDeletedEvent event =
-                (NotificationEvent.NotificationDeletedEvent) payload;
+    @EventHandler
+    public void onDeleted(NotificationEvent.NotificationDeletedEvent event,
+                          @SequenceNumber long sequenceNumber,
+                          @Timestamp Instant timestamp) {
         EventEnvelopeResponse envelope = EventEnvelopeResponse.of(
                 event.notificationId(),
-                domainMessage.getSequenceNumber(),
-                domainMessage.getTimestamp(),
+                sequenceNumber,
+                timestamp,
                 DELETED_EVENT_TYPE,
                 new NotificationDeletedView(event.notificationId()));
         messagingTemplate.convertAndSend(DESTINATION_PREFIX + event.userId(), envelope);
     }
 
     private void publishCreated(NotificationEvent.NotificationCreatedEvent event,
-                                DomainEventMessage<?> domainMessage,
+                                long sequenceNumber,
+                                Instant timestamp,
                                 boolean actorSuspended) {
         EventEnvelopeResponse envelope = EventEnvelopeResponse.of(
                 event.notificationId(),
-                domainMessage.getSequenceNumber(),
-                domainMessage.getTimestamp(),
+                sequenceNumber,
+                timestamp,
                 event.type().name(),
                 NotificationView.of(event, actorSuspended));
         messagingTemplate.convertAndSend(DESTINATION_PREFIX + event.userId(), envelope);

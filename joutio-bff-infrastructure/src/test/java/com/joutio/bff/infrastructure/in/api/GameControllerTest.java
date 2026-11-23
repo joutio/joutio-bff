@@ -162,7 +162,8 @@ class GameControllerTest {
                 "opponent-1",
                 null,
                 false,
-                java.util.List.of(new com.joutio.bff.infrastructure.in.api.response.ProgressionView.BadgeView("FIRST_WIN", "Première victoire", "VICTORY", "FER")));
+                java.util.List.of(new com.joutio.bff.infrastructure.in.api.response.ProgressionView.BadgeView("FIRST_WIN", "Première victoire", "VICTORY", "FER")),
+                java.util.List.of());
         when(gameViewService.result("game-1", USER_ID)).thenReturn(CompletableFuture.completedFuture(view));
 
         MvcResult mvcResult = mockMvc.perform(get("/api/games/game-1/result"))
@@ -196,11 +197,11 @@ class GameControllerTest {
     }
 
     @Test
-    void notifications_are_scoped_to_the_current_user() throws Exception {
+    void events_are_scoped_to_the_current_user() throws Exception {
         when(gameViewService.events("game-1", USER_ID))
                 .thenReturn(CompletableFuture.completedFuture(List.of()));
 
-        MvcResult mvcResult = mockMvc.perform(get("/api/games/game-1/notifications"))
+        MvcResult mvcResult = mockMvc.perform(get("/api/games/game-1/events"))
                 .andExpect(request().asyncStarted())
                 .andReturn();
 

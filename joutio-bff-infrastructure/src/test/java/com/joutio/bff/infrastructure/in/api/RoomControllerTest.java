@@ -3,6 +3,8 @@ package com.joutio.bff.infrastructure.in.api;
 import com.joutio.bff.application.RoomViewService;
 import com.joutio.bff.infrastructure.in.api.request.CreateBotRoomRequest;
 import com.joutio.bff.infrastructure.in.api.request.CreateRoomRequest;
+import com.joutio.matchmaking.domain.event.RoomEvent;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,6 +13,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -19,8 +23,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -98,5 +104,23 @@ class RoomControllerTest {
         mockMvc.perform(asyncDispatch(wizz)).andExpect(status().isOk());
 
         verify(roomViewService).wizz("room-1", USER_ID);
+    }
+
+    @Test
+    void events_return_the_sequenced_web_payload() throws Exception {
+        Instant at = Instant.parse("2026-11-23T10:00:00Z");
+        when(roomViewService.events("room-1")).thenReturn(CompletableFuture.completedFuture(
+                List.of(EventEnvelope.of("room-1", 3L, at, new RoomEvent.RoomWizzedEvent("room-1", "initiator", "opponent", at)))));
+
+        MvcResult result = mockMvc.perform(get("/api/rooms/room-1/events"))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        mockMvc.perform(asyncDispatch(result))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].aggregateId").value("room-1"))
+                .andExpect(jsonPath("$[0].sequenceNumber").value(3))
+                .andExpect(jsonPath("$[0].eventType").value("ROOM_WIZZED"))
+                .andExpect(jsonPath("$[0].payload.type").value("ROOM_WIZZED"));
     }
 }

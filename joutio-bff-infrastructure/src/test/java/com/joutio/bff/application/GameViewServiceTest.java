@@ -12,7 +12,7 @@ import com.joutio.game.domain.model.GameQuestionChoice;
 import com.joutio.game.domain.model.GameResult;
 import com.joutio.game.domain.model.GameRoundType;
 import com.joutio.game.domain.query.GameQuery;
-import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 import com.joutio.profile.domain.model.Badge;
 import com.joutio.profile.domain.model.GameXp;
 import com.joutio.profile.domain.model.PlayerProgress;
@@ -262,6 +262,7 @@ class GameViewServiceTest {
                 botGame,
                 null,
                 100, 20, 6, 3, 7, 7,
-                800, 900);
+                800, 900,
+                List.of());
     }
 }

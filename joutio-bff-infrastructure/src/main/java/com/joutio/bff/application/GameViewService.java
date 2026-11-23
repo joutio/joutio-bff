@@ -12,11 +12,14 @@ import com.joutio.game.domain.exception.GameExceptions;
 import com.joutio.game.domain.model.Game;
 import com.joutio.game.domain.model.GamePlayerType;
 import com.joutio.game.domain.model.GameQuestionChoice;
+import com.joutio.game.domain.model.GameQuestionContent;
 import com.joutio.game.domain.model.GameResult;
+import com.joutio.game.domain.model.GameRound;
 import com.joutio.game.domain.model.GameRoundType;
 import com.joutio.game.domain.query.GameQuery;
 import com.joutio.identity.domain.model.UserAccountStatus;
-import com.joutio.microservice.core.domain.model.notification.EventEnvelope;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
+import com.joutio.microservice.core.domain.model.i18n.Language;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import com.joutio.profile.domain.model.BadgeUnlock;
 import com.joutio.profile.domain.model.EloRules;
@@ -392,8 +395,66 @@ public class GameViewService {
                         gameResult.opponentId(),
                         gameResult.botDifficulty(),
                         opponentDeleted,
-                        gameBadges(unlocksFuture.join(), gameId));
+                        gameBadges(unlocksFuture.join(), gameId),
+                        toRoundViews(gameResult));
             });
         });
+    }
+
+    /** Manches closes orientées moi/adversaire, dans l'ordre de la partie. */
+    private static List<GameResultView.RoundView> toRoundViews(GameResult gameResult) {
+        boolean isPlayer1 = gameResult.playerId().equals(gameResult.player1Id());
+        return gameResult.rounds().stream()
+                .map(round -> toRoundView(round, isPlayer1))
+                .toList();
+    }
+
+    private static GameResultView.RoundView toRoundView(GameRound round, boolean isPlayer1) {
+        GameQuestionChoice myChoice = isPlayer1 ? round.player1Choice() : round.player2Choice();
+        GameQuestionChoice opponentChoice = isPlayer1 ? round.player2Choice() : round.player1Choice();
+        int myPoints = isPlayer1 ? round.player1Points() : round.player2Points();
+        int opponentPoints = isPlayer1 ? round.player2Points() : round.player1Points();
+        Long myTimeMs = isPlayer1 ? round.player1TimeMs() : round.player2TimeMs();
+        Long opponentTimeMs = isPlayer1 ? round.player2TimeMs() : round.player1TimeMs();
+
+        return new GameResultView.RoundView(
+                round.round().name(),
+                round.questionText(),
+                toAnswerMap(round.answers()),
+                toTranslationViews(round.translations()),
+                round.imageUrl(),
+                round.imageAlt(),
+                round.round().isBonus(),
+                round.correctAnswer() == null ? null : round.correctAnswer().name(),
+                myChoice == null
+                        ? null
+                        : new GameResultView.AnswerView(
+                                myChoice.name(), myChoice == round.correctAnswer(), myPoints, myTimeMs == null ? 0 : myTimeMs),
+                opponentChoice == null
+                        ? null
+                        : new GameResultView.AnswerView(
+                                opponentChoice.name(), opponentChoice == round.correctAnswer(), opponentPoints, opponentTimeMs == null ? 0 : opponentTimeMs));
+    }
+
+    private static Map<String, String> toAnswerMap(Map<GameQuestionChoice, String> answers) {
+        Map<String, String> mapped = new LinkedHashMap<>();
+        if (answers != null) {
+            answers.forEach((choice, text) -> mapped.put(choice.name(), text));
+        }
+        return mapped;
+    }
+
+    private static Map<String, GameResultView.TranslationView> toTranslationViews(Map<Language, GameQuestionContent> translations) {
+        Map<String, GameResultView.TranslationView> mapped = new LinkedHashMap<>();
+        if (translations != null) {
+            for (Map.Entry<Language, GameQuestionContent> entry : translations.entrySet()) {
+                mapped.put(entry.getKey().code(),
+                        new GameResultView.TranslationView(
+                                entry.getValue().text(),
+                                toAnswerMap(entry.getValue().answers()),
+                                entry.getValue().imageAlt()));
+            }
+        }
+        return mapped;
     }
 }

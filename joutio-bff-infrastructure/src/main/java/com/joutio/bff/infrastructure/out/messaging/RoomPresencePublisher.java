@@ -1,6 +1,7 @@
 package com.joutio.bff.infrastructure.out.messaging;
 
 import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
+import com.joutio.bff.infrastructure.in.websocket.RoomPresenceChannelConfiguration;
 import com.joutio.bff.infrastructure.out.messaging.response.RoomPresenceView;
 import com.joutio.matchmaking.domain.event.RoomEvent;
 import com.joutio.microservice.core.domain.constant.JoutioConstants;
@@ -14,21 +15,20 @@ import java.util.Set;
 
 /**
  * Présence d'un joueur dans un salon, poussée sur le <b>flux personnel</b> des joueurs du salon
- * ({@code /topic/notifications/{userId}}, type {@code ROOM_PRESENCE}, 2026-11-16) : le canal
+ * ({@code /topic/room-presence/{userId}}, type {@code ROOM_PRESENCE}, 2026-11-16) : le canal
  * {@code /topic/rooms/{id}} n'est écouté que depuis l'écran du salon. Hors du salon, le client
  * sait ainsi tout de suite qu'un adversaire l'attend (pastille de l'onglet Défis) ou qu'il est parti.
  *
  * <p>Les destinataires viennent de l'événement ({@code roomPlayerIds} : joueurs humains du salon, le
  * joueur concerné compris) : aucune relecture de la salle. <b>Éphémère</b> : jamais persisté, absent de
- * l'inbox ; un client déconnecté relit ses salons à la reconnexion. Groupe {@code room-notification},
+ * l'inbox ; un client déconnecté relit ses salons à la reconnexion. Groupe {@code room-events},
  * instance-scopé comme les autres fan-out STOMP.</p>
  */
 @Service
-@ProcessingGroup("room-notification")
+@ProcessingGroup("room-events")
 public class RoomPresencePublisher {
 
     static final String EVENT_TYPE = "ROOM_PRESENCE";
-    private static final String DESTINATION_PREFIX = "/topic/notifications/";
 
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -52,6 +52,6 @@ public class RoomPresencePublisher {
         }
         RoomPresenceView view = new RoomPresenceView(roomId, playerId, present, at);
         EventEnvelopeResponse envelope = EventEnvelopeResponse.of(roomId, 0, at, EVENT_TYPE, view);
-        recipients.forEach(userId -> messagingTemplate.convertAndSend(DESTINATION_PREFIX + userId, envelope));
+        recipients.forEach(userId -> messagingTemplate.convertAndSend(RoomPresenceChannelConfiguration.DESTINATION_PREFIX + userId, envelope));
     }
 }
