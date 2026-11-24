@@ -26,7 +26,14 @@ public final class RoomEventResponseMapper {
                                     e.initiatorId(),
                                     e.opponentId(),
                                     e.vsBot(),
+                                    e.origin(),
+                                    e.status(),
+                                    e.sourceGameId(),
                                     e.expiresAt()));
+            case RoomEvent.RoomAcceptedEvent e ->
+                    Optional.of(new RoomEventResponse.RoomAcceptedEventResponse(e.roomId(), e.expiresAt()));
+            case RoomEvent.RoomDeclinedEvent e ->
+                    Optional.of(new RoomEventResponse.RoomDeclinedEventResponse(e.roomId()));
             case RoomEvent.RoomEnteredEvent e ->
                     Optional.of(
                             new RoomEventResponse.RoomEnteredEventResponse(e.roomId(), e.playerId()));
@@ -47,16 +54,16 @@ public final class RoomEventResponseMapper {
             case RoomEvent.RoomLeftEvent e ->
                     Optional.of(
                             new RoomEventResponse.RoomLeftEventResponse(e.roomId(), e.playerId()));
-            case RoomEvent.RoomWizzedEvent e ->
+            case RoomEvent.RoomRemindedEvent e ->
                     Optional.of(
-                            new RoomEventResponse.RoomWizzedEventResponse(
-                                    e.roomId(), e.playerId(), e.targetId(), e.wizzedAt()));
+                            new RoomEventResponse.RoomRemindedEventResponse(
+                                    e.roomId(), e.playerId(), e.targetId(), e.stage(), e.remindedAt(), e.remindableAt()));
             case RoomEvent.RoomCompletedEvent e ->
                     Optional.of(
                             new RoomEventResponse.RoomCompletedEventResponse(e.roomId(), e.gameId()));
             case RoomEvent.RoomCancelledEvent e ->
                     Optional.of(
-                            new RoomEventResponse.RoomCancelledEventResponse(e.roomId(), e.reason()));
+                            new RoomEventResponse.RoomCancelledEventResponse(e.roomId(), e.reason().name()));
             case RoomEvent.RoomExpiredEvent e ->
                     Optional.of(new RoomEventResponse.RoomExpiredEventResponse(e.roomId()));
             case RoomEvent.RoomFailedEvent e ->

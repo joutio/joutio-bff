@@ -74,7 +74,7 @@ public class WebPushDispatcher {
         return switch (event.type()) {
             // Invitation : carte du défi dans l'espace Social (onglet Défis & Salons, reçus).
             case CHALLENGE_RECEIVED -> event.sourceId() != null
-                    ? "/social?tab=challenges&type=received&challenge=" + event.sourceId()
+                    ? "/social?tab=challenges&type=received&room=" + event.sourceId()
                     : "/notifications";
             // Partie créée (gameId attaché) : arène ; sinon salle encore ouverte.
             case ROOM_ACCEPTED -> event.gameId() != null

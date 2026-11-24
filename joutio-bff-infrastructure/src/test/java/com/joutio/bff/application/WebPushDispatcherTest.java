@@ -77,10 +77,10 @@ class WebPushDispatcherTest {
 
     @Test
     void challenge_invitation_targets_the_social_card() {
-        dispatcher.dispatch(event(NotificationType.CHALLENGE_RECEIVED, "challenge-1", "actor-1"));
+        dispatcher.dispatch(event(NotificationType.CHALLENGE_RECEIVED, "room-1", "actor-1"));
 
         assertThat(capturedMessage().path())
-                .isEqualTo("/social?tab=challenges&type=received&challenge=challenge-1");
+                .isEqualTo("/social?tab=challenges&type=received&room=room-1");
     }
 
     @Test

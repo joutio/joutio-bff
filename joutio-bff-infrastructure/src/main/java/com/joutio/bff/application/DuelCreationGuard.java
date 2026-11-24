@@ -1,40 +1,32 @@
 package com.joutio.bff.application;
 
 import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
-import com.joutio.matchmaking.domain.model.Challenge;
-import com.joutio.matchmaking.domain.model.ChallengeStatus;
 import com.joutio.matchmaking.domain.model.Room;
+import com.joutio.matchmaking.domain.model.RoomOrigin;
 import com.joutio.matchmaking.domain.model.RoomStatus;
-import com.joutio.matchmaking.domain.query.ChallengeQuery;
 import com.joutio.matchmaking.domain.query.RoomQuery;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import org.axonframework.queryhandling.QueryGateway;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Garde de création des défis et salons : empêche le spam et applique les quotas.
+ * Garde de création des défis et salons : empêche le spam et applique les quotas, sur une seule lecture des salles
+ * ouvertes du joueur ({@code GetMyOpenRooms}). L'échéance des salles est tenue par matchmaking : aucune salle n'est
+ * filtrée ici sur l'heure.
  *
  * <ul>
- *   <li><b>Défi</b> : un défi PENDING ne peut pas être dupliqué entre les deux mêmes joueurs sur
- *   le même sujet, dans aucun sens (symétrique) ; le nombre de défis PENDING <b>créés</b> par le
- *   joueur est plafonné par {@link DuelLimitPolicy}.</li>
- *   <li><b>Salon privé/partagé</b> : un joueur ne peut avoir qu'un salon WAITING_PLAYERS
- *   <b>créé</b> par sujet ; le nombre de salons WAITING_PLAYERS créés est plafonné par
+ *   <li><b>Défi</b> (salle {@code CHALLENGE}/{@code REMATCH} en {@code INVITED}) : pas de second défi entre les deux
+ *   mêmes joueurs sur le même sujet, dans aucun sens ; le nombre de défis <b>envoyés</b> en attente est plafonné par
  *   {@link DuelLimitPolicy}.</li>
- *   <li><b>Salon bot</b> : il ne partage pas les slots des salons privés/partagés — un salon
- *   privé ouvert ne bloque pas l'entraînement. Il possède son propre quota de salons bot
- *   ouverts, pour éviter le spam.</li>
+ *   <li><b>Salon partagé</b> ({@code SHARED} en {@code WAITING_PLAYERS}) : un seul par sujet, et un nombre plafonné.</li>
+ *   <li><b>Salon bot</b> : son propre quota, pour qu'un salon partagé ouvert n'empêche jamais l'entraînement.</li>
  * </ul>
  *
- * <p>Les listes viennent des queries existantes : les défis où le joueur est invité sont utilisés
- * pour l'unicité symétrique mais ne comptent pas dans son quota (il n'en est pas le créateur).
- * Le contrôle est séquentiel ; deux créations strictement concurrentes sur des réplicas
- * différentes peuvent encore se glisser — un verrou fort demanderait un agrégat de réservation
- * dédié.</p>
+ * <p>Deux créations strictement concurrentes sur des répliques différentes peuvent encore se glisser : un verrou
+ * fort demanderait un agrégat de réservation dédié.</p>
  */
 @Service
 public class DuelCreationGuard {
@@ -47,105 +39,72 @@ public class DuelCreationGuard {
         this.limits = limits;
     }
 
-    /** Vérifie l'unicité symétrique (opposant + sujet) et le quota de défis créés. */
-    public CompletableFuture<Void> ensureChallengeAllowed(String challengerId,
-                                                          String opponentId,
-                                                          String topicId) {
-        return queryGateway
-                .query(new ChallengeQuery.GetMyChallenges(challengerId),
-                        QueryResponseTypes.multipleInstancesOf(Challenge.class))
-                .thenCombine(limits.maxPendingChallenges(challengerId), (challenges, limit) -> {
-                    List<Challenge> active = activeChallenges(challenges);
-                    boolean duplicate = active.stream().anyMatch(challenge ->
-                            topicId.equals(challenge.topicId())
-                                    && samePair(challenge, challengerId, opponentId));
+    /** Vérifie l'unicité symétrique (adversaire + sujet) et le quota de défis envoyés en attente. */
+    public CompletableFuture<Void> ensureChallengeAllowed(String challengerId, String opponentId, String topicId) {
+        return openRooms(challengerId)
+                .thenCombine(limits.maxPendingChallenges(challengerId), (rooms, limit) -> {
+                    List<Room> invitations = rooms.stream().filter(DuelCreationGuard::isPendingInvitation).toList();
+                    boolean duplicate = invitations.stream()
+                            .anyMatch(room -> topicId.equals(room.topicId()) && samePair(room, challengerId, opponentId));
                     if (duplicate) {
                         throw new BffProblems.ChallengeAlreadyPendingProblem(topicId, opponentId);
                     }
-                    long created = active.stream()
-                            .filter(challenge -> challengerId.equals(challenge.challengerId()))
-                            .count();
-                    if (created >= limit) {
+                    long sent = invitations.stream().filter(room -> challengerId.equals(room.initiatorId())).count();
+                    if (sent >= limit) {
                         throw new BffProblems.ChallengeQuotaExceededProblem(limit);
                     }
                     return null;
                 });
     }
 
-    /** Vérifie l'unicité (initiateur + sujet) et le quota des salons privés/partagés. */
+    /** Vérifie l'unicité (initiateur + sujet) et le quota des salons partagés. */
     public CompletableFuture<Void> ensureRoomAllowed(String initiatorId, String topicId) {
-        return queryGateway
-                .query(new RoomQuery.GetMyOpenRooms(initiatorId),
-                        QueryResponseTypes.multipleInstancesOf(Room.class))
+        return openRooms(initiatorId)
                 .thenCombine(limits.maxOpenRooms(initiatorId), (rooms, limit) -> {
-                    List<Room> active = humanRooms(rooms, initiatorId);
-                    boolean duplicate = active.stream()
-                            .anyMatch(room -> topicId.equals(room.topicId()));
-                    if (duplicate) {
-                        String roomId = active.stream()
-                                .filter(room -> topicId.equals(room.topicId()))
-                                .findFirst()
-                                .map(Room::roomId)
-                                .orElse(null);
-                        throw new BffProblems.RoomAlreadyOpenOnTopicProblem(topicId, roomId);
-                    }
-                    if (active.size() >= limit) {
+                    List<Room> shared = waitingRoomsCreatedBy(rooms, initiatorId, RoomOrigin.SHARED);
+                    shared.stream()
+                            .filter(room -> topicId.equals(room.topicId()))
+                            .findFirst()
+                            .ifPresent(room -> {
+                                throw new BffProblems.RoomAlreadyOpenOnTopicProblem(topicId, room.roomId());
+                            });
+                    if (shared.size() >= limit) {
                         throw new BffProblems.RoomQuotaExceededProblem(limit);
                     }
                     return null;
                 });
     }
 
-    /**
-     * Vérifie le quota des salons bot. Aucune unicité par sujet : un salon privé ouvert ne doit
-     * jamais empêcher un entraînement contre le bot.
-     */
+    /** Vérifie le quota des salons bot. Aucune unicité par sujet. */
     public CompletableFuture<Void> ensureBotRoomAllowed(String initiatorId) {
-        return queryGateway
-                .query(new RoomQuery.GetMyOpenRooms(initiatorId),
-                        QueryResponseTypes.multipleInstancesOf(Room.class))
-                .thenAccept(rooms -> {
-                    List<Room> active = activeRooms(rooms).stream()
-                            .filter(room -> initiatorId.equals(room.initiatorId()))
-                            .filter(Room::vsBot)
-                            .toList();
-                    int limit = limits.maxBotRooms();
-                    if (active.size() >= limit) {
-                        throw new BffProblems.RoomQuotaExceededProblem(limit);
-                    }
-                });
+        return openRooms(initiatorId).thenAccept(rooms -> {
+            int limit = limits.maxBotRooms();
+            if (waitingRoomsCreatedBy(rooms, initiatorId, RoomOrigin.BOT).size() >= limit) {
+                throw new BffProblems.RoomQuotaExceededProblem(limit);
+            }
+        });
     }
 
-    private static List<Challenge> activeChallenges(List<Challenge> challenges) {
-        Instant now = Instant.now();
-        return challenges.stream()
-                .filter(challenge -> challenge.status() == ChallengeStatus.PENDING)
-                .filter(challenge -> challenge.expiresAt() != null
-                        && challenge.expiresAt().isAfter(now))
-                .toList();
+    private CompletableFuture<List<Room>> openRooms(String playerId) {
+        return queryGateway.query(
+                new RoomQuery.GetMyOpenRooms(playerId), QueryResponseTypes.multipleInstancesOf(Room.class));
     }
 
-    private static List<Room> activeRooms(List<Room> rooms) {
-        Instant now = Instant.now();
+    private static boolean isPendingInvitation(Room room) {
+        return room.status() == RoomStatus.INVITED;
+    }
+
+    private static List<Room> waitingRoomsCreatedBy(List<Room> rooms, String initiatorId, RoomOrigin origin) {
         return rooms.stream()
                 .filter(room -> room.status() == RoomStatus.WAITING_PLAYERS)
-                .filter(room -> room.expiresAt() != null && room.expiresAt().isAfter(now))
-                .toList();
-    }
-
-    /** Slots des salons privés/partagés : les salons bot ne les consomment pas. */
-    private static List<Room> humanRooms(List<Room> rooms, String initiatorId) {
-        return activeRooms(rooms).stream()
+                .filter(room -> room.origin() == origin)
                 .filter(room -> initiatorId.equals(room.initiatorId()))
-                .filter(room -> !room.vsBot())
                 .toList();
     }
 
-    /** Vrai si le défi oppose exactement les deux joueurs, quel que soit le sens. */
-    private static boolean samePair(Challenge challenge, String playerId, String opponentId) {
-        return (playerId.equals(challenge.challengerId())
-                && opponentId.equals(challenge.opponentId()))
-                || (opponentId.equals(challenge.challengerId())
-                && playerId.equals(challenge.opponentId()));
+    /** Vrai si la salle oppose exactement les deux joueurs, quel que soit le sens. */
+    private static boolean samePair(Room room, String playerId, String opponentId) {
+        return (playerId.equals(room.initiatorId()) && opponentId.equals(room.opponentId()))
+                || (opponentId.equals(room.initiatorId()) && playerId.equals(room.opponentId()));
     }
 }

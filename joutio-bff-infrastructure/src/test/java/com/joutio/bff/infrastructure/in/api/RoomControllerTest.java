@@ -4,6 +4,7 @@ import com.joutio.bff.application.RoomViewService;
 import com.joutio.bff.infrastructure.in.api.request.CreateBotRoomRequest;
 import com.joutio.bff.infrastructure.in.api.request.CreateRoomRequest;
 import com.joutio.matchmaking.domain.event.RoomEvent;
+import com.joutio.matchmaking.domain.model.RoomReminderStage;
 import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,21 +97,29 @@ class RoomControllerTest {
     }
 
     @Test
-    void wizz_delegates_to_service() throws Exception {
-        when(roomViewService.wizz("room-1", USER_ID)).thenReturn(CompletableFuture.completedFuture(null));
+    void remind_accept_decline_delegate_to_service() throws Exception {
+        when(roomViewService.remind("room-1", USER_ID)).thenReturn(CompletableFuture.completedFuture(null));
+        when(roomViewService.accept("room-1", USER_ID)).thenReturn(CompletableFuture.completedFuture(null));
+        when(roomViewService.decline("room-1", USER_ID)).thenReturn(CompletableFuture.completedFuture(null));
 
-        MvcResult wizz = mockMvc.perform(post("/api/rooms/room-1/wizz"))
-                .andExpect(request().asyncStarted()).andReturn();
-        mockMvc.perform(asyncDispatch(wizz)).andExpect(status().isOk());
+        for (String action : List.of("remind", "accept", "decline")) {
+            MvcResult result = mockMvc.perform(post("/api/rooms/room-1/" + action))
+                    .andExpect(request().asyncStarted()).andReturn();
+            mockMvc.perform(asyncDispatch(result)).andExpect(status().isOk());
+        }
 
-        verify(roomViewService).wizz("room-1", USER_ID);
+        verify(roomViewService).remind("room-1", USER_ID);
+        verify(roomViewService).accept("room-1", USER_ID);
+        verify(roomViewService).decline("room-1", USER_ID);
     }
 
     @Test
     void events_return_the_sequenced_web_payload() throws Exception {
         Instant at = Instant.parse("2026-11-23T10:00:00Z");
         when(roomViewService.events("room-1")).thenReturn(CompletableFuture.completedFuture(
-                List.of(EventEnvelope.of("room-1", 3L, at, new RoomEvent.RoomWizzedEvent("room-1", "initiator", "opponent", at)))));
+                List.of(EventEnvelope.of("room-1", 3L, at, new RoomEvent.RoomRemindedEvent(
+                        "room-1", "initiator", "opponent", RoomReminderStage.PRESENCE, "topic-1", null,
+                        at.plusSeconds(3600), at, at.plusSeconds(10))))));
 
         MvcResult result = mockMvc.perform(get("/api/rooms/room-1/events"))
                 .andExpect(request().asyncStarted())
@@ -120,7 +129,7 @@ class RoomControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].aggregateId").value("room-1"))
                 .andExpect(jsonPath("$[0].sequenceNumber").value(3))
-                .andExpect(jsonPath("$[0].eventType").value("ROOM_WIZZED"))
-                .andExpect(jsonPath("$[0].payload.type").value("ROOM_WIZZED"));
+                .andExpect(jsonPath("$[0].eventType").value("ROOM_REMINDED"))
+                .andExpect(jsonPath("$[0].payload.type").value("ROOM_REMINDED"));
     }
 }

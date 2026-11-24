@@ -1,17 +1,23 @@
 package com.joutio.bff.application;
 
-import com.joutio.matchmaking.domain.model.RoomOrigin;
-
+import com.joutio.bff.infrastructure.in.api.problem.BffProblems;
 import com.joutio.bff.infrastructure.in.api.request.CreateBotRoomRequest;
+import com.joutio.bff.infrastructure.in.api.request.CreateChallengeRequest;
 import com.joutio.bff.infrastructure.in.api.request.CreateRoomRequest;
 import com.joutio.bff.infrastructure.in.api.response.RoomOpponentView;
 import com.joutio.bff.infrastructure.in.api.response.RoomView;
+import com.joutio.bff.infrastructure.in.api.response.RoomAccess;
 import com.joutio.bff.infrastructure.in.api.response.TopicRefView;
 import com.joutio.game.domain.model.BotDifficulty;
+import com.joutio.game.domain.model.Game;
+import com.joutio.game.domain.model.GamePlayerType;
+import com.joutio.game.domain.query.GameQuery;
 import com.joutio.identity.domain.model.UserAccountStatus;
 import com.joutio.matchmaking.domain.command.RoomCommand;
-import com.joutio.matchmaking.domain.model.RoomLeaveReason;
 import com.joutio.matchmaking.domain.model.Room;
+import com.joutio.matchmaking.domain.model.RoomCancelReason;
+import com.joutio.matchmaking.domain.model.RoomLeaveReason;
+import com.joutio.matchmaking.domain.model.RoomOrigin;
 import com.joutio.matchmaking.domain.model.RoomPlayer;
 import com.joutio.matchmaking.domain.query.RoomQuery;
 import com.joutio.microservice.core.domain.constant.JoutioConstants;
@@ -38,8 +44,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Salle (salle d'attente temps réel) : création (partagée ou contre le bot), consultation,
- * apparition, annulation. Le lien de partage se compose côté client via {@code /join/{roomId}}.
+ * Salles : création (défi ou revanche, salon partagé, bot), consultation, réponse à une invitation, apparition,
+ * relance et annulation. Un défi est une salle {@code INVITED} : l'invité l'accepte ou la refuse. Le lien de partage
+ * se compose côté client ({@code go.joutio.com/j/{roomId}}).
  */
 @Service
 public class RoomViewService {
@@ -70,9 +77,67 @@ public class RoomViewService {
     }
 
     /**
-     * Ouvre une salle partagée (lien). Le défi nominatif passe par {@code POST /api/challenges} :
-     * la salle nominative n'est créée qu'à l'acceptation (saga).
+     * Défi (ou revanche si {@code gameId}) : la salle naît {@code INVITED}, l'invité répond. L'adversaire doit exister
+     * et être actif (statut identity lu avant le profil, déjà supprimé pour un compte effacé), le sujet jouable, aucun
+     * blocage entre les deux, et la garde de création respectée. C'est le seul point où le blocage est vérifié pour
+     * une salle nominative : un blocage ultérieur annule la salle (matchmaking).
      */
+    public CompletableFuture<String> createChallenge(String challengerId, CreateChallengeRequest request) {
+        String roomId = UUID.randomUUID().toString();
+        boolean rematch = request.gameId() != null && !request.gameId().isBlank();
+        return identityLookup
+                .status(request.opponentId())
+                .exceptionally(_ -> null)
+                .thenCompose(account -> {
+                    if (account != null && account.deleted()) {
+                        throw new BffProblems.ChallengeOpponentDeletedProblem(request.opponentId());
+                    }
+                    if (account != null && account.suspended(Instant.now())) {
+                        throw new BffProblems.ChallengeOpponentSuspendedProblem(request.opponentId());
+                    }
+                    return profileLookup.get(request.opponentId());
+                })
+                .thenCompose(_ -> TopicAccessService.requirePlayable(queryGateway, request.topicId()))
+                .thenCompose(_ -> userBlockService.requireNotBlocked(challengerId, request.opponentId()))
+                .thenCompose(_ -> rematch ? validateRematch(challengerId, request) : CompletableFuture.completedFuture(null))
+                .thenCompose(_ -> duelCreationGuard.ensureChallengeAllowed(
+                        challengerId, request.opponentId(), request.topicId()))
+                .thenCompose(_ -> commandGateway.send(new RoomCommand.CreateRoomCommand(
+                        roomId,
+                        request.topicId(),
+                        challengerId,
+                        request.opponentId(),
+                        false,
+                        null,
+                        rematch ? RoomOrigin.REMATCH : RoomOrigin.CHALLENGE,
+                        rematch ? request.gameId() : null)))
+                .thenApply(_ -> roomId);
+    }
+
+    /**
+     * Revanche : la partie d'origine existe (404 via le problème game), le lanceur y a joué, c'est un duel entre
+     * humains et {@code opponentId} est l'autre joueur.
+     */
+    private CompletableFuture<Void> validateRematch(String challengerId, CreateChallengeRequest request) {
+        return queryGateway
+                .query(new GameQuery.GetGameByIdQuery(request.gameId()), QueryResponseTypes.instanceOf(Game.class))
+                .thenAccept(game -> {
+                    boolean participated = challengerId.equals(game.player1Id()) || challengerId.equals(game.player2Id());
+                    if (!participated) {
+                        throw new BffProblems.RematchNotAllowedProblem(request.gameId(), challengerId);
+                    }
+                    if (GamePlayerType.BOT.equals(game.opponent())) {
+                        throw new BffProblems.InvalidRematchProblem("A bot duel cannot be rematched with a challenge");
+                    }
+                    String opponentId = challengerId.equals(game.player1Id()) ? game.player2Id() : game.player1Id();
+                    if (!opponentId.equals(request.opponentId())) {
+                        throw new BffProblems.InvalidRematchProblem(
+                                "opponentId must be the other player of the source game");
+                    }
+                });
+    }
+
+    /** Ouvre un salon partagé par lien : le premier qui entre devient l'adversaire. */
     public CompletableFuture<String> create(String playerId, CreateRoomRequest request) {
         String roomId = UUID.randomUUID().toString();
         return TopicAccessService.requirePlayable(queryGateway, request.topicId())
@@ -87,7 +152,8 @@ public class RoomViewService {
                                                 null,
                                                 false,
                                                 null,
-                                                RoomOrigin.SHARED)))
+                                                RoomOrigin.SHARED,
+                                                null)))
                 .thenApply(_ -> roomId);
     }
 
@@ -111,7 +177,8 @@ public class RoomViewService {
                                                 JoutioConstants.SYSTEM_USER_ID,
                                                 true,
                                                 difficulty.name(),
-                                                RoomOrigin.BOT)))
+                                                RoomOrigin.BOT,
+                                                null)))
                 .thenApply(_ -> roomId);
     }
 
@@ -150,8 +217,10 @@ public class RoomViewService {
                                                 ? TopicAccessService.requirePlayable(
                                                         queryGateway, room.topicId())
                                                 : CompletableFuture.<Void>completedFuture(null))
-                                        // Salon d'un joueur en relation de blocage : refusé, sans dire pourquoi.
-                                        .thenCompose(_ -> playerId.equals(room.initiatorId())
+                                        // Salon partagé d'un joueur en relation de blocage : refusé, sans dire
+                                        // pourquoi. Une salle nominative a été vérifiée à sa création.
+                                        .thenCompose(_ -> room.origin() != RoomOrigin.SHARED
+                                                        || playerId.equals(room.initiatorId())
                                                 ? CompletableFuture.<Void>completedFuture(null)
                                                 : userBlockService.requireNotBlocked(playerId, room.initiatorId()))
                                         .thenCompose(_ -> roomPlayer(playerId, room.topicId())))
@@ -210,26 +279,28 @@ public class RoomViewService {
     }
 
     public CompletableFuture<Void> cancel(String roomId, String playerId) {
-        return requireRoom(roomId)
-                .thenCompose(
-                        _ ->
-                                commandGateway
-                                        .send(new RoomCommand.CancelRoomCommand(roomId, playerId))
-                                        .thenAccept(_ -> {}));
+        return send(roomId, new RoomCommand.CancelRoomCommand(roomId, playerId, RoomCancelReason.PLAYER_CANCELLED));
+    }
+
+    /** L'invité accepte le défi ; les invariants (invité seul, invitation en attente) vivent dans l'agrégat. */
+    public CompletableFuture<Void> accept(String roomId, String playerId) {
+        return send(roomId, new RoomCommand.AcceptRoomInvitationCommand(roomId, playerId));
+    }
+
+    public CompletableFuture<Void> decline(String roomId, String playerId) {
+        return send(roomId, new RoomCommand.DeclineRoomInvitationCommand(roomId, playerId));
     }
 
     /**
-     * Relance (« wizz ») de l'adversaire absent : pur temps réel (aucune préparation déclenchée).
-     * Les invariants (émetteur présent, cible humaine absente, cadence 10 s) vivent dans l'agrégat
-     * — une relance refusée remonte le {@code Problem} métier mappé par le SDK.
+     * Relance selon l'étape : le lanceur renvoie son invitation (10 min), ou un joueur présent appelle l'autre, absent
+     * (10 s). Une relance refusée remonte le {@code Problem} métier de l'agrégat.
      */
-    public CompletableFuture<Void> wizz(String roomId, String playerId) {
-        return requireRoom(roomId)
-                .thenCompose(
-                        _ ->
-                                commandGateway
-                                        .send(new RoomCommand.WizzRoomCommand(roomId, playerId))
-                                        .thenAccept(_ -> {}));
+    public CompletableFuture<Void> remind(String roomId, String playerId) {
+        return send(roomId, new RoomCommand.RemindRoomCommand(roomId, playerId));
+    }
+
+    private CompletableFuture<Void> send(String roomId, RoomCommand command) {
+        return requireRoom(roomId).thenCompose(_ -> commandGateway.send(command).thenAccept(_ -> {}));
     }
 
     /**
@@ -338,13 +409,16 @@ public class RoomViewService {
                 room.status(),
                 room.vsBot(),
                 room.origin(),
+                RoomAccess.of(room.origin()),
                 viewerId.equals(room.initiatorId()),
                 opponentRef(opponentId, opponent, status, progress),
                 room.initiatorPresent(),
                 room.participantPresent(),
                 room.gameId(),
+                room.sourceGameId(),
                 room.createdAt(),
                 room.expiresAt(),
+                room.remindableAt(),
                 room.updatedAt());
     }
 

@@ -2,6 +2,7 @@ package com.joutio.bff.infrastructure.in.api;
 
 import com.joutio.bff.application.RoomViewService;
 import com.joutio.bff.infrastructure.in.api.request.CreateBotRoomRequest;
+import com.joutio.bff.infrastructure.in.api.request.CreateChallengeRequest;
 import com.joutio.bff.infrastructure.in.api.request.CreateRoomRequest;
 import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
 import com.joutio.bff.infrastructure.in.api.response.RoomView;
@@ -25,9 +26,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * {@code /api/rooms} — salles : création, consultation, annulation et relance. La présence passe par
- * le canal STOMP {@code /topic/rooms/{roomId}/presence} ({@code PresenceChannelListener}).
- * Le lien de partage est composé côté client : {@code /join/{roomId}}.
+ * {@code /api/rooms} — salles : création (défi, salon partagé, bot), consultation, réponse à une invitation, relance
+ * et annulation. La présence passe par le canal STOMP {@code /topic/rooms/{roomId}/presence}
+ * ({@code PresenceChannelListener}).
  */
 @RestController
 @RequestMapping("/api/rooms")
@@ -45,6 +46,15 @@ public class RoomController {
     public CompletableFuture<ResponseEntity<IdResponse>> create(@Valid @RequestBody CreateRoomRequest request) {
         return roomViewService
                 .create(SecurityHelper.getUserId(), request)
+                .thenApply(roomId -> ResponseEntityBuilder.creation(ENDPOINT, roomId));
+    }
+
+    /** Défi (ou revanche si {@code gameId}) : la salle naît {@code INVITED}, l'invité accepte ou refuse. */
+    @PostMapping("/challenge")
+    public CompletableFuture<ResponseEntity<IdResponse>> createChallenge(
+            @Valid @RequestBody CreateChallengeRequest request) {
+        return roomViewService
+                .createChallenge(SecurityHelper.getUserId(), request)
                 .thenApply(roomId -> ResponseEntityBuilder.creation(ENDPOINT, roomId));
     }
 
@@ -73,11 +83,26 @@ public class RoomController {
                 .thenApply(_ -> ResponseEntity.ok().build());
     }
 
-    /** Relance (« wizz ») de l'adversaire absent — cadence 10 s par joueur, gardée par l'agrégat. */
-    @PostMapping("/{roomId}/wizz")
-    public CompletableFuture<ResponseEntity<Void>> wizz(@PathVariable String roomId) {
+    /** L'invité accepte le défi : la salle s'ouvre aux deux joueurs. */
+    @PostMapping("/{roomId}/accept")
+    public CompletableFuture<ResponseEntity<Void>> accept(@PathVariable String roomId) {
         return roomViewService
-                .wizz(roomId, SecurityHelper.getUserId())
+                .accept(roomId, SecurityHelper.getUserId())
+                .thenApply(_ -> ResponseEntity.ok().build());
+    }
+
+    @PostMapping("/{roomId}/decline")
+    public CompletableFuture<ResponseEntity<Void>> decline(@PathVariable String roomId) {
+        return roomViewService
+                .decline(roomId, SecurityHelper.getUserId())
+                .thenApply(_ -> ResponseEntity.ok().build());
+    }
+
+    /** Relance : invitation renvoyée (10 min) ou adversaire absent appelé (« wizz », 10 s), gardée par l'agrégat. */
+    @PostMapping("/{roomId}/remind")
+    public CompletableFuture<ResponseEntity<Void>> remind(@PathVariable String roomId) {
+        return roomViewService
+                .remind(roomId, SecurityHelper.getUserId())
                 .thenApply(_ -> ResponseEntity.ok().build());
     }
 

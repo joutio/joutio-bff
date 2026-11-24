@@ -1,5 +1,7 @@
 package com.joutio.bff.application;
 
+import com.joutio.matchmaking.domain.model.Room;
+import com.joutio.matchmaking.domain.query.RoomQuery;
 import com.joutio.identity.domain.model.AccountStatus;
 import com.joutio.identity.domain.query.UserQuery;
 import com.joutio.microservice.core.domain.model.i18n.Language;
@@ -79,10 +81,22 @@ public class SharePageService {
     }
 
     /** Les salons sont éphémères : page sans lecture du salon, l'app affiche son état réel. */
+    /**
+     * Salon partagé : invitation tant qu'il attend ses joueurs, sinon page « salon expiré ou introuvable » (l'app
+     * ouverte sur le même chemin affiche le refus d'entrée).
+     */
     public CompletableFuture<SharePage> room(String roomId) {
-        return CompletableFuture.completedFuture(new SharePage(
-                Kind.ROOM, "Un défi t'attend sur Joutio", "Rejoins le salon et affronte ton adversaire en direct.",
-                properties.defaultImage(), "/join/" + roomId));
+        return queryGateway
+                .query(new RoomQuery.GetRoomById(roomId), QueryResponseTypes.instanceOf(Room.class))
+                .thenApply(room -> room.status().isOpen())
+                .exceptionally(_ -> false)
+                .thenApply(open -> open
+                        ? new SharePage(Kind.ROOM, "Un défi t'attend sur Joutio",
+                                "Rejoins le salon et affronte ton adversaire en direct.",
+                                properties.defaultImage(), "/join/" + roomId)
+                        : new SharePage(Kind.ROOM, "Salon expiré ou introuvable",
+                                "Ce salon n'est plus disponible. Lance un nouveau duel sur Joutio.",
+                                properties.defaultImage(), "/join/" + roomId));
     }
 
     private SharePage generic(Kind kind, String appPath) {

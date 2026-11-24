@@ -138,18 +138,37 @@ class RoomViewServiceTest {
     }
 
     @Test
-    void wizz_checksRoomExistenceAndSendsTheCommand() {
+    void remind_checksRoomExistenceAndSendsTheCommand() {
         stubRoom();
-        when(commandGateway.send(any(RoomCommand.WizzRoomCommand.class)))
+        when(commandGateway.send(any(RoomCommand.RemindRoomCommand.class)))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
-        service.wizz("room-1", "user-1").join();
+        service.remind("room-1", "user-1").join();
 
-        ArgumentCaptor<RoomCommand.WizzRoomCommand> captor =
-                ArgumentCaptor.forClass(RoomCommand.WizzRoomCommand.class);
-        verify(commandGateway).send(captor.capture());
-        assertThat(captor.getValue().roomId()).isEqualTo("room-1");
-        assertThat(captor.getValue().playerId()).isEqualTo("user-1");
+        verify(commandGateway).send(new RoomCommand.RemindRoomCommand("room-1", "user-1"));
+    }
+
+    @Test
+    void accept_and_decline_sendTheInvitationCommands() {
+        stubRoom();
+        when(commandGateway.send(any())).thenReturn(CompletableFuture.completedFuture(null));
+
+        service.accept("room-1", "user-2").join();
+        service.decline("room-1", "user-2").join();
+
+        verify(commandGateway).send(new RoomCommand.AcceptRoomInvitationCommand("room-1", "user-2"));
+        verify(commandGateway).send(new RoomCommand.DeclineRoomInvitationCommand("room-1", "user-2"));
+    }
+
+    @Test
+    void cancel_isOnBehalfOfThePlayer() {
+        stubRoom();
+        when(commandGateway.send(any())).thenReturn(CompletableFuture.completedFuture(null));
+
+        service.cancel("room-1", "user-1").join();
+
+        verify(commandGateway).send(new RoomCommand.CancelRoomCommand(
+                "room-1", "user-1", com.joutio.matchmaking.domain.model.RoomCancelReason.PLAYER_CANCELLED));
     }
 
     @Test

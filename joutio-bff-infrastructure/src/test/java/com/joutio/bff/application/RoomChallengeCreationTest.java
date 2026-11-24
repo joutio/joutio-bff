@@ -15,7 +15,8 @@ import com.joutio.bff.infrastructure.in.api.request.CreateChallengeRequest;
 import com.joutio.game.domain.model.Game;
 import com.joutio.game.domain.model.GamePlayerType;
 import com.joutio.game.domain.query.GameQuery;
-import com.joutio.matchmaking.domain.command.ChallengeCommand;
+import com.joutio.matchmaking.domain.command.RoomCommand;
+import com.joutio.matchmaking.domain.model.RoomOrigin;
 
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.responsetypes.ResponseType;
@@ -28,10 +29,11 @@ import org.mockito.ArgumentMatchers;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Validation du défi de revanche : {@code gameId} référence la partie terminée d'origine —
- * participation du challenger, duel humain/humain et cohérence de l'adversaire.
+ * Création d'un défi ({@code POST /api/rooms/challenge}) : contrôles de l'adversaire, garde, et validation de la
+ * revanche ({@code gameId} : participation du lanceur, duel entre humains, cohérence de l'adversaire). La salle naît
+ * {@code INVITED} côté matchmaking.
  */
-class ChallengeViewServiceTest {
+class RoomChallengeCreationTest {
 
     private static final String CHALLENGER = "challenger-1";
     private static final String OPPONENT = "opponent-1";
@@ -41,9 +43,15 @@ class ChallengeViewServiceTest {
     private final ProfileLookup profileLookup = mock(ProfileLookup.class);
     private final IdentityLookup identityLookup = mock(IdentityLookup.class);
     private final DuelCreationGuard duelCreationGuard = mock(DuelCreationGuard.class);
-    private final ChallengeViewService service =
-            new ChallengeViewService(
-                    queryGateway, commandGateway, profileLookup, identityLookup, duelCreationGuard, TestUserBlocks.none());
+    private final RoomViewService service =
+            new RoomViewService(
+                    queryGateway,
+                    commandGateway,
+                    profileLookup,
+                    mock(ProgressionLookup.class),
+                    identityLookup,
+                    duelCreationGuard,
+                    TestUserBlocks.none());
 
     @BeforeEach
     void setUp() {
@@ -62,10 +70,13 @@ class ChallengeViewServiceTest {
 
     @Test
     void create_normalChallenge_skipsRematchValidation() {
-        service.create(CHALLENGER, request(OPPONENT, null)).join();
+        service.createChallenge(CHALLENGER, request(OPPONENT, null)).join();
 
-        ChallengeCommand.CreateChallengeCommand command = capturedCommand();
-        assertThat(command.gameId()).isNull();
+        RoomCommand.CreateRoomCommand command = capturedCommand();
+        assertThat(command.origin()).isEqualTo(RoomOrigin.CHALLENGE);
+        assertThat(command.initiatorId()).isEqualTo(CHALLENGER);
+        assertThat(command.opponentId()).isEqualTo(OPPONENT);
+        assertThat(command.sourceGameId()).isNull();
         verify(queryGateway, never())
                 .query(
                         any(GameQuery.GetGameByIdQuery.class),
@@ -82,18 +93,20 @@ class ChallengeViewServiceTest {
                                         com.joutio.identity.domain.model.AccountStatus.DELETED,
                                         null)));
 
-        assertThatThrownBy(() -> service.create(CHALLENGER, request(OPPONENT, "game-1")).join())
+        assertThatThrownBy(() -> service.createChallenge(CHALLENGER, request(OPPONENT, "game-1")).join())
                 .hasCauseInstanceOf(BffProblems.ChallengeOpponentDeletedProblem.class);
         verify(commandGateway, never()).send(any());
     }
 
     @Test
-    void create_rematch_passesSourceGameIdToCommand() {
+    void create_rematch_opensARematchRoomWithItsSourceGame() {
         stubGame(game(CHALLENGER, OPPONENT, GamePlayerType.HUMAN));
 
-        service.create(CHALLENGER, request(OPPONENT, "game-1")).join();
+        service.createChallenge(CHALLENGER, request(OPPONENT, "game-1")).join();
 
-        assertThat(capturedCommand().gameId()).isEqualTo("game-1");
+        RoomCommand.CreateRoomCommand command = capturedCommand();
+        assertThat(command.origin()).isEqualTo(RoomOrigin.REMATCH);
+        assertThat(command.sourceGameId()).isEqualTo("game-1");
     }
 
     @Test
@@ -104,7 +117,7 @@ class ChallengeViewServiceTest {
                                 new BffProblems.ChallengeAlreadyPendingProblem(
                                         "topic-1", OPPONENT)));
 
-        assertThatThrownBy(() -> service.create(CHALLENGER, request(OPPONENT, null)).join())
+        assertThatThrownBy(() -> service.createChallenge(CHALLENGER, request(OPPONENT, null)).join())
                 .hasCauseInstanceOf(BffProblems.ChallengeAlreadyPendingProblem.class);
         verify(commandGateway, never()).send(any());
     }
@@ -113,7 +126,7 @@ class ChallengeViewServiceTest {
     void create_rematch_refusedWhenChallengerDidNotPlay() {
         stubGame(game("someone-else", OPPONENT, GamePlayerType.HUMAN));
 
-        assertThatThrownBy(() -> service.create(CHALLENGER, request(OPPONENT, "game-1")).join())
+        assertThatThrownBy(() -> service.createChallenge(CHALLENGER, request(OPPONENT, "game-1")).join())
                 .hasCauseInstanceOf(BffProblems.RematchNotAllowedProblem.class);
     }
 
@@ -121,7 +134,7 @@ class ChallengeViewServiceTest {
     void create_rematch_refusedForBotGame() {
         stubGame(game(CHALLENGER, "bot-1", GamePlayerType.BOT));
 
-        assertThatThrownBy(() -> service.create(CHALLENGER, request(OPPONENT, "game-1")).join())
+        assertThatThrownBy(() -> service.createChallenge(CHALLENGER, request(OPPONENT, "game-1")).join())
                 .hasCauseInstanceOf(BffProblems.InvalidRematchProblem.class);
     }
 
@@ -129,7 +142,7 @@ class ChallengeViewServiceTest {
     void create_rematch_refusedOnOpponentMismatch() {
         stubGame(game(CHALLENGER, OPPONENT, GamePlayerType.HUMAN));
 
-        assertThatThrownBy(() -> service.create(CHALLENGER, request("other-1", "game-1")).join())
+        assertThatThrownBy(() -> service.createChallenge(CHALLENGER, request("other-1", "game-1")).join())
                 .hasCauseInstanceOf(BffProblems.InvalidRematchProblem.class);
     }
 
@@ -140,9 +153,9 @@ class ChallengeViewServiceTest {
                 .thenReturn(CompletableFuture.completedFuture(game));
     }
 
-    private ChallengeCommand.CreateChallengeCommand capturedCommand() {
-        ArgumentCaptor<ChallengeCommand.CreateChallengeCommand> captor =
-                ArgumentCaptor.forClass(ChallengeCommand.CreateChallengeCommand.class);
+    private RoomCommand.CreateRoomCommand capturedCommand() {
+        ArgumentCaptor<RoomCommand.CreateRoomCommand> captor =
+                ArgumentCaptor.forClass(RoomCommand.CreateRoomCommand.class);
         verify(commandGateway).send(captor.capture());
         return captor.getValue();
     }

@@ -54,9 +54,10 @@ public class ShareLinkController {
         return render(topicId, "t", pages::topic);
     }
 
+    /** Le statut d'un salon change : jamais mis en cache (un lien expiré doit le dire tout de suite). */
     @GetMapping("/go/j/{roomId}")
     public CompletableFuture<ResponseEntity<String>> room(@PathVariable String roomId) {
-        return render(roomId, "j", pages::room);
+        return render(roomId, "j", pages::room, CacheControl.noCache());
     }
 
     @GetMapping(value = "/.well-known/apple-app-site-association", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -83,12 +84,18 @@ public class ShareLinkController {
 
     private CompletableFuture<ResponseEntity<String>> render(String id, String prefix,
                                                             java.util.function.Function<String, CompletableFuture<SharePage>> resolve) {
+        return render(id, prefix, resolve, CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic());
+    }
+
+    private CompletableFuture<ResponseEntity<String>> render(String id, String prefix,
+                                                            java.util.function.Function<String, CompletableFuture<SharePage>> resolve,
+                                                            CacheControl cacheControl) {
         if (!ID.matcher(id).matches()) {
             return CompletableFuture.completedFuture(ResponseEntity.notFound().build());
         }
         return resolve.apply(id).thenApply(page -> ResponseEntity.ok()
                 .contentType(HTML)
-                .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic())
+                .cacheControl(cacheControl)
                 .body(renderer.render(page, "/" + prefix + "/" + id)));
     }
 }
