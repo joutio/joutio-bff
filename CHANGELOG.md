@@ -1,3 +1,9 @@
+## [4.0.2](https://github.com/joutio/joutio-bff/compare/v4.0.1...v4.0.2) (2026-11-24)
+
+### Bug Fixes
+
+* **deps:** pin published leaderboard-domain 1.1.11 ([20df776](https://github.com/joutio/joutio-bff/commit/20df776290e3b9349d420e1086994c3480566703))
+
 ## [4.0.1](https://github.com/joutio/joutio-bff/compare/v4.0.0...v4.0.1) (2026-11-24)
 
 ### Bug Fixes
