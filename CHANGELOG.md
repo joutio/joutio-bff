@@ -1,3 +1,9 @@
+## [4.0.1](https://github.com/joutio/joutio-bff/compare/v4.0.0...v4.0.1) (2026-11-24)
+
+### Bug Fixes
+
+* **deps:** pin published contract versions ([de591e2](https://github.com/joutio/joutio-bff/commit/de591e2314c9cbf3267343e6fc49c96da538ab93))
+
 ## [4.0.0](https://github.com/joutio/joutio-bff/compare/v3.14.0...v4.0.0) (2026-11-24)
 
 ### ⚠ BREAKING CHANGES
