@@ -1,3 +1,14 @@
+## [4.0.0](https://github.com/joutio/joutio-bff/compare/v3.14.0...v4.0.0) (2026-11-24)
+
+### ⚠ BREAKING CHANGES
+
+* /api/challenges and ChallengeView are removed; /api/rooms/{id}/wizz
+becomes /api/rooms/{id}/remind.
+
+### Features
+
+* serve challenges as invited rooms ([ccf25c1](https://github.com/joutio/joutio-bff/commit/ccf25c110ae3b02638e5713c1ccf0687f72b551b))
+
 ## [3.14.0](https://github.com/joutio/joutio-bff/compare/v3.13.0...v3.14.0) (2026-11-23)
 
 ### Features
