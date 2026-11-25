@@ -16,9 +16,15 @@ y est documentée dans le même commit.
   `RewardLookup`, `FollowLookup`, `IdentityLookup`) ; règles `*Policy`/`*Guard`
   (`PremiumAccessPolicy`, `DuelLimitPolicy`, `DuelCreationGuard`, `TopicCreationLimitPolicy`,
   `AvatarEntitlementPolicy`, `TopicAccessService`) ; médias, push, partage, administration.
+- `application/live` : vues vivantes. `LiveView` (destination, règle d'accès locale, requête, version, mapper),
+  ses deux formes `VersionedLiveView` (`LiveUpdate` sur `/topic/live/<vue>/{clé}`) et `AggregateStreamLiveView`
+  (flux d'agrégat), le catalogue `LiveViews` (résolution d'une destination, lecture `GET /api/live/<vue>/{clé}`).
 - `infrastructure/in/api` : contrôleurs minces, `*Request`, `*View`.
 - `infrastructure/in/websocket` : `PresenceChannelListener` (canaux de présence → commandes de
-  salle et de ticket), sessions de présence joueur et contrôle d’abonnement au canal personnel des salles.
+  salle et de ticket), sessions de présence joueur et contrôle d’abonnement au canal personnel des salles ;
+  `LiveViewChannelConfiguration` (accès aux vues vivantes au `SUBSCRIBE`) et `LiveViewSubscriptions` (pont : un
+  `subscriptionQuery` par destination et par pod, compté par références, rouvert et comblé après la perte des
+  fournisseurs).
 - `infrastructure/in/share` : pages `go.joutio.com`.
 - `infrastructure/out/messaging` : publishers temps réel, mappers événement → réponse BFF. Les handlers d’agrégat reçoivent le payload typé et les métadonnées utiles via les résolveurs Axon.
 - `infrastructure/out/{media,push,persistence}` : MinIO, Web Push, Expo, tables propres.
@@ -62,6 +68,14 @@ Schéma dans `V1__init_bff.sql`.
 mvn -pl joutio-bff-infrastructure test     # avant tout commit
 JOUTIO_EXPO_TEST_DB_URL=jdbc:postgresql://… mvn -pl joutio-bff-infrastructure test -Dtest=ExpoPushJdbcStoreTest
 ```
+
+## Vues vivantes
+
+- **Une vue vivante = un `LiveView`** (bean Spring). Ni publisher, ni handler d'événements, ni cache pour la servir :
+  le pont et `LiveViews` font le reste. Contrat : [api](../../docs/api/README.md#vues-vivantes).
+- `canSubscribe` est évaluée sur le thread entrant STOMP : règle locale, **sans I/O**.
+- La valeur du service porte une version monotone (séquence de l'agrégat) ; le pont ne relaie qu'une version
+  supérieure à la dernière relayée.
 
 ## Pièges
 

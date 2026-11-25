@@ -612,4 +612,37 @@ public final class BffProblems {
                     Map.of());
         }
     }
+
+    /** Vue vivante inconnue du BFF ({@code 404}). */
+    public static class LiveViewNotFoundProblem extends BaseProblem {
+        public LiveViewNotFoundProblem(String view) {
+            super("urn:joutio:bff:live:unknownView",
+                    ProblemCategory.BUSINESS_RESOURCE_MISSING,
+                    "Unknown live view",
+                    "No live view named " + view,
+                    Map.of("view", view));
+        }
+    }
+
+    /** Vue vivante réservée à d'autres joueurs ({@code 403}, ou abonnement STOMP ignoré). */
+    public static class LiveViewForbiddenProblem extends BaseProblem {
+        public LiveViewForbiddenProblem(String view, String key) {
+            super("urn:joutio:bff:live:forbidden",
+                    ProblemCategory.PERMISSION,
+                    "Live view forbidden",
+                    "Access to live view " + view + " is not allowed for this key",
+                    Map.of("view", view, "key", key));
+        }
+    }
+
+    /** Vue vivante sans valeur pour cette clé, pas encore produite ({@code 404}). */
+    public static class LiveValueNotFoundProblem extends BaseProblem {
+        public LiveValueNotFoundProblem(String view, String key) {
+            super("urn:joutio:bff:live:notFound",
+                    ProblemCategory.BUSINESS_RESOURCE_MISSING,
+                    "Live value not found",
+                    "Live view " + view + " has no value for this key yet",
+                    Map.of("view", view, "key", key));
+        }
+    }
 }
