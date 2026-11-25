@@ -15,6 +15,11 @@ spring:
 # Web Push local : paire VAPID de DÉVELOPPEMENT jetable (locale au poste). Ne jamais réutiliser
 # en production — la paire prod vit dans le secret sealed GitOps (voir devops/joutio-gitops).
 joutio:
+  axon:
+    grpc:
+      # Port du bus gRPC en local (8124 en prod), aligné sur la découverte de joutio-local.yml.
+      port: 18092
+
   push:
     vapid:
       public-key: BL4_f0c1UrFgu1Hdym2XedjmA5cjTg8hDLn_AxU-MvhEf1aTauiA2Ph0_j4t89siXdF5dD4E6URhkonwHTBWxdE
