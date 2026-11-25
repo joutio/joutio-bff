@@ -1,3 +1,9 @@
+## [4.1.1](https://github.com/joutio/joutio-bff/compare/v4.1.0...v4.1.1) (2026-11-25)
+
+### Bug Fixes
+
+* **live:** send the current value to every new subscriber ([97c891d](https://github.com/joutio/joutio-bff/commit/97c891d4993a25792e242370bf267ba4c365a381))
+
 ## [4.1.0](https://github.com/joutio/joutio-bff/compare/v4.0.4...v4.1.0) (2026-11-25)
 
 ### Features
