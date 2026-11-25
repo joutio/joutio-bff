@@ -1,3 +1,9 @@
+## [4.3.0](https://github.com/joutio/joutio-bff/compare/v4.2.0...v4.3.0) (2026-11-25)
+
+### Features
+
+* **live:** game event stream through the live view bridge ([c678e50](https://github.com/joutio/joutio-bff/commit/c678e50e80accc89c5fa71cf970c185fa7a07a34))
+
 ## [4.2.0](https://github.com/joutio/joutio-bff/compare/v4.1.1...v4.2.0) (2026-11-25)
 
 ### Features
