@@ -1,3 +1,9 @@
+## [4.1.0](https://github.com/joutio/joutio-bff/compare/v4.0.4...v4.1.0) (2026-11-25)
+
+### Features
+
+* **live:** relay live views over STOMP ([d0417b6](https://github.com/joutio/joutio-bff/commit/d0417b6f8cec31933ff95552139be2cfe31f78ad))
+
 ## [4.0.4](https://github.com/joutio/joutio-bff/compare/v4.0.3...v4.0.4) (2026-11-25)
 
 ### Bug Fixes
