@@ -1,3 +1,9 @@
+## [4.2.0](https://github.com/joutio/joutio-bff/compare/v4.1.1...v4.2.0) (2026-11-25)
+
+### Features
+
+* **live:** duel reward live view ([e337863](https://github.com/joutio/joutio-bff/commit/e337863389b20c9496cbf41f21437a81f946f26a))
+
 ## [4.1.1](https://github.com/joutio/joutio-bff/compare/v4.1.0...v4.1.1) (2026-11-25)
 
 ### Bug Fixes
