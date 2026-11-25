@@ -1,3 +1,9 @@
+## [4.0.4](https://github.com/joutio/joutio-bff/compare/v4.0.3...v4.0.4) (2026-11-25)
+
+### Bug Fixes
+
+* **deps:** joutio-parent 3.2.0 with the gRPC query bus ([c07edc8](https://github.com/joutio/joutio-bff/commit/c07edc84c2e5aa7b2d63f3eb9d7ec59e8205bf51))
+
 ## [4.0.3](https://github.com/joutio/joutio-bff/compare/v4.0.2...v4.0.3) (2026-11-25)
 
 ### Bug Fixes
