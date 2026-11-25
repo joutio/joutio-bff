@@ -7,8 +7,6 @@ import com.joutio.bff.infrastructure.in.api.response.ActiveGameView;
 import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
 import com.joutio.bff.infrastructure.in.api.response.GameResultView;
 import com.joutio.bff.infrastructure.out.messaging.mapper.GameEventResponseMapper;
-import com.joutio.game.domain.event.GameEvent;
-import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 import com.joutio.microservice.security.SecurityHelper;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -95,22 +93,9 @@ public class GameController {
         return gameViewService
                 .events(gameId, SecurityHelper.getUserId())
                 .thenApply(envelopes -> envelopes.stream()
-                        .map(GameController::toResponse)
+                        .map(GameEventResponseMapper::toEnvelope)
                         .flatMap(Optional::stream)
                         .toList())
                 .thenApply(ResponseEntity::ok);
-    }
-
-    private static Optional<EventEnvelopeResponse> toResponse(EventEnvelope envelope) {
-        if (!(envelope.payload() instanceof GameEvent event)) {
-            return Optional.empty();
-        }
-        return GameEventResponseMapper.toResponse(event)
-                .map(response -> EventEnvelopeResponse.of(
-                        envelope.aggregateId(),
-                        envelope.sequenceNumber(),
-                        envelope.timestamp(),
-                        response.type().name(),
-                        response));
     }
 }

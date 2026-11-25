@@ -1,10 +1,12 @@
 package com.joutio.bff.infrastructure.out.messaging.mapper;
 
+import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
 import com.joutio.bff.infrastructure.out.messaging.response.GameEventResponse;
 import com.joutio.game.domain.event.GameEvent;
 import com.joutio.game.domain.model.GameQuestion;
 import com.joutio.game.domain.model.GameQuestionChoice;
 import com.joutio.game.domain.model.GameQuestionContent;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 import com.joutio.microservice.core.domain.model.i18n.Language;
 
 import java.util.LinkedHashMap;
@@ -21,6 +23,19 @@ import static java.util.Objects.isNull;
 public final class GameEventResponseMapper {
 
     private GameEventResponseMapper() {
+    }
+
+    /** Événement de l'historique ou du flux vivant d'une partie, au contrat de {@code /topic/games/{id}}. */
+    public static Optional<EventEnvelopeResponse> toEnvelope(EventEnvelope envelope) {
+        if (!(envelope.payload() instanceof GameEvent event)) {
+            return Optional.empty();
+        }
+        return toResponse(event).map(response -> EventEnvelopeResponse.of(
+                envelope.aggregateId(),
+                envelope.sequenceNumber(),
+                envelope.timestamp(),
+                response.type().name(),
+                response));
     }
 
     public static Optional<GameEventResponse> toResponse(GameEvent event) {

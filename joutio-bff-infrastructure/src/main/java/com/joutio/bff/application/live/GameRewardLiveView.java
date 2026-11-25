@@ -32,7 +32,7 @@ public class GameRewardLiveView extends VersionedLiveView<GameReward, GameReward
     @Override
     public boolean canSubscribe(String userId, String key) {
         int separator = key.lastIndexOf(SEPARATOR);
-        return userId != null && separator > 0 && key.substring(separator + 1).equals(userId);
+        return separator > 0 && key.substring(separator + 1).equals(userId);
     }
 
     @Override

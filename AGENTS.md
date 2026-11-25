@@ -19,7 +19,8 @@ y est documentée dans le même commit.
 - `application/live` : vues vivantes. `LiveView` (destination, règle d'accès locale, requête, version, mapper),
   ses deux formes `VersionedLiveView` (`LiveUpdate` sur `/topic/live/<vue>/{clé}`) et `AggregateStreamLiveView`
   (flux d'agrégat), le catalogue `LiveViews` (résolution d'une destination, lecture `GET /api/live/<vue>/{clé}`).
-  Vues : `GameRewardLiveView` (`game-reward`, clé `{gameId}:{userId}`).
+  Vues : `GameRewardLiveView` (`game-reward`, clé `{gameId}:{userId}`), `GameStreamLiveView` (`/topic/games/{id}`,
+  flux d'agrégat).
 - `infrastructure/in/api` : contrôleurs minces, `*Request`, `*View`.
 - `infrastructure/in/websocket` : `PresenceChannelListener` (canaux de présence → commandes de
   salle et de ticket), sessions de présence joueur et contrôle d’abonnement au canal personnel des salles ;
@@ -38,7 +39,7 @@ y est documentée dans le même commit.
 
 | Groupe | Portée |
 |---|---|
-| `game-events`, `room-events`, `matchmaking-events`, `presence-events`, `follow-presence-events`, `achievement-events`, `notification-ws`, `cache-invalidation` | **instance-scopés** : chaque pod reçoit tout, en direct, par un seul consumer Kafka sans token (SDK) ; handlers non bloquants |
+| `room-events`, `matchmaking-events`, `presence-events`, `follow-presence-events`, `achievement-events`, `notification-ws`, `cache-invalidation` | **instance-scopés** : chaque pod reçoit tout, en direct, par un seul consumer Kafka sans token (SDK) ; handlers non bloquants |
 | `notification-push` | global : un seul envoi Web Push / Expo par événement, hors thread du processor |
 | `account-deletion-bff` | global : purge des données du BFF à la suppression d'un compte |
 
