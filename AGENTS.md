@@ -19,6 +19,7 @@ y est documentée dans le même commit.
 - `application/live` : vues vivantes. `LiveView` (destination, règle d'accès locale, requête, version, mapper),
   ses deux formes `VersionedLiveView` (`LiveUpdate` sur `/topic/live/<vue>/{clé}`) et `AggregateStreamLiveView`
   (flux d'agrégat), le catalogue `LiveViews` (résolution d'une destination, lecture `GET /api/live/<vue>/{clé}`).
+  Vues : `GameRewardLiveView` (`game-reward`, clé `{gameId}:{userId}`).
 - `infrastructure/in/api` : contrôleurs minces, `*Request`, `*View`.
 - `infrastructure/in/websocket` : `PresenceChannelListener` (canaux de présence → commandes de
   salle et de ticket), sessions de présence joueur et contrôle d’abonnement au canal personnel des salles ;
