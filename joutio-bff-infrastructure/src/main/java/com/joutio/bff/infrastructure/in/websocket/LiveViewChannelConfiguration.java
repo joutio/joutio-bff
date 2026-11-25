@@ -11,11 +11,17 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHandler;
+import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessageType;
+import org.springframework.messaging.simp.broker.AbstractBrokerMessageHandler;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.ExecutorChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
@@ -24,15 +30,18 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Contrôle d'accès des vues vivantes, avant que le broker n'enregistre l'abonnement (il diffuse ensuite à tous les
- * abonnés de la destination).
+ * Canal entrant STOMP des vues vivantes.
  *
+ * <p>Avant le broker, le contrôle d'accès (le broker diffuse ensuite à tous les abonnés de la destination) :</p>
  * <ul>
  *   <li>{@code SUBSCRIBE} refusé (anonyme, vue inconnue sous {@code /topic/live/}, règle de la vue) : la trame est
  *   abandonnée, aucun abonnement n'existe, et le problème est poussé au joueur sur {@code /user/queue/live}. La
  *   connexion et ses autres abonnements restent ouverts.</li>
  *   <li>{@code SEND} vers une vue vivante : abandonné, seul le BFF y publie.</li>
  * </ul>
+ *
+ * <p>Après le broker, le suivi des abonnements ({@code SUBSCRIBE}, {@code UNSUBSCRIBE}, {@code DISCONNECT}) par
+ * {@link LiveViewSubscriptions} : l'abonné est déjà inscrit quand le pont lui envoie la valeur courante.</p>
  */
 @Configuration(proxyBeanMethods = false)
 public class LiveViewChannelConfiguration implements WebSocketMessageBrokerConfigurer {
@@ -41,17 +50,62 @@ public class LiveViewChannelConfiguration implements WebSocketMessageBrokerConfi
 
     private final ObjectProvider<LiveViews> liveViews;
     private final ObjectProvider<SimpMessagingTemplate> messagingTemplate;
+    private final ObjectProvider<LiveViewSubscriptions> subscriptions;
 
     /** Fournisseurs paresseux : les configurers STOMP sont créés avant le bus de requêtes et le broker. */
     public LiveViewChannelConfiguration(ObjectProvider<LiveViews> liveViews,
-                                        ObjectProvider<SimpMessagingTemplate> messagingTemplate) {
+                                        ObjectProvider<SimpMessagingTemplate> messagingTemplate,
+                                        ObjectProvider<LiveViewSubscriptions> subscriptions) {
         this.liveViews = liveViews;
         this.messagingTemplate = messagingTemplate;
+        this.subscriptions = subscriptions;
     }
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(new LiveViewChannelInterceptor(liveViews, messagingTemplate));
+        registration.interceptors(new LiveViewChannelInterceptor(liveViews, messagingTemplate),
+                new LiveViewBrokerTracker(subscriptions));
+    }
+
+    /** Suit les abonnements une fois traités par le broker, dans l'ordre où il les a vus. */
+    static final class LiveViewBrokerTracker implements ExecutorChannelInterceptor {
+
+        private final ObjectProvider<LiveViewSubscriptions> subscriptions;
+
+        LiveViewBrokerTracker(ObjectProvider<LiveViewSubscriptions> subscriptions) {
+            this.subscriptions = subscriptions;
+        }
+
+        @Override
+        public void afterMessageHandled(Message<?> message, MessageChannel channel, MessageHandler handler,
+                                        Exception failure) {
+            if (failure != null || !(handler instanceof AbstractBrokerMessageHandler)) {
+                return;
+            }
+            MessageHeaders headers = message.getHeaders();
+            SimpMessageType type = SimpMessageHeaderAccessor.getMessageType(headers);
+            String sessionId = SimpMessageHeaderAccessor.getSessionId(headers);
+            String subscriptionId = SimpMessageHeaderAccessor.getSubscriptionId(headers);
+            String destination = SimpMessageHeaderAccessor.getDestination(headers);
+            if (type == null || sessionId == null) {
+                return;
+            }
+            switch (type) {
+                case SUBSCRIBE -> {
+                    if (subscriptionId != null && destination != null) {
+                        subscriptions.getObject().subscribed(sessionId, subscriptionId, destination);
+                    }
+                }
+                case UNSUBSCRIBE -> {
+                    if (subscriptionId != null) {
+                        subscriptions.getObject().unsubscribed(sessionId, subscriptionId);
+                    }
+                }
+                case DISCONNECT -> subscriptions.getObject().disconnected(sessionId);
+                default -> {
+                }
+            }
+        }
     }
 
     static final class LiveViewChannelInterceptor implements ChannelInterceptor {

@@ -8,6 +8,12 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageHandler;
+import org.springframework.messaging.SubscribableChannel;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessageType;
+import org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -23,6 +29,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class LiveViewChannelConfigurationTest {
@@ -83,6 +90,55 @@ class LiveViewChannelConfigurationTest {
         assertThat(interceptor.preSend(frame(StompCommand.SEND, "/topic/live/score/u1", "u1"), null)).isNull();
         assertThat(interceptor.preSend(frame(StompCommand.SEND, "/topic/matches/m1", "u1"), null)).isNull();
         verify(messaging, never()).convertAndSendToUser(anyString(), anyString(), any());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void tracks_subscriptions_once_the_broker_handled_them() {
+        LiveViewSubscriptions subscriptions = mock(LiveViewSubscriptions.class);
+        var tracker = tracker(subscriptions);
+
+        tracker.afterMessageHandled(simp(SimpMessageType.SUBSCRIBE, "s1", "sub-1", "/topic/live/score/u1"), null,
+                broker(), null);
+        tracker.afterMessageHandled(simp(SimpMessageType.UNSUBSCRIBE, "s1", "sub-1", null), null, broker(), null);
+        tracker.afterMessageHandled(simp(SimpMessageType.DISCONNECT, "s1", null, null), null, broker(), null);
+
+        verify(subscriptions).subscribed("s1", "sub-1", "/topic/live/score/u1");
+        verify(subscriptions).unsubscribed("s1", "sub-1");
+        verify(subscriptions).disconnected("s1");
+    }
+
+    @Test
+    void ignores_other_handlers_and_failures() {
+        LiveViewSubscriptions subscriptions = mock(LiveViewSubscriptions.class);
+        var tracker = tracker(subscriptions);
+        var subscribe = simp(SimpMessageType.SUBSCRIBE, "s1", "sub-1", "/topic/live/score/u1");
+
+        tracker.afterMessageHandled(subscribe, null, mock(MessageHandler.class), null);
+        tracker.afterMessageHandled(subscribe, null, broker(), new IllegalStateException("boom"));
+
+        verifyNoInteractions(subscriptions);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static LiveViewChannelConfiguration.LiveViewBrokerTracker tracker(LiveViewSubscriptions subscriptions) {
+        ObjectProvider<LiveViewSubscriptions> provider = mock(ObjectProvider.class);
+        when(provider.getObject()).thenReturn(subscriptions);
+        return new LiveViewChannelConfiguration.LiveViewBrokerTracker(provider);
+    }
+
+    private static MessageHandler broker() {
+        return new SimpleBrokerMessageHandler(mock(SubscribableChannel.class), mock(MessageChannel.class),
+                mock(SubscribableChannel.class), List.of("/topic"));
+    }
+
+    private static Message<byte[]> simp(SimpMessageType type, String session, String subscription,
+                                        String destination) {
+        SimpMessageHeaderAccessor headers = SimpMessageHeaderAccessor.create(type);
+        headers.setSessionId(session);
+        if (subscription != null) headers.setSubscriptionId(subscription);
+        if (destination != null) headers.setDestination(destination);
+        return MessageBuilder.createMessage(new byte[0], headers.getMessageHeaders());
     }
 
     private static Message<byte[]> frame(StompCommand command, String destination, String userId) {

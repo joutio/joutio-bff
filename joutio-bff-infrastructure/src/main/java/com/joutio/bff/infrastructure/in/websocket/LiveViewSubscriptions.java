@@ -8,17 +8,9 @@ import org.axonframework.queryhandling.SubscriptionQueryResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.event.EventListener;
-import org.springframework.messaging.Message;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.messaging.SessionDisconnectEvent;
-import org.springframework.web.socket.messaging.SessionSubscribeEvent;
-import org.springframework.web.socket.messaging.SessionUnsubscribeEvent;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -28,20 +20,23 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Pont des vues vivantes : <b>un seul</b> {@code subscriptionQuery} par destination STOMP et par pod, compté par
- * références sur les sessions abonnées.
+ * références sur les abonnements des sessions.
+ *
+ * <p>Les abonnements sont suivis <b>après</b> leur traitement par le broker ({@link LiveViewChannelConfiguration}) :
+ * un abonné est déjà inscrit quand le pont lui parle, et ne manque donc aucun update.</p>
  *
  * <ul>
- *   <li>premier abonné du pod : ouverture ; le résultat initial fixe la version de départ, sans rien pousser (le client
- *   lit la valeur lui-même, après s'être abonné) ;</li>
- *   <li>update : relayé sur la destination si sa version dépasse la dernière relayée ;</li>
+ *   <li>premier abonné du pod : ouverture, puis le résultat initial est diffusé à la destination ;</li>
+ *   <li>abonné suivant : la dernière valeur relayée lui est envoyée, à lui seul ;</li>
+ *   <li>update : diffusé si sa version dépasse la dernière relayée ;</li>
  *   <li>dernier départ ({@code UNSUBSCRIBE} ou déconnexion) : fermeture ;</li>
  *   <li>perte des fournisseurs (flux en erreur) : réouverture à délais croissants tant qu'un abonné reste, puis le
- *   résultat initial comble le trou (versions manquées poussées) ;</li>
+ *   résultat initial comble le trou (versions manquées diffusées) ;</li>
  *   <li>fin de la vue par le fournisseur ({@code complete}) : plus rien à relayer, pas de réouverture.</li>
  * </ul>
  *
- * <p>Le contrôle d'accès a lieu avant, dans {@link LiveViewChannelConfiguration} : un abonnement refusé n'arrive
- * jamais ici.</p>
+ * <p>Le client garde la plus haute version reçue, par REST ou par STOMP : une valeur reçue en double ou en retard est
+ * ignorée. Le contrôle d'accès a lieu avant le broker : un abonnement refusé n'arrive jamais ici.</p>
  */
 @Component
 public class LiveViewSubscriptions {
@@ -52,7 +47,7 @@ public class LiveViewSubscriptions {
 
     private final LiveViews liveViews;
     private final QueryGateway queryGateway;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final LiveViewSender sender;
     private final ScheduledExecutorService scheduler;
     private final Duration firstReopen;
     private final Duration maxReopen;
@@ -63,16 +58,15 @@ public class LiveViewSubscriptions {
     private final Map<String, Relay<?, ?>> relays = new ConcurrentHashMap<>();
 
     @Autowired
-    public LiveViewSubscriptions(LiveViews liveViews, QueryGateway queryGateway,
-                                 SimpMessagingTemplate messagingTemplate) {
-        this(liveViews, queryGateway, messagingTemplate, FIRST_REOPEN, MAX_REOPEN);
+    public LiveViewSubscriptions(LiveViews liveViews, QueryGateway queryGateway, LiveViewSender sender) {
+        this(liveViews, queryGateway, sender, FIRST_REOPEN, MAX_REOPEN);
     }
 
-    LiveViewSubscriptions(LiveViews liveViews, QueryGateway queryGateway, SimpMessagingTemplate messagingTemplate,
+    LiveViewSubscriptions(LiveViews liveViews, QueryGateway queryGateway, LiveViewSender sender,
                           Duration firstReopen, Duration maxReopen) {
         this.liveViews = liveViews;
         this.queryGateway = queryGateway;
-        this.messagingTemplate = messagingTemplate;
+        this.sender = sender;
         this.firstReopen = firstReopen;
         this.maxReopen = maxReopen;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
@@ -82,33 +76,19 @@ public class LiveViewSubscriptions {
         });
     }
 
-    @EventListener
-    public void onSubscribe(SessionSubscribeEvent event) {
-        Message<byte[]> message = event.getMessage();
-        String sessionId = SimpMessageHeaderAccessor.getSessionId(message.getHeaders());
-        String subscriptionId = SimpMessageHeaderAccessor.getSubscriptionId(message.getHeaders());
-        String destination = SimpMessageHeaderAccessor.getDestination(message.getHeaders());
-        if (sessionId == null || subscriptionId == null || destination == null) {
-            return;
-        }
+    /** Abonnement inscrit par le broker. Une destination qui n'est pas une vue vivante est ignorée. */
+    public void subscribed(String sessionId, String subscriptionId, String destination) {
         liveViews.resolve(destination).ifPresent(target -> {
             String previous = sessions.computeIfAbsent(sessionId, _ -> new ConcurrentHashMap<>())
                     .put(subscriptionId, destination);
             if (previous != null) {
                 release(previous);
             }
-            acquire(target);
+            acquire(target).snapshotTo(sessionId, subscriptionId);
         });
     }
 
-    @EventListener
-    public void onUnsubscribe(SessionUnsubscribeEvent event) {
-        Message<byte[]> message = event.getMessage();
-        String sessionId = SimpMessageHeaderAccessor.getSessionId(message.getHeaders());
-        String subscriptionId = SimpMessageHeaderAccessor.getSubscriptionId(message.getHeaders());
-        if (sessionId == null || subscriptionId == null) {
-            return;
-        }
+    public void unsubscribed(String sessionId, String subscriptionId) {
         Map<String, String> session = sessions.get(sessionId);
         String destination = session == null ? null : session.remove(subscriptionId);
         if (destination != null) {
@@ -116,9 +96,8 @@ public class LiveViewSubscriptions {
         }
     }
 
-    @EventListener
-    public void onDisconnect(SessionDisconnectEvent event) {
-        Map<String, String> session = event.getSessionId() == null ? null : sessions.remove(event.getSessionId());
+    public void disconnected(String sessionId) {
+        Map<String, String> session = sessions.remove(sessionId);
         if (session != null) {
             session.values().forEach(this::release);
         }
@@ -137,7 +116,7 @@ public class LiveViewSubscriptions {
         return relays.size();
     }
 
-    private void acquire(LiveViews.Target target) {
+    private Relay<?, ?> acquire(LiveViews.Target target) {
         boolean[] created = {false};
         Relay<?, ?> relay = relays.compute(target.destination(), (destination, existing) -> {
             Relay<?, ?> current = existing;
@@ -151,6 +130,7 @@ public class LiveViewSubscriptions {
         if (created[0]) {
             relay.open();
         }
+        return relay;
     }
 
     private void release(String destination) {
@@ -182,9 +162,10 @@ public class LiveViewSubscriptions {
         private int subscribers;
 
         private SubscriptionQueryResult<I, U> result;
+        /** Dernier update relayé, envoyé à chaque nouvel abonné. */
+        private U latest;
         private long version = NONE;
         private int generation;
-        private boolean established;
         private boolean closed;
         private Duration backoff = firstReopen;
 
@@ -199,7 +180,6 @@ public class LiveViewSubscriptions {
                 return;
             }
             int current = ++generation;
-            boolean fill = established;
             try {
                 result = queryGateway.subscriptionQuery(view.query(key), view.initialResponseType(),
                         view.updateResponseType());
@@ -208,9 +188,9 @@ public class LiveViewSubscriptions {
                 return;
             }
             result.initialResult().subscribe(
-                    initial -> initial(current, initial, fill),
+                    initial -> initial(current, initial),
                     failure -> failed(current, failure),
-                    () -> established(current));
+                    () -> opened(current));
             result.updates().subscribe(
                     update -> updated(current, update),
                     failure -> failed(current, failure),
@@ -223,20 +203,19 @@ public class LiveViewSubscriptions {
             cancel();
         }
 
-        private synchronized void initial(int current, I initial, boolean fill) {
-            if (current != generation) {
+        synchronized void snapshotTo(String sessionId, String subscriptionId) {
+            if (latest == null) {
                 return;
             }
-            List<U> values = view.updatesOf(initial);
-            for (U value : values) {
-                if (fill) {
-                    relay(value);
-                } else {
-                    version = Math.max(version, view.version(value));
-                }
+            Object message = view.message(key, latest);
+            if (message != null) {
+                sender.sendTo(sessionId, subscriptionId, destination, message);
             }
-            if (fill) {
-                logger.info("Live view {} reopened ({} value(s) in the initial result)", destination, values.size());
+        }
+
+        private synchronized void initial(int current, I initial) {
+            if (current == generation) {
+                view.updatesOf(initial).forEach(this::relay);
             }
         }
 
@@ -246,10 +225,9 @@ public class LiveViewSubscriptions {
             }
         }
 
-        /** Résultat initial reçu (ou vide) : une réouverture ultérieure comblera le trou. */
-        private synchronized void established(int current) {
+        /** Résultat initial reçu (ou vide) : l'abonnement est établi. */
+        private synchronized void opened(int current) {
             if (current == generation) {
-                established = true;
                 backoff = firstReopen;
             }
         }
@@ -260,9 +238,10 @@ public class LiveViewSubscriptions {
                 return;
             }
             version = next;
+            latest = update;
             Object message = view.message(key, update);
             if (message != null) {
-                messagingTemplate.convertAndSend(destination, message);
+                sender.broadcast(destination, message);
             }
         }
 

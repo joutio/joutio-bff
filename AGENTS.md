@@ -22,9 +22,10 @@ y est documentée dans le même commit.
 - `infrastructure/in/api` : contrôleurs minces, `*Request`, `*View`.
 - `infrastructure/in/websocket` : `PresenceChannelListener` (canaux de présence → commandes de
   salle et de ticket), sessions de présence joueur et contrôle d’abonnement au canal personnel des salles ;
-  `LiveViewChannelConfiguration` (accès aux vues vivantes au `SUBSCRIBE`) et `LiveViewSubscriptions` (pont : un
-  `subscriptionQuery` par destination et par pod, compté par références, rouvert et comblé après la perte des
-  fournisseurs).
+  `LiveViewChannelConfiguration` (accès aux vues vivantes avant le broker, suivi des abonnements après lui),
+  `LiveViewSubscriptions` (pont : un `subscriptionQuery` par destination et par pod, compté par références, valeur
+  courante au nouvel abonné, rouvert et comblé après la perte des fournisseurs) et `LiveViewSender` (diffusion, ou
+  envoi à un seul abonnement).
 - `infrastructure/in/share` : pages `go.joutio.com`.
 - `infrastructure/out/messaging` : publishers temps réel, mappers événement → réponse BFF. Les handlers d’agrégat reçoivent le payload typé et les métadonnées utiles via les résolveurs Axon.
 - `infrastructure/out/{media,push,persistence}` : MinIO, Web Push, Expo, tables propres.
@@ -76,6 +77,9 @@ JOUTIO_EXPO_TEST_DB_URL=jdbc:postgresql://… mvn -pl joutio-bff-infrastructure 
 - `canSubscribe` est évaluée sur le thread entrant STOMP : règle locale, **sans I/O**.
 - La valeur du service porte une version monotone (séquence de l'agrégat) ; le pont ne relaie qu'une version
   supérieure à la dernière relayée.
+- Les abonnements sont suivis **après** leur traitement par le broker (`ExecutorChannelInterceptor`), pas par les
+  `Session*Event` : ces événements partent avant que le broker n'ait inscrit l'abonné, qui manquerait alors la valeur
+  courante.
 
 ## Pièges
 
