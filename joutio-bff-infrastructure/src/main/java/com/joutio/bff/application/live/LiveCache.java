@@ -163,19 +163,23 @@ public final class LiveCache<U, V> implements SmartLifecycle {
             return;
         }
         int current = ++generation;
+        SubscriptionQueryResult<?, U> opening;
         try {
-            subscription = queryGateway.subscriptionQuery(watchQuery, ResponseTypes.multipleInstancesOf(updateType),
+            opening = queryGateway.subscriptionQuery(watchQuery, ResponseTypes.multipleInstancesOf(updateType),
                     ResponseTypes.instanceOf(updateType));
         } catch (RuntimeException failure) {
             failed(current, failure);
             return;
         }
-        subscription.initialResult().subscribe(
+        subscription = opening;
+        // L'échec peut être immédiat (aucun fournisseur connu au démarrage) : failed() a alors déjà annulé, d'où la
+        // variable locale.
+        opening.initialResult().subscribe(
                 _ -> {
                 },
                 failure -> failed(current, failure),
                 () -> opened(current));
-        subscription.updates().subscribe(
+        opening.updates().subscribe(
                 update -> updated(current, update),
                 failure -> failed(current, failure),
                 () -> failed(current, new IllegalStateException("watch completed by its provider")));

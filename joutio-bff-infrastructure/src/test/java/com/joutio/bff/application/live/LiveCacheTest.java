@@ -68,6 +68,20 @@ class LiveCacheTest {
     }
 
     @Test
+    void startsWhenNoProviderIsKnownYet() {
+        Sinks.One<Object> refused = Sinks.one();
+        refused.tryEmitError(new IllegalStateException("No handler for subscription query"));
+        when(gateway.subscriptionQuery(any(), any(ResponseType.class), any(ResponseType.class)))
+                .thenAnswer(_ -> new DefaultSubscriptionQueryResult<>(refused.asMono(), updates.asFlux(), () -> true));
+
+        cache.start();
+
+        assertThat(cache.isRunning()).isTrue();
+        assertThat(cache.live()).isFalse();
+        assertThat(cache.get("a", source("v1")).join()).isEqualTo("v1");
+    }
+
+    @Test
     void cachesOnceTheWatchIsOpen() {
         subscribed();
 
