@@ -187,16 +187,8 @@ public class RoomViewService {
                 .query(new RoomQuery.GetRoomById(roomId), QueryResponseTypes.instanceOf(Room.class))
                 .thenCompose(
                         room ->
-                                enrich(List.of(room), viewerId)
+                                views(List.of(room), viewerId)
                                         .thenApply(views -> views.getFirst()));
-    }
-
-    public CompletableFuture<List<RoomView>> mine(String playerId) {
-        return queryGateway
-                .query(
-                        new RoomQuery.GetMyOpenRooms(playerId),
-                        QueryResponseTypes.multipleInstancesOf(Room.class))
-                .thenCompose(rooms -> enrich(rooms, playerId));
     }
 
     /**
@@ -313,7 +305,8 @@ public class RoomViewService {
                 .thenAccept(_ -> {});
     }
 
-    private CompletableFuture<List<RoomView>> enrich(List<Room> rooms, String viewerId) {
+    /** Salles vues par ce joueur : sujet, adversaire (profil, statut du compte, Elo) et droits du viewer. */
+    public CompletableFuture<List<RoomView>> views(List<Room> rooms, String viewerId) {
         List<String> topicIds = rooms.stream().map(Room::topicId).distinct().toList();
         List<String> opponentIds =
                 rooms.stream()

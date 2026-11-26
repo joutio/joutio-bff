@@ -1,6 +1,9 @@
 package com.joutio.bff.application;
 
 import com.joutio.bff.application.TestUserBlocks;
+import com.joutio.bff.infrastructure.in.api.response.RoomOpponentView;
+import com.joutio.bff.infrastructure.out.messaging.response.MatchmakingEventResponse.MatchedEventResponse;
+import com.joutio.bff.infrastructure.out.messaging.response.MatchmakingEventResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -79,6 +82,31 @@ class MatchmakingViewServiceTest {
         assertThat(command.topicCoverage().approvedCountFor(Set.of(Language.FR, Language.EN)))
                 .isEqualTo(7);
         assertThat(command.excludedPlayerIds()).containsExactly("blocked-1");
+    }
+
+    @Test
+    void matched_against_a_human_carries_the_opponent_profile() {
+        when(profileLookup.get("user-1")).thenReturn(CompletableFuture.completedFuture(profile()));
+        when(progressionLookup.get("user-1")).thenReturn(CompletableFuture.failedFuture(new IllegalStateException()));
+
+        MatchmakingEventResponse enriched = service.withOpponent(
+                new MatchedEventResponse("t1", "r1", "user-1", false, null)).join();
+
+        RoomOpponentView opponent = ((MatchedEventResponse) enriched).opponent();
+        assertThat(opponent.pseudonym()).isEqualTo("Alice");
+        assertThat(opponent.country()).isEqualTo("FR");
+        assertThat(opponent.rating()).isNull();
+    }
+
+    @Test
+    void matched_against_the_bot_or_without_profile_passes_unchanged() {
+        when(profileLookup.get("user-1")).thenReturn(CompletableFuture.failedFuture(new IllegalStateException()));
+        when(progressionLookup.get("user-1")).thenReturn(CompletableFuture.failedFuture(new IllegalStateException()));
+        MatchedEventResponse bot = new MatchedEventResponse("t1", "r1", null, true, null);
+        MatchedEventResponse human = new MatchedEventResponse("t1", "r1", "user-1", false, null);
+
+        assertThat(service.withOpponent(bot).join()).isSameAs(bot);
+        assertThat(service.withOpponent(human).join()).isSameAs(human);
     }
 
     private static Profile profile() {

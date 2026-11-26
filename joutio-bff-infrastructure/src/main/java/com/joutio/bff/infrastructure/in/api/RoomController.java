@@ -66,11 +66,6 @@ public class RoomController {
                 .thenApply(roomId -> ResponseEntityBuilder.creation(ENDPOINT, roomId));
     }
 
-    @GetMapping("/mine")
-    public CompletableFuture<ResponseEntity<List<RoomView>>> mine() {
-        return roomViewService.mine(SecurityHelper.getUserId()).thenApply(ResponseEntity::ok);
-    }
-
     @GetMapping("/{roomId}")
     public CompletableFuture<ResponseEntity<RoomView>> get(@PathVariable String roomId) {
         return roomViewService.get(roomId, SecurityHelper.getUserId()).thenApply(ResponseEntity::ok);
@@ -111,22 +106,9 @@ public class RoomController {
         return roomViewService
                 .events(roomId)
                 .thenApply(envelopes -> envelopes.stream()
-                        .map(RoomController::toResponse)
+                        .map(RoomEventResponseMapper::toEnvelope)
                         .flatMap(Optional::stream)
                         .toList())
                 .thenApply(ResponseEntity::ok);
-    }
-
-    private static Optional<EventEnvelopeResponse> toResponse(EventEnvelope envelope) {
-        if (!(envelope.payload() instanceof RoomEvent event)) {
-            return Optional.empty();
-        }
-        return RoomEventResponseMapper.toResponse(event)
-                .map(response -> EventEnvelopeResponse.of(
-                        envelope.aggregateId(),
-                        envelope.sequenceNumber(),
-                        envelope.timestamp(),
-                        response.type().name(),
-                        response));
     }
 }

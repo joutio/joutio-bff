@@ -1,5 +1,6 @@
 package com.joutio.bff.application.live;
 
+import java.util.concurrent.CompletableFuture;
 import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 
 /** Vues vivantes de test : une valeur personnelle versionnée et un flux d'agrégat public. */
@@ -45,8 +46,8 @@ public final class TestLiveViews {
         }
 
         @Override
-        protected ScoreView payload(Score score) {
-            return new ScoreView(score.points());
+        protected CompletableFuture<ScoreView> payload(String key, Score score) {
+            return CompletableFuture.completedFuture(new ScoreView(score.points()));
         }
     }
 
@@ -68,8 +69,8 @@ public final class TestLiveViews {
         }
 
         @Override
-        public Object message(String key, EventEnvelope event) {
-            return event.eventType();
+        public CompletableFuture<String> message(String key, EventEnvelope event) {
+            return CompletableFuture.completedFuture(event.eventType());
         }
     }
 }

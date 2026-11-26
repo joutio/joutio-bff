@@ -19,11 +19,15 @@ y est documentée dans le même commit.
 - `application/live` : vues vivantes. `LiveView` (destination, règle d'accès locale, requête, version, mapper),
   ses deux formes `VersionedLiveView` (`LiveUpdate` sur `/topic/live/<vue>/{clé}`) et `AggregateStreamLiveView`
   (flux d'agrégat), le catalogue `LiveViews` (résolution d'une destination, lecture `GET /api/live/<vue>/{clé}`).
-  Vues : `GameRewardLiveView` (`game-reward`, clé `{gameId}:{userId}`), `GameStreamLiveView` (`/topic/games/{id}`,
-  flux d'agrégat).
+  Vues : `GameRewardLiveView` (`game-reward`, clé `{gameId}:{userId}`), `MyRoomsLiveView` (`my-rooms`, clé
+  `{userId}`, composée par `RoomViewService.views`), flux d'agrégat `GameStreamLiveView` (`/topic/games/{id}`),
+  `RoomStreamLiveView` (`/topic/rooms/{id}`) et `TicketStreamLiveView` (`/topic/matchmaking/tickets/{id}`, `MATCHED`
+  enrichi par `MatchmakingViewService.withOpponent`). Le message d'une vue est asynchrone (enrichissement) ; le pont
+  l'envoie dans l'ordre des versions.
 - `infrastructure/in/api` : contrôleurs minces, `*Request`, `*View`.
 - `infrastructure/in/websocket` : `PresenceChannelListener` (canaux de présence → commandes de
-  salle et de ticket), sessions de présence joueur et contrôle d’abonnement au canal personnel des salles ;
+  salle et de ticket), sessions de présence joueur, abonnements `/topic/` à destination exacte
+  (`TopicChannelConfiguration`) ;
   `LiveViewChannelConfiguration` (accès aux vues vivantes avant le broker, suivi des abonnements après lui),
   `LiveViewSubscriptions` (pont : un `subscriptionQuery` par destination et par pod, compté par références, valeur
   courante au nouvel abonné, rouvert et comblé après la perte des fournisseurs) et `LiveViewSender` (diffusion, ou
@@ -39,7 +43,7 @@ y est documentée dans le même commit.
 
 | Groupe | Portée |
 |---|---|
-| `room-events`, `matchmaking-events`, `presence-events`, `follow-presence-events`, `achievement-events`, `notification-ws`, `cache-invalidation` | **instance-scopés** : chaque pod reçoit tout, en direct, par un seul consumer Kafka sans token (SDK) ; handlers non bloquants |
+| `presence-events`, `follow-presence-events`, `achievement-events`, `notification-ws`, `cache-invalidation` | **instance-scopés** : chaque pod reçoit tout, en direct, par un seul consumer Kafka sans token (SDK) ; handlers non bloquants |
 | `notification-push` | global : un seul envoi Web Push / Expo par événement, hors thread du processor |
 | `account-deletion-bff` | global : purge des données du BFF à la suppression d'un compte |
 

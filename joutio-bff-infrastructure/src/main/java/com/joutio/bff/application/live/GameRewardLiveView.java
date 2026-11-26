@@ -9,6 +9,8 @@ import com.joutio.profile.domain.model.MasteryTier;
 import com.joutio.profile.domain.query.ProgressionQuery.GetGameRewardQuery;
 import org.springframework.stereotype.Component;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * Récompense d'un duel, {@code /topic/live/game-reward/{gameId}:{userId}} : la clé porte le joueur, car la valeur est
  * propre à chacun (profile émet à chaque joueur récompensé de la partie). Accès réservé au joueur de la clé ; un
@@ -47,13 +49,13 @@ public class GameRewardLiveView extends VersionedLiveView<GameReward, GameReward
     }
 
     @Override
-    protected GameRewardView payload(GameReward reward) {
+    protected CompletableFuture<GameRewardView> payload(String key, GameReward reward) {
         AwardedGame player = reward.player();
         AwardedGame opponent = reward.opponent();
         // Entraînement : XP nulle par construction, aucun bonus de victoire à dériver.
         int victoryBonus = player.botGame() ? 0 : player.xp() - player.gameScore();
         MasteryTier tier = MasteryTier.tierFor(reward.topicXp());
-        return new GameRewardView(
+        return CompletableFuture.completedFuture(new GameRewardView(
                 new GameResultView.RewardView(player.xp(), victoryBonus),
                 player.rating(),
                 reward.peakRating(),
@@ -70,6 +72,6 @@ public class GameRewardLiveView extends VersionedLiveView<GameReward, GameReward
                 opponent == null ? null : opponent.rating(),
                 opponent == null ? 0 : opponent.ratingDelta(),
                 opponent != null && opponent.rated(),
-                reward.badges().stream().map(ProgressionViews::toBadgeView).toList());
+                reward.badges().stream().map(ProgressionViews::toBadgeView).toList()));
     }
 }

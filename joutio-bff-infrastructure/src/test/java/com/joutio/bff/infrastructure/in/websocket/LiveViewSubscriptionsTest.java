@@ -1,7 +1,9 @@
 package com.joutio.bff.infrastructure.in.websocket;
 
+import com.joutio.bff.application.live.AggregateStreamLiveView;
 import com.joutio.bff.application.live.LiveUpdate;
 import com.joutio.bff.application.live.LiveViews;
+import com.joutio.bff.application.live.TestLiveViews.GetMatchEventsQuery;
 import com.joutio.bff.application.live.TestLiveViews.GetScoreQuery;
 import com.joutio.bff.application.live.TestLiveViews.MatchStreamLiveView;
 import com.joutio.bff.application.live.TestLiveViews.Score;
@@ -20,6 +22,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BooleanSupplier;
 
@@ -36,6 +41,8 @@ class LiveViewSubscriptionsTest {
 
     private static final String SCORE = "/topic/live/score/u1";
     private static final String MATCH = "/topic/matches/m1";
+    private static final String SLOW = "/topic/slow/m1";
+    private static final Instant AT = Instant.parse("2026-11-26T10:00:00Z");
 
     private final List<Pod> pods = new ArrayList<>();
 
@@ -211,6 +218,27 @@ class LiveViewSubscriptionsTest {
         assertThat(pod.broadcasts()).isEmpty();
     }
 
+    @Test
+    void messages_prepared_out_of_order_are_sent_in_version_order_and_a_failed_one_is_skipped() {
+        Pod pod = pod();
+        pod.subscriptions.subscribed("s1", "sub-1", SLOW);
+        Opening opening = pod.openings.getFirst();
+
+        opening.initial(List.of());
+        opening.update(EventEnvelope.of("m1", 0, AT, "first"));
+        opening.update(EventEnvelope.of("m1", 1, AT, "second"));
+        opening.update(EventEnvelope.of("m1", 2, AT, "third"));
+        pod.slow.complete(1, "second");
+        pod.slow.fail(2);
+        assertThat(pod.broadcasts()).isEmpty();
+
+        pod.slow.complete(0, "first");
+        assertThat(pod.broadcasts()).containsExactly("first", "second");
+
+        pod.subscriptions.subscribed("s2", "sub-1", SLOW);
+        verify(pod.sender, never()).sendTo(anyString(), anyString(), anyString(), any());
+    }
+
     private Pod pod() {
         Pod pod = new Pod();
         pods.add(pod);
@@ -227,6 +255,7 @@ class LiveViewSubscriptionsTest {
         final QueryGateway gateway = mock(QueryGateway.class);
         final LiveViewSender sender = mock(LiveViewSender.class);
         final List<Opening> openings = new CopyOnWriteArrayList<>();
+        final SlowStreamLiveView slow = new SlowStreamLiveView();
         final LiveViewSubscriptions subscriptions;
 
         @SuppressWarnings("unchecked")
@@ -237,7 +266,7 @@ class LiveViewSubscriptionsTest {
                         openings.add(opening);
                         return opening.result();
                     });
-            LiveViews views = new LiveViews(List.of(new ScoreLiveView(), new MatchStreamLiveView()), gateway);
+            LiveViews views = new LiveViews(List.of(new ScoreLiveView(), new MatchStreamLiveView(), slow), gateway);
             subscriptions = new LiveViewSubscriptions(views, gateway, sender, Duration.ofMillis(5),
                     Duration.ofMillis(20));
         }
@@ -301,6 +330,43 @@ class LiveViewSubscriptionsTest {
                 throw new AssertionError("condition not met within 2 s");
             }
             Thread.onSpinWait();
+        }
+    }
+
+    /** Flux dont chaque message attend que le test le termine : préparation asynchrone dans le désordre. */
+    private static final class SlowStreamLiveView extends AggregateStreamLiveView {
+
+        private final Map<Long, CompletableFuture<Object>> messages = new ConcurrentHashMap<>();
+
+        SlowStreamLiveView() {
+            super("/topic/slow/");
+        }
+
+        @Override
+        public boolean canSubscribe(String userId, String key) {
+            return true;
+        }
+
+        @Override
+        public Object query(String key) {
+            return new GetMatchEventsQuery(key);
+        }
+
+        @Override
+        public CompletableFuture<Object> message(String key, EventEnvelope event) {
+            return future(event.sequenceNumber());
+        }
+
+        void complete(long sequence, Object message) {
+            future(sequence).complete(message);
+        }
+
+        void fail(long sequence) {
+            future(sequence).completeExceptionally(new IllegalStateException("profile unavailable"));
+        }
+
+        private CompletableFuture<Object> future(long sequence) {
+            return messages.computeIfAbsent(sequence, _ -> new CompletableFuture<>());
         }
     }
 }

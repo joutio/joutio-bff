@@ -1,16 +1,31 @@
 package com.joutio.bff.infrastructure.out.messaging.mapper;
 
-import static java.util.Objects.isNull;
-
+import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
 import com.joutio.bff.infrastructure.out.messaging.response.RoomEventResponse;
 import com.joutio.matchmaking.domain.event.RoomEvent;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 
 import java.util.Optional;
+
+import static java.util.Objects.isNull;
 
 /** Mappe les événements de salle vers le contrat web {@link RoomEventResponse}. */
 public final class RoomEventResponseMapper {
 
     private RoomEventResponseMapper() {}
+
+    /** Événement de l'historique ou du flux vivant d'une salle, au contrat de {@code /topic/rooms/{id}}. */
+    public static Optional<EventEnvelopeResponse> toEnvelope(EventEnvelope envelope) {
+        if (!(envelope.payload() instanceof RoomEvent event)) {
+            return Optional.empty();
+        }
+        return toResponse(event).map(response -> EventEnvelopeResponse.of(
+                envelope.aggregateId(),
+                envelope.sequenceNumber(),
+                envelope.timestamp(),
+                response.type().name(),
+                response));
+    }
 
     public static Optional<RoomEventResponse> toResponse(RoomEvent event) {
         if (isNull(event)) {

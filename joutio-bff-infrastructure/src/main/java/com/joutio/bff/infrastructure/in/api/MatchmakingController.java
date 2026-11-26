@@ -68,22 +68,9 @@ public class MatchmakingController {
         return matchmakingViewService
                 .events(ticketId)
                 .thenApply(envelopes -> envelopes.stream()
-                        .map(MatchmakingController::toResponse)
+                        .map(MatchmakingEventResponseMapper::toEnvelope)
                         .flatMap(Optional::stream)
                         .toList())
                 .thenApply(ResponseEntity::ok);
-    }
-
-    private static Optional<EventEnvelopeResponse> toResponse(EventEnvelope envelope) {
-        if (!(envelope.payload() instanceof MatchmakingEvent event)) {
-            return Optional.empty();
-        }
-        return MatchmakingEventResponseMapper.toResponse(event)
-                .map(response -> EventEnvelopeResponse.of(
-                        envelope.aggregateId(),
-                        envelope.sequenceNumber(),
-                        envelope.timestamp(),
-                        response.type().name(),
-                        response));
     }
 }

@@ -12,11 +12,13 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * Pont des vues vivantes : <b>un seul</b> {@code subscriptionQuery} par destination STOMP et par pod, compté par
@@ -34,6 +36,9 @@ import java.util.concurrent.TimeUnit;
  *   résultat initial comble le trou (versions manquées diffusées) ;</li>
  *   <li>fin de la vue par le fournisseur ({@code complete}) : plus rien à relayer, pas de réouverture.</li>
  * </ul>
+ *
+ * <p>Les messages se préparent en parallèle (un message peut s'enrichir d'autres lectures), mais partent dans l'ordre
+ * des versions : chaque envoi attend le précédent. Un message en échec est journalisé et sauté.</p>
  *
  * <p>Le client garde la plus haute version reçue, par REST ou par STOMP : une valeur reçue en double ou en retard est
  * ignorée. Le contrôle d'accès a lieu avant le broker : un abonnement refusé n'arrive jamais ici.</p>
@@ -162,8 +167,10 @@ public class LiveViewSubscriptions {
         private int subscribers;
 
         private SubscriptionQueryResult<I, U> result;
-        /** Dernier update relayé, envoyé à chaque nouvel abonné. */
-        private U latest;
+        /** Message du dernier update relayé, envoyé à chaque nouvel abonné. */
+        private CompletableFuture<?> latest;
+        /** Fin du dernier envoi : le suivant l'attend, pour garder l'ordre des versions. */
+        private CompletableFuture<Void> sent = CompletableFuture.completedFuture(null);
         private long version = NONE;
         private int generation;
         private boolean closed;
@@ -204,12 +211,8 @@ public class LiveViewSubscriptions {
         }
 
         synchronized void snapshotTo(String sessionId, String subscriptionId) {
-            if (latest == null) {
-                return;
-            }
-            Object message = view.message(key, latest);
-            if (message != null) {
-                sender.sendTo(sessionId, subscriptionId, destination, message);
+            if (latest != null) {
+                send(latest, message -> sender.sendTo(sessionId, subscriptionId, destination, message));
             }
         }
 
@@ -238,11 +241,20 @@ public class LiveViewSubscriptions {
                 return;
             }
             version = next;
-            latest = update;
-            Object message = view.message(key, update);
-            if (message != null) {
-                sender.broadcast(destination, message);
-            }
+            latest = view.message(key, update);
+            send(latest, message -> sender.broadcast(destination, message));
+        }
+
+        /** Envoie le message après les précédents ; rien s'il est {@code null}, journalisé s'il échoue. */
+        private void send(CompletableFuture<?> message, Consumer<Object> delivery) {
+            sent = sent.thenCompose(_ -> message.handle((value, failure) -> {
+                if (failure != null) {
+                    logger.warn("Live view {} skipped an update: {}", destination, failure.toString());
+                } else if (value != null) {
+                    delivery.accept(value);
+                }
+                return null;
+            }));
         }
 
         private synchronized void failed(int current, Throwable failure) {

@@ -79,8 +79,6 @@ joutio:
     default-image: ${JOUTIO_SHARE_DEFAULT_IMAGE:https://joutio.com/og.png}
   axon:
     instance-scoped-groups:
-      - room-events
-      - matchmaking-events
       - presence-events
       - follow-presence-events
       - achievement-events

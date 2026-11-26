@@ -4,6 +4,7 @@ import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import org.axonframework.messaging.responsetypes.ResponseType;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Vue vivante d'une valeur versionnée (résultat de duel, profil, compte…), relayée en {@link LiveUpdate} sur
@@ -52,10 +53,11 @@ public abstract class VersionedLiveView<V, T> implements LiveView<V, V> {
     }
 
     @Override
-    public final LiveUpdate<T> message(String key, V value) {
-        return new LiveUpdate<>(name, key, version(value), payload(value));
+    public final CompletableFuture<LiveUpdate<T>> message(String key, V value) {
+        long version = version(value);
+        return payload(key, value).thenApply(payload -> new LiveUpdate<>(name, key, version, payload));
     }
 
-    /** {@code *View} du BFF exposé aux joueurs pour cette valeur. */
-    protected abstract T payload(V value);
+    /** {@code *View} du BFF exposé aux joueurs pour cette valeur, vue par la clé (le joueur, s'il en fait partie). */
+    protected abstract CompletableFuture<T> payload(String key, V value);
 }

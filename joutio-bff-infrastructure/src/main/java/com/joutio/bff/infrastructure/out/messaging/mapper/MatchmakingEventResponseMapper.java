@@ -1,7 +1,9 @@
 package com.joutio.bff.infrastructure.out.messaging.mapper;
 
+import com.joutio.bff.infrastructure.in.api.response.EventEnvelopeResponse;
 import com.joutio.bff.infrastructure.out.messaging.response.MatchmakingEventResponse;
 import com.joutio.matchmaking.domain.event.MatchmakingEvent;
+import com.joutio.microservice.core.domain.model.event.EventEnvelope;
 
 import java.util.Optional;
 
@@ -13,6 +15,19 @@ import static java.util.Objects.isNull;
 public final class MatchmakingEventResponseMapper {
 
     private MatchmakingEventResponseMapper() {
+    }
+
+    /** Événement de l'historique ou du flux vivant d'un ticket d'appariement, au contrat de {@code /topic/matchmaking/tickets/{id}}. */
+    public static Optional<EventEnvelopeResponse> toEnvelope(EventEnvelope envelope) {
+        if (!(envelope.payload() instanceof MatchmakingEvent event)) {
+            return Optional.empty();
+        }
+        return toResponse(event).map(response -> EventEnvelopeResponse.of(
+                envelope.aggregateId(),
+                envelope.sequenceNumber(),
+                envelope.timestamp(),
+                response.type().name(),
+                response));
     }
 
     public static Optional<MatchmakingEventResponse> toResponse(MatchmakingEvent event) {

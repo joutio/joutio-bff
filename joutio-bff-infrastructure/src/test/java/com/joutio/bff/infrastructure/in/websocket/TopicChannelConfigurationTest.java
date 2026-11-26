@@ -10,26 +10,21 @@ import org.springframework.security.access.AccessDeniedException;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class RoomPresenceChannelConfigurationTest {
+class TopicChannelConfigurationTest {
 
-    private final RoomPresenceChannelConfiguration.RoomPresenceChannelInterceptor interceptor =
-            new RoomPresenceChannelConfiguration.RoomPresenceChannelInterceptor();
+    private final TopicChannelConfiguration.ExactTopicInterceptor interceptor =
+            new TopicChannelConfiguration.ExactTopicInterceptor();
 
     @Test
-    void accepts_presence_subscription_for_the_authenticated_recipient() {
-        var own = frame(StompCommand.SUBSCRIBE, "/topic/room-presence/player", "player");
-        assertSame(own, interceptor.preSend(own, null));
-
+    void accepts_an_exact_topic_subscription() {
         var room = frame(StompCommand.SUBSCRIBE, "/topic/rooms/r1", "player");
         assertSame(room, interceptor.preSend(room, null));
     }
 
     @Test
-    void rejects_other_recipients_unauthenticated_subscriptions_and_client_publication() {
-        assertDenied(frame(StompCommand.SUBSCRIBE, "/topic/room-presence/other", "player"));
-        assertDenied(frame(StompCommand.SUBSCRIBE, "/topic/room-presence/player", null));
+    void rejects_a_pattern_subscription() {
         assertDenied(frame(StompCommand.SUBSCRIBE, "/topic/**", "player"));
-        assertDenied(frame(StompCommand.SEND, "/topic/room-presence/player", "player"));
+        assertDenied(frame(StompCommand.SUBSCRIBE, "/topic/live/my-rooms/*", "player"));
     }
 
     private void assertDenied(Message<?> frame) {

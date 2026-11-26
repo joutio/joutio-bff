@@ -43,7 +43,7 @@ class GameRewardLiveViewTest {
         GameReward reward = new GameReward("game-1", "me", 4, ME, OPPONENT, 900, 1250, 7,
                 List.of(Badge.DUELIST_FER));
 
-        LiveUpdate<?> update = view.message(GameRewardLiveView.key("game-1", "me"), reward);
+        LiveUpdate<?> update = view.message(GameRewardLiveView.key("game-1", "me"), reward).join();
 
         assertThat(update.view()).isEqualTo("game-reward");
         assertThat(update.version()).isEqualTo(4);
@@ -68,7 +68,7 @@ class GameRewardLiveViewTest {
         GameReward reward = new GameReward("game-1", "me", 1, training, null, 40, 1000, 0, List.of());
 
         GameRewardView payload = (GameRewardView) view.message(GameRewardLiveView.key("game-1", "me"), reward)
-                .payload();
+                .join().payload();
 
         assertThat(payload.reward()).isEqualTo(new GameResultView.RewardView(0, 0));
         assertThat(payload.rating()).isNull();

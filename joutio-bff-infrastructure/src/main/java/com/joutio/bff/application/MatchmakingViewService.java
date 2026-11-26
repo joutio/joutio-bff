@@ -1,6 +1,9 @@
 package com.joutio.bff.application;
 
 import com.joutio.bff.infrastructure.in.api.response.MatchmakingTicketView;
+import com.joutio.bff.infrastructure.in.api.response.RoomOpponentView;
+import com.joutio.bff.infrastructure.out.messaging.response.MatchmakingEventResponse;
+import com.joutio.bff.infrastructure.out.messaging.response.MatchmakingEventResponse.MatchedEventResponse;
 import com.joutio.matchmaking.domain.command.MatchmakingCommand;
 import com.joutio.matchmaking.domain.model.Matchmaking;
 import com.joutio.matchmaking.domain.model.MatchmakingStatus;
@@ -175,6 +178,25 @@ public class MatchmakingViewService {
     private record PreparedCommand(PendingCommand pending, TopicLanguageCoverage topicCoverage, Set<String> excludedPlayerIds) {}
 
     /** Événements du ticket d'appariement, du plus ancien au plus récent : repli de l'écran à l'ouverture. */
+    /**
+     * {@code MATCHED} contre un humain, enrichi du profil et de la progression de l'adversaire (pseudo, avatar, Elo,
+     * pays) : la carte « Adversaire trouvé » s'affiche complète sans attendre la lecture de la salle. Les autres
+     * événements, et un profil momentanément indisponible, passent tels quels : la salle reste la source de repli.
+     */
+    public CompletableFuture<MatchmakingEventResponse> withOpponent(MatchmakingEventResponse response) {
+        if (!(response instanceof MatchedEventResponse matched) || matched.opponentId() == null || matched.vsBot()) {
+            return CompletableFuture.completedFuture(response);
+        }
+        String opponentId = matched.opponentId();
+        CompletableFuture<Profile> profileFuture = profileLookup.get(opponentId).exceptionally(_ -> null);
+        CompletableFuture<PlayerProgress> progressFuture = progressionLookup.get(opponentId).exceptionally(_ -> null);
+        return profileFuture.thenCombine(progressFuture, (profile, progress) -> profile == null
+                ? matched
+                : new MatchedEventResponse(matched.ticketId(), matched.roomId(), opponentId, false,
+                        new RoomOpponentView(profile.userId(), profile.pseudonym(), profile.avatarOptions(), false,
+                                false, progress == null ? null : progress.rating(), profile.country())));
+    }
+
     public CompletableFuture<List<EventEnvelope>> events(String ticketId) {
         return queryGateway.query(new MatchmakingQuery.GetMatchmakingEventsQuery(ticketId),
                 QueryResponseTypes.multipleInstancesOf(EventEnvelope.class));

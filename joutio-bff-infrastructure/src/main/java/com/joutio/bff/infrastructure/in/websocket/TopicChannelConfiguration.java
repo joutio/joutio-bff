@@ -12,36 +12,30 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+/**
+ * Abonnements aux {@code /topic/} : destination exacte seulement. Un motif ({@code /topic/**}) recevrait les flux de
+ * tous les joueurs, en contournant les règles d'accès de chaque destination.
+ */
 @Configuration(proxyBeanMethods = false)
-public class RoomPresenceChannelConfiguration implements WebSocketMessageBrokerConfigurer {
-
-    public static final String DESTINATION_PREFIX = "/topic/room-presence/";
+public class TopicChannelConfiguration implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(new RoomPresenceChannelInterceptor());
+        registration.interceptors(new ExactTopicInterceptor());
     }
 
-    static final class RoomPresenceChannelInterceptor implements ChannelInterceptor {
+    static final class ExactTopicInterceptor implements ChannelInterceptor {
         private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
         @Override
         public Message<?> preSend(Message<?> message, MessageChannel channel) {
             StompHeaderAccessor frame = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-            if (frame == null || frame.getDestination() == null) {
-                return message;
-            }
-            String destination = frame.getDestination();
-            if (StompCommand.SUBSCRIBE.equals(frame.getCommand())
-                    && destination.startsWith("/topic/")
-                    && pathMatcher.isPattern(destination)) {
+            if (frame != null
+                    && StompCommand.SUBSCRIBE.equals(frame.getCommand())
+                    && frame.getDestination() != null
+                    && frame.getDestination().startsWith("/topic/")
+                    && pathMatcher.isPattern(frame.getDestination())) {
                 throw new AccessDeniedException("STOMP topics require an exact subscription destination");
-            }
-            if (destination.startsWith(DESTINATION_PREFIX)
-                    && (!StompCommand.SUBSCRIBE.equals(frame.getCommand())
-                        || frame.getUser() == null
-                        || !destination.equals(DESTINATION_PREFIX + frame.getUser().getName()))) {
-                throw new AccessDeniedException("Room presence is private to the recipient");
             }
             return message;
         }

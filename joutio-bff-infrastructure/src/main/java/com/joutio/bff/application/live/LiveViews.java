@@ -86,6 +86,6 @@ public class LiveViews {
         return queryGateway.query(view.query(key), view.initialResponseType())
                 .thenCompose(value -> value == null
                         ? CompletableFuture.failedFuture(new LiveValueNotFoundProblem(view.name(), key))
-                        : CompletableFuture.completedFuture(view.message(key, value)));
+                        : view.message(key, value).thenApply(update -> update));
     }
 }

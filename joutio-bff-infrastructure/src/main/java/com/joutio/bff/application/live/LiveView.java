@@ -3,6 +3,7 @@ package com.joutio.bff.application.live;
 import org.axonframework.messaging.responsetypes.ResponseType;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Une vue vivante relayée aux clients en STOMP : une lecture d'un service dont la nouvelle valeur est poussée
@@ -43,6 +44,9 @@ public interface LiveView<I, U> {
     /** Version monotone d'un update (séquence de l'agrégat). */
     long version(U update);
 
-    /** Message STOMP d'un update (DTO du BFF), ou {@code null} pour ne rien pousser. */
-    Object message(String key, U update);
+    /**
+     * Message STOMP d'un update (DTO du BFF), ou {@code null} pour ne rien pousser. Asynchrone, car un message peut
+     * s'enrichir d'autres lectures (profils de l'adversaire) ; le pont envoie les messages dans l'ordre des versions.
+     */
+    CompletableFuture<?> message(String key, U update);
 }

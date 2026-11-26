@@ -33,12 +33,12 @@ class GameStreamLiveViewTest {
 
         assertThat(view.version(envelope)).isEqualTo(7);
         assertThat(view.updatesOf(List.of(envelope))).containsExactly(envelope);
-        assertThat(view.message("g1", envelope)).isEqualTo(EventEnvelopeResponse.of(
+        assertThat(view.message("g1", envelope).join()).isEqualTo(EventEnvelopeResponse.of(
                 "g1", 7, AT, "GAME_CANCELLED", GameEventResponseMapper.toResponse(event).orElseThrow()));
     }
 
     @Test
     void pushes_nothing_for_a_payload_outside_the_game_contract() {
-        assertThat(view.message("g1", EventEnvelope.of("g1", 8, AT, "unknown"))).isNull();
+        assertThat(view.message("g1", EventEnvelope.of("g1", 8, AT, "unknown")).join()).isNull();
     }
 }
