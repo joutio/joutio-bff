@@ -15,11 +15,11 @@
 
     <properties>
         <!-- Contrats inter-services : versions publiées des *-domain (GitHub Packages). -->
-        <joutio.identity-domain.version>2.5.1</joutio.identity-domain.version>
+        <joutio.identity-domain.version>2.6.0</joutio.identity-domain.version>
         <joutio.theme-domain.version>3.9.7</joutio.theme-domain.version>
-        <joutio.social-domain.version>2.0.0</joutio.social-domain.version>
+        <joutio.social-domain.version>2.1.0</joutio.social-domain.version>
         <joutio.game-domain.version>1.6.0</joutio.game-domain.version>
-        <joutio.profile-domain.version>4.4.0</joutio.profile-domain.version>
+        <joutio.profile-domain.version>4.5.0</joutio.profile-domain.version>
         <joutio.matchmaking-domain.version>3.1.0</joutio.matchmaking-domain.version>
         <joutio.leaderboard-domain.version>1.1.11</joutio.leaderboard-domain.version>
         <joutio.notification-domain.version>2.0.0</joutio.notification-domain.version>

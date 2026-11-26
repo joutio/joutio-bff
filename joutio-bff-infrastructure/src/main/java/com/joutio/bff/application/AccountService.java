@@ -16,21 +16,17 @@ import java.util.concurrent.CompletableFuture;
 public class AccountService {
 
     private final CommandGateway commandGateway;
-    private final IdentityLookup identityLookup;
 
-    public AccountService(CommandGateway commandGateway, IdentityLookup identityLookup) {
+    public AccountService(CommandGateway commandGateway) {
         this.commandGateway = commandGateway;
-        this.identityLookup = identityLookup;
     }
 
     public CompletableFuture<Void> setBirthDate(String userId, LocalDate birthDate) {
-        return commandGateway.send(new UserCommand.SetBirthDateCommand(userId, birthDate, userId, Instant.now()))
-                .thenRun(() -> identityLookup.invalidate(userId));
+        return commandGateway.send(new UserCommand.SetBirthDateCommand(userId, birthDate, userId, Instant.now()));
     }
 
     /** Acceptation explicite d'une version des CGU (preuve du consentement, conservée dans identity). */
     public CompletableFuture<Void> acceptTerms(String userId, String version) {
-        return commandGateway.send(new UserCommand.AcceptTermsCommand(userId, version, Instant.now()))
-                .thenRun(() -> identityLookup.invalidate(userId));
+        return commandGateway.send(new UserCommand.AcceptTermsCommand(userId, version, Instant.now()));
     }
 }

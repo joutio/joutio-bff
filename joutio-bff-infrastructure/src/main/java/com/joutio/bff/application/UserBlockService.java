@@ -31,18 +31,15 @@ public class UserBlockService {
     private final CommandGateway commandGateway;
     private final ProfileLookup profileLookup;
     private final IdentityLookup identityLookup;
-    private final FollowLookup followLookup;
 
     public UserBlockService(QueryGateway queryGateway,
                               CommandGateway commandGateway,
                               ProfileLookup profileLookup,
-                              IdentityLookup identityLookup,
-                              FollowLookup followLookup) {
+                              IdentityLookup identityLookup) {
         this.queryGateway = queryGateway;
         this.commandGateway = commandGateway;
         this.profileLookup = profileLookup;
         this.identityLookup = identityLookup;
-        this.followLookup = followLookup;
     }
 
     /** Joueurs en relation de blocage avec {@code userId}, dans un sens ou dans l'autre. */
@@ -67,8 +64,7 @@ public class UserBlockService {
     }
 
     public CompletableFuture<Void> block(String viewerId, String userId) {
-        return commandGateway.send(new UserBlockCommand.BlockUserCommand(UserBlock.id(viewerId, userId), viewerId, userId))
-                .thenAccept(_ -> invalidateCounts(viewerId, userId));
+        return commandGateway.send(new UserBlockCommand.BlockUserCommand(UserBlock.id(viewerId, userId), viewerId, userId));
     }
 
     public CompletableFuture<Void> unblock(String viewerId, String userId) {
@@ -104,11 +100,5 @@ public class UserBlockService {
     private CompletableFuture<List<UserBlock>> blocks(String viewerId) {
         return queryGateway.query(new UserBlockQuery.GetBlockedUsersQuery(viewerId),
                 QueryResponseTypes.multipleInstancesOf(UserBlock.class));
-    }
-
-    /** Le blocage retire les abonnements (social, asynchrone) : les compteurs en cache sont purgés des deux côtés. */
-    private void invalidateCounts(String viewerId, String userId) {
-        followLookup.invalidateCounts(viewerId);
-        followLookup.invalidateCounts(userId);
     }
 }

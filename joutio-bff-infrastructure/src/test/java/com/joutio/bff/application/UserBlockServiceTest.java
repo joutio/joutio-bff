@@ -21,7 +21,7 @@ class UserBlockServiceTest {
 
     private final QueryGateway queryGateway = mock(QueryGateway.class);
     private final UserBlockService service = new UserBlockService(queryGateway, mock(CommandGateway.class),
-            mock(ProfileLookup.class), mock(IdentityLookup.class), mock(FollowLookup.class));
+            mock(ProfileLookup.class), mock(IdentityLookup.class));
 
     @Test
     @SuppressWarnings("unchecked")

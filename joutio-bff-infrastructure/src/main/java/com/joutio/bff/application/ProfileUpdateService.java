@@ -27,20 +27,17 @@ import java.util.concurrent.CompletableFuture;
 public class ProfileUpdateService {
 
     private final CommandGateway commandGateway;
-    private final ProfileLookup profileLookup;
     private final ProgressionLookup progressionLookup;
     private final RewardLookup rewardLookup;
     private final AvatarEntitlementPolicy avatarEntitlementPolicy;
     private final PremiumAccessPolicy premiumAccessPolicy;
 
     public ProfileUpdateService(CommandGateway commandGateway,
-                                ProfileLookup profileLookup,
                                 ProgressionLookup progressionLookup,
                                 RewardLookup rewardLookup,
                                 AvatarEntitlementPolicy avatarEntitlementPolicy,
                                 PremiumAccessPolicy premiumAccessPolicy) {
         this.commandGateway = commandGateway;
-        this.profileLookup = profileLookup;
         this.progressionLookup = progressionLookup;
         this.rewardLookup = rewardLookup;
         this.avatarEntitlementPolicy = avatarEntitlementPolicy;
@@ -49,22 +46,19 @@ public class ProfileUpdateService {
 
     /** Fin explicite ou skip de l'onboarding ; idempotent côté agrégat. */
     public CompletableFuture<Void> completeOnboarding(String userId) {
-        return dispatch(userId, new ProfileCommand.CompleteOnboardingCommand(userId, java.time.Instant.now()));
+        return dispatch(new ProfileCommand.CompleteOnboardingCommand(userId, java.time.Instant.now()));
     }
 
     public CompletableFuture<Void> updatePseudonym(String userId, String requestedBy, String pseudonym) {
-        return dispatch(userId,
-                new ProfileCommand.UpdateProfilePseudonymCommand(userId, requestedBy, pseudonym));
+        return dispatch(new ProfileCommand.UpdateProfilePseudonymCommand(userId, requestedBy, pseudonym));
     }
 
     public CompletableFuture<Void> updateBio(String userId, String requestedBy, String bio) {
-        return dispatch(userId,
-                new ProfileCommand.UpdateProfileBioCommand(userId, requestedBy, bio));
+        return dispatch(new ProfileCommand.UpdateProfileBioCommand(userId, requestedBy, bio));
     }
 
     public CompletableFuture<Void> updateCountry(String userId, String requestedBy, String country) {
-        return dispatch(userId,
-                new ProfileCommand.UpdateProfileCountryCommand(userId, requestedBy, country));
+        return dispatch(new ProfileCommand.UpdateProfileCountryCommand(userId, requestedBy, country));
     }
 
     public CompletableFuture<Void> updateAvatarOptions(String userId, String requestedBy, String avatarOptions) {
@@ -73,25 +67,21 @@ public class ProfileUpdateService {
         return rewardLookup.get(userId).thenCompose(rewards -> {
             avatarEntitlementPolicy.assertCanSave(
                     avatarOptions, premium, rewards.has(RewardCode.MICAH_AVATAR));
-            return dispatch(userId,
-                    new ProfileCommand.UpdateProfileAvatarCommand(userId, requestedBy, avatarOptions));
+            return dispatch(new ProfileCommand.UpdateProfileAvatarCommand(userId, requestedBy, avatarOptions));
         });
     }
 
     public CompletableFuture<Void> updateBanner(String userId, String requestedBy, String bannerUrl) {
-        return dispatch(userId,
-                new ProfileCommand.UpdateProfileBannerCommand(userId, requestedBy, bannerUrl));
+        return dispatch(new ProfileCommand.UpdateProfileBannerCommand(userId, requestedBy, bannerUrl));
     }
 
     public CompletableFuture<Void> updateLanguage(String userId, String requestedBy, Language language) {
-        return dispatch(userId,
-                new ProfileCommand.UpdateProfileLanguageCommand(userId, requestedBy, language));
+        return dispatch(new ProfileCommand.UpdateProfileLanguageCommand(userId, requestedBy, language));
     }
 
     /** Préférence « entraînement si aucun adversaire » (propriétaire uniquement, vérifié par l'agrégat). */
     public CompletableFuture<Void> updateAutoTrainOnTimeout(String userId, String requestedBy, boolean enabled) {
-        return dispatch(userId,
-                new ProfileCommand.UpdateAutoTrainOnTimeoutCommand(userId, requestedBy, enabled));
+        return dispatch(new ProfileCommand.UpdateAutoTrainOnTimeoutCommand(userId, requestedBy, enabled));
     }
 
     /**
@@ -102,8 +92,7 @@ public class ProfileUpdateService {
     public CompletableFuture<Void> updateInterests(String userId, String requestedBy,
                                                    List<TopicCategory> interests) {
         List<String> codes = validateInterests(interests);
-        return dispatch(userId,
-                new ProfileCommand.UpdateProfileInterestsCommand(userId, requestedBy, codes));
+        return dispatch(new ProfileCommand.UpdateProfileInterestsCommand(userId, requestedBy, codes));
     }
 
     public static List<String> validateInterests(List<TopicCategory> interests) {
@@ -129,8 +118,7 @@ public class ProfileUpdateService {
      */
     public CompletableFuture<Void> updateEquippedTitle(String userId, String requestedBy, String titleKey) {
         if (titleKey == null) {
-            return dispatch(userId,
-                    new ProfileCommand.UpdateEquippedTitleCommand(userId, requestedBy, null));
+            return dispatch(new ProfileCommand.UpdateEquippedTitleCommand(userId, requestedBy, null));
         }
 
         PlayerTitle title = PlayerTitle.parse(titleKey)
@@ -149,12 +137,11 @@ public class ProfileUpdateService {
                 throw new BffProblems.TitleNotEarnedProblem(titleKey, reached);
             }
 
-            return dispatch(userId,
-                    new ProfileCommand.UpdateEquippedTitleCommand(userId, requestedBy, titleKey));
+            return dispatch(new ProfileCommand.UpdateEquippedTitleCommand(userId, requestedBy, titleKey));
         });
     }
 
-    private CompletableFuture<Void> dispatch(String userId, ProfileCommand command) {
-        return commandGateway.send(command).thenRun(() -> profileLookup.invalidate(userId));
+    private CompletableFuture<Void> dispatch(ProfileCommand command) {
+        return commandGateway.send(command);
     }
 }

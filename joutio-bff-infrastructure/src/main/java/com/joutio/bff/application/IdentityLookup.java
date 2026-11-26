@@ -1,141 +1,78 @@
 package com.joutio.bff.application;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
+import com.joutio.bff.application.live.LiveCache;
 import com.joutio.identity.domain.exception.UserProblems;
 import com.joutio.identity.domain.model.User;
 import com.joutio.identity.domain.model.UserAccountStatus;
+import com.joutio.identity.domain.model.UserUpdate;
 import com.joutio.identity.domain.query.UserQuery;
 import com.joutio.microservice.core.infrastructure.axon.QueryResponseTypes;
 import org.axonframework.queryhandling.QueryGateway;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
- * Statut des comptes côté identity, avec cache local (Caffeine).
+ * Comptes côté identity, en cache tenu à jour par abonnement ({@code WatchUsersQuery}).
  *
  * <p>Trois usages : le filtre d'accès BFF (existence + suspension), le droit Premium
- * ({@link PremiumAccessPolicy}) et les badges publics
- * « Compte suspendu » sur les vues où un joueur apparaît. Le cache est borné à 30 s et purgé
- * sur les événements identity (toutes les répliques via le groupe instance-scopé
- * {@code cache-invalidation}).</p>
+ * ({@link PremiumAccessPolicy}) et les badges publics « Compte suspendu » sur les vues où un joueur apparaît ; le
+ * compte complet sert aussi {@code /api/me}.</p>
  */
 @Service
 public class IdentityLookup {
 
-    private static final Duration TTL = Duration.ofSeconds(30);
-    private static final long MAX_SIZE = 10_000;
     private static final int MAX_BATCH = 200;
 
-    private static final Duration REFRESH_GRACE = Duration.ofSeconds(3);
-
     private final QueryGateway queryGateway;
-    private final Cache<String, UserAccountStatus> cache = Caffeine.newBuilder()
-            .expireAfterWrite(TTL)
-            .maximumSize(MAX_SIZE)
-            .build();
-    /** Compte complet du joueur courant (date de naissance privée, date d'inscription) pour {@code /api/me}. */
-    private final Cache<String, User> accounts = Caffeine.newBuilder()
-            .expireAfterWrite(TTL)
-            .maximumSize(MAX_SIZE)
-            .build();
-    /** Après une invalidation, la projection identity peut être en retard : ne pas re-cacher. */
-    private final Cache<String, Instant> recentlyInvalidated = Caffeine.newBuilder()
-            .expireAfterWrite(REFRESH_GRACE)
-            .maximumSize(MAX_SIZE)
-            .build();
+    private final LiveCache<UserUpdate, User> users;
 
-    public IdentityLookup(QueryGateway queryGateway) {
+    public IdentityLookup(QueryGateway queryGateway, LiveCache<UserUpdate, User> users) {
         this.queryGateway = queryGateway;
+        this.users = users;
     }
 
     /**
-     * Statut d'un compte. Le future échoue avec {@code UserNotFoundProblem} si le compte
-     * n'existe pas (le filtre le mappe en 401). On interroge {@code FindUserQuery} (Optional)
-     * plutôt que {@code GetUserAccountStatusQuery} : une exception distante traversant Axon ne
-     * conserve pas toujours la cause métier, ce qui faisait retomber le filtre en fail-open
-     * après un reset de base.
+     * Statut d'un compte. Le future échoue avec {@code UserNotFoundProblem} si le compte n'existe pas (le filtre le
+     * mappe en 401).
      */
     public CompletableFuture<UserAccountStatus> status(String userId) {
-        UserAccountStatus cached = cache.getIfPresent(userId);
-        if (cached != null) {
-            return CompletableFuture.completedFuture(cached);
-        }
-        // `FindUserQuery` renvoie `Optional.empty()` pour un compte disparu : contrairement à
-        // `GetUserAccountStatusQuery`, il ne lève pas d'exception distante que le filtre ne peut
-        // pas toujours relier à `UserNotFoundProblem` (reset de base : fail-open involontaire).
-        return queryGateway
-                .query(new UserQuery.FindUserQuery(userId),
-                        QueryResponseTypes.optionalInstanceOf(User.class))
-                .thenApply(user -> user
-                        .map(IdentityLookup::toStatus)
-                        .orElseThrow(() -> new UserProblems.UserNotFoundProblem(userId)))
-                .thenApply(status -> {
-                    cacheIfConverged(userId, status);
-                    return status;
-                });
+        return account(userId).thenApply(IdentityLookup::toStatus);
     }
 
     /**
-     * Statuts en lot, avec complétion des entrées absentes du cache. Les comptes inconnus sont
-     * simplement absents de la map (les vues publiques retombent sur « actif »).
+     * Statuts en lot. Les comptes inconnus sont simplement absents de la map (les vues publiques retombent sur
+     * « actif »).
      */
     public CompletableFuture<Map<String, UserAccountStatus>> statuses(Collection<String> userIds) {
         if (userIds == null || userIds.isEmpty()) {
             return CompletableFuture.completedFuture(Map.of());
         }
-        List<String> distinct = userIds.stream().filter(id -> id != null && !id.isBlank()).distinct().toList();
-        Map<String, UserAccountStatus> result = new LinkedHashMap<>();
-        List<String> missing = new java.util.ArrayList<>();
-        for (String userId : distinct) {
-            UserAccountStatus cached = cache.getIfPresent(userId);
-            if (cached == null) {
-                missing.add(userId);
-            } else {
-                result.put(userId, cached);
-            }
-        }
-        if (missing.isEmpty()) {
-            return CompletableFuture.completedFuture(result);
-        }
-        List<String> batch = missing.size() > MAX_BATCH ? missing.subList(0, MAX_BATCH) : missing;
-        return queryGateway
-                .query(new UserQuery.GetUserAccountStatusesQuery(batch),
-                        QueryResponseTypes.multipleInstancesOf(UserAccountStatus.class))
-                .thenApply(statuses -> {
-                    statuses.forEach(status -> {
-                        cacheIfConverged(status.userId(), status);
-                        result.put(status.userId(), status);
-                    });
-                    return result;
-                });
+        List<String> ids = userIds.stream().filter(id -> id != null && !id.isBlank()).toList();
+        return users.getAll(ids, this::loadAll).thenApply(found -> {
+            Map<String, UserAccountStatus> result = new LinkedHashMap<>();
+            found.forEach((id, user) -> result.put(id, toStatus(user)));
+            return result;
+        });
     }
 
     /**
      * Compte complet (identity), pour les seules vues du joueur concerné : il porte la date de naissance privée.
-     * Le future échoue avec {@code UserNotFoundProblem} si le compte n'existe pas.
+     * Le future échoue avec {@code UserNotFoundProblem} si le compte n'existe pas. On interroge
+     * {@code FindUserQuery} (Optional) : une exception distante ne conserve pas toujours la cause métier, ce qui
+     * faisait retomber le filtre en fail-open après un reset de base.
      */
     public CompletableFuture<User> account(String userId) {
-        User cached = accounts.getIfPresent(userId);
-        if (cached != null) {
-            return CompletableFuture.completedFuture(cached);
-        }
-        return queryGateway
-                .query(new UserQuery.FindUserQuery(userId), QueryResponseTypes.optionalInstanceOf(User.class))
-                .thenApply(user -> user.orElseThrow(() -> new UserProblems.UserNotFoundProblem(userId)))
-                .thenApply(user -> {
-                    if (recentlyInvalidated.getIfPresent(userId) == null) {
-                        accounts.put(userId, user);
-                    }
-                    return user;
-                });
+        return users.get(userId, id -> queryGateway
+                .query(new UserQuery.FindUserQuery(id), QueryResponseTypes.optionalInstanceOf(User.class))
+                .thenApply(user -> user.orElseThrow(() -> new UserProblems.UserNotFoundProblem(id))));
     }
 
     /** Premium accordé et effectif (badge des vues joueur) ; {@code ROLE_ADMIN} n'y compte pas. */
@@ -148,24 +85,19 @@ public class IdentityLookup {
         return status != null && status.suspended(now);
     }
 
+    private CompletableFuture<Map<String, User>> loadAll(List<String> userIds) {
+        List<String> batch = userIds.size() > MAX_BATCH ? userIds.subList(0, MAX_BATCH) : userIds;
+        return queryGateway
+                .query(new UserQuery.GetUsersByIdsQuery(batch), QueryResponseTypes.multipleInstancesOf(User.class))
+                .thenApply(found -> found.stream()
+                        .collect(Collectors.toMap(User::userId, Function.identity(), (a, _) -> a)));
+    }
+
     private static UserAccountStatus toStatus(User user) {
         return new UserAccountStatus(
                 user.userId(),
                 user.status(),
                 user.suspension() == null ? null : user.suspension().suspendedUntil(),
                 user.premium());
-    }
-
-    public void invalidate(String userId) {
-        cache.invalidate(userId);
-        accounts.invalidate(userId);
-        recentlyInvalidated.put(userId, Instant.now());
-    }
-
-    private void cacheIfConverged(String userId, UserAccountStatus status) {
-        if (recentlyInvalidated.getIfPresent(userId) != null) {
-            return;
-        }
-        cache.put(userId, status);
     }
 }

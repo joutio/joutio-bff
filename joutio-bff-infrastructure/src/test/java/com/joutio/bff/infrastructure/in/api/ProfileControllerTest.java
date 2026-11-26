@@ -61,7 +61,7 @@ class ProfileControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new ProfileController(profileViewService, profileUpdateService, followLookup, commandGateway, TestUserBlocks.none()))
+                        new ProfileController(profileViewService, profileUpdateService, commandGateway, TestUserBlocks.none()))
                 .setControllerAdvice(new BffProblemExceptionHandler())
                 .build();
         TestSecurity.authenticate(USER_ID);

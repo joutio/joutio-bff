@@ -13,10 +13,11 @@ y est documentée dans le même commit.
 
 - `application/` (à plat) : services de composition par écran ou domaine (`*ViewService`,
   `MeService`, `HomeService`…) ; lectures en cache `*Lookup` (`ProfileLookup`, `ProgressionLookup`,
-  `RewardLookup`, `FollowLookup`, `IdentityLookup`) ; règles `*Policy`/`*Guard`
-  (`PremiumAccessPolicy`, `DuelLimitPolicy`, `DuelCreationGuard`, `TopicCreationLimitPolicy`,
+  `RewardLookup`, `FollowLookup`, `IdentityLookup`), sur les `LiveCache` déclarés par `LiveCacheConfiguration` ;
+  règles `*Policy`/`*Guard` (`PremiumAccessPolicy`, `DuelLimitPolicy`, `DuelCreationGuard`, `TopicCreationLimitPolicy`,
   `AvatarEntitlementPolicy`, `TopicAccessService`) ; médias, push, partage, administration.
-- `application/live` : vues vivantes. `LiveView` (destination, règle d'accès locale, requête, version, mapper),
+- `application/live` : `LiveCache` (cache tenu à jour par un abonnement par vue et par pod à une `Watch*Query`) et
+  vues vivantes. `LiveView` (destination, règle d'accès locale, requête, version, mapper),
   ses deux formes `VersionedLiveView` (`LiveUpdate` sur `/topic/live/<vue>/{clé}`) et `AggregateStreamLiveView`
   (flux d'agrégat), le catalogue `LiveViews` (résolution d'une destination, lecture `GET /api/live/<vue>/{clé}`).
   Vues : `GameRewardLiveView` (`game-reward`, clé `{gameId}:{userId}`), `MyRoomsLiveView` (`my-rooms`, clé
@@ -43,7 +44,7 @@ y est documentée dans le même commit.
 
 | Groupe | Portée |
 |---|---|
-| `presence-events`, `follow-presence-events`, `achievement-events`, `notification-ws`, `cache-invalidation` | **instance-scopés** : chaque pod reçoit tout, en direct, par un seul consumer Kafka sans token (SDK) ; handlers non bloquants |
+| `presence-events`, `follow-presence-events`, `achievement-events`, `notification-ws` | **instance-scopés** : chaque pod reçoit tout, en direct, par un seul consumer Kafka sans token (SDK) ; handlers non bloquants |
 | `notification-push` | global : un seul envoi Web Push / Expo par événement, hors thread du processor |
 | `account-deletion-bff` | global : purge des données du BFF à la suppression d'un compte |
 
@@ -94,6 +95,6 @@ JOUTIO_EXPO_TEST_DB_URL=jdbc:postgresql://… mvn -pl joutio-bff-infrastructure 
   `null`.
 - La recherche paginée d'identity revient du bus en `LinkedHashMap` : la re-matérialiser.
 - Les réponses `401`/`403` de `CurrentUserExistsFilter` doivent porter les en-têtes CORS.
-- Une donnée mutable mise en cache est purgée sur **toutes** les répliques par
-  `CacheInvalidationHandler`, sinon le TTL doit rester court.
+- Une donnée mutable mise en cache passe par un `LiveCache` : le service propriétaire doit émettre chaque écriture
+  sur sa `Watch*Query`, sinon le cache garde l'ancienne valeur jusqu'à l'éviction.
 - Écarts connus avec les règles : `make backlog REPO=joutio-bff TYPE=dette`.

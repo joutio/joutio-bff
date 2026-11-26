@@ -83,6 +83,3 @@ joutio:
       - follow-presence-events
       - achievement-events
       - notification-ws
-      # Purge des caches de lecture sur chaque réplique (follows, profil) : Éditions/follows sont
-      # traités par un pod, tous les autres doivent invalider leur Caffeine local.
-      - cache-invalidation

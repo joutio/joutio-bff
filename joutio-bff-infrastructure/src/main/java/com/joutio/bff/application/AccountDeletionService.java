@@ -67,7 +67,6 @@ public class AccountDeletionService {
     private void awaitDeletionProjected(String userId) {
         long deadline = System.nanoTime() + DELETION_WAIT_MS * 1_000_000L;
         while (System.nanoTime() < deadline) {
-            identityLookup.invalidate(userId);
             try {
                 var status = identityLookup.status(userId).join();
                 if (status.deleted()) {
