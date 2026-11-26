@@ -1,3 +1,9 @@
+## [4.5.1](https://github.com/joutio/joutio-bff/compare/v4.5.0...v4.5.1) (2026-11-26)
+
+### Bug Fixes
+
+* **live:** start a live cache when no provider is known yet ([486c183](https://github.com/joutio/joutio-bff/commit/486c1837cb1ee11beab0d11d54d1ce64301b4c89))
+
 ## [4.5.0](https://github.com/joutio/joutio-bff/compare/v4.4.0...v4.5.0) (2026-11-26)
 
 ### Features
