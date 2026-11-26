@@ -1,3 +1,9 @@
+## [4.5.0](https://github.com/joutio/joutio-bff/compare/v4.4.0...v4.5.0) (2026-11-26)
+
+### Features
+
+* **live:** BFF caches fed by watch subscriptions ([38c8103](https://github.com/joutio/joutio-bff/commit/38c8103f6b52723da1406b25c5b39821433d2ebc))
+
 ## [4.4.0](https://github.com/joutio/joutio-bff/compare/v4.3.0...v4.4.0) (2026-11-26)
 
 ### Features
