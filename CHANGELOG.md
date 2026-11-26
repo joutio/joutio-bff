@@ -1,3 +1,9 @@
+## [4.4.0](https://github.com/joutio/joutio-bff/compare/v4.3.0...v4.4.0) (2026-11-26)
+
+### Features
+
+* **live:** rooms, tickets and my rooms through the live view bridge ([ccadf87](https://github.com/joutio/joutio-bff/commit/ccadf87c51dbcb261d9547850f1a99cb8cddd6b8))
+
 ## [4.3.0](https://github.com/joutio/joutio-bff/compare/v4.2.0...v4.3.0) (2026-11-25)
 
 ### Features
